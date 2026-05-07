@@ -1,12 +1,13 @@
 import React, { useContext, useState } from "react";
 import { useHistory } from "react-router-dom";
+import { toast } from "react-toastify";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { Replay } from "@material-ui/icons";
 import Tooltip from "@material-ui/core/Tooltip";
 import IconButton from "@material-ui/core/IconButton";
-import SmartToyIcon from "@material-ui/icons/SmartToy";
-import SmartToyOutlinedIcon from "@material-ui/icons/SmartToyOutlined";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
+import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";

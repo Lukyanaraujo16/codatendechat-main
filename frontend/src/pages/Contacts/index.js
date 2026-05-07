@@ -26,8 +26,8 @@ import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
 import ScheduleIcon from "@material-ui/icons/Schedule";
-import SmartToyOutlinedIcon from "@material-ui/icons/SmartToyOutlined";
-import SmartToyIcon from "@material-ui/icons/SmartToy";
+import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
