@@ -323,6 +323,10 @@ const messages = {
 					stageUpdated: "Stage updated.",
 					priorityUpdated: "Priority updated.",
 					attentionResolvedToast: "Attention cleared.",
+					chatbot: {
+						disableForContact: "Disable chatbot for this contact",
+						enableForContact: "Enable chatbot for this contact",
+					},
 				},
 				contact: { createOpportunity: "Create in CRM" },
 				reports: {
@@ -1258,10 +1262,15 @@ const messages = {
 				searchHelper: "Search by name, number, email, or notes.",
 				openAttendance: "Open ticket",
 				scheduleMessage: "Schedule message",
+				chatbotEnabled: "Chatbot enabled for this contact",
+				chatbotDisabled: "Chatbot disabled only for this contact",
+				chatbotToggle: "Toggle chatbot",
 				lastInteractionTooltip: "Last interaction",
 				toasts: {
 					deleted: "Contact deleted successfully!",
 					deletedAll: "All contacts deleted successfully!",
+					chatbotDisabled: "Chatbot disabled for this contact.",
+					chatbotEnabled: "Chatbot enabled for this contact.",
 				},
 				searchPlaceholder: "Search by name, number, email, or notes…",
 				confirmationModal: {
@@ -1551,6 +1560,9 @@ const messages = {
 					token: "Token",
 					orderQueue: "Queue order (Bot)",
 					integrationId: "Integration",
+					chatbotDisabled: "Disable chatbot in this queue",
+					chatbotDisabledHint:
+						"When enabled, tickets routed to this queue go straight to human handling (pending), without automations.",
 				},
 				buttons: {
 					okAdd: "Add",

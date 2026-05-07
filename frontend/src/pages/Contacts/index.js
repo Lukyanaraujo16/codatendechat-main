@@ -26,6 +26,8 @@ import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
 import ScheduleIcon from "@material-ui/icons/Schedule";
+import SmartToyOutlinedIcon from "@material-ui/icons/SmartToyOutlined";
+import SmartToyIcon from "@material-ui/icons/SmartToy";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -324,6 +326,7 @@ const Contacts = () => {
 	const [tagOptions, setTagOptions] = useState([]);
 	const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 	const [scheduleContactId, setScheduleContactId] = useState(null);
+	const [chatbotToggleLoadingId, setChatbotToggleLoadingId] = useState(null);
 
 	const socketManager = useContext(SocketContext);
 
@@ -461,6 +464,27 @@ const Contacts = () => {
 	const handleOpenScheduleModal = (contactId) => {
 		setScheduleContactId(contactId);
 		setScheduleModalOpen(true);
+	};
+
+	const handleToggleChatbotForContact = async (contact) => {
+		if (!contact?.id) return;
+		setChatbotToggleLoadingId(contact.id);
+		try {
+			const next = !Boolean(contact.chatbotDisabled);
+			const { data } = await api.put(`/contacts/${contact.id}/chatbot`, {
+				chatbotDisabled: next,
+			});
+			dispatch({ type: "UPDATE_CONTACTS", payload: data });
+			showSuccessToast(
+				next
+					? "contacts.toasts.chatbotDisabled"
+					: "contacts.toasts.chatbotEnabled"
+			);
+		} catch (err) {
+			toastError(err);
+		} finally {
+			setChatbotToggleLoadingId(null);
+		}
 	};
 
 	const handleCloseScheduleModal = () => {
@@ -897,6 +921,30 @@ const Contacts = () => {
 														>
 															<ScheduleIcon fontSize="small" />
 														</IconButton>
+													</Tooltip>
+													<Tooltip
+														title={
+															contact.chatbotDisabled
+																? i18n.t("contacts.chatbotDisabled")
+																: i18n.t("contacts.chatbotEnabled")
+														}
+													>
+														<span>
+															<IconButton
+																size="small"
+																color={contact.chatbotDisabled ? "default" : "primary"}
+																className={classes.actionIconBtn}
+																aria-label={i18n.t("contacts.chatbotToggle")}
+																disabled={chatbotToggleLoadingId === contact.id}
+																onClick={() => handleToggleChatbotForContact(contact)}
+															>
+																{contact.chatbotDisabled ? (
+																	<SmartToyOutlinedIcon fontSize="small" />
+																) : (
+																	<SmartToyIcon fontSize="small" />
+																)}
+															</IconButton>
+														</span>
 													</Tooltip>
 													<Tooltip title={i18n.t("contacts.buttons.edit")}>
 														<IconButton

@@ -273,6 +273,8 @@ const Ticket = () => {
           {renderTicketInfo()}
           <TicketActionButtons
             ticket={ticket}
+            contact={contact}
+            onContactUpdated={(next) => setContact(next)}
             onOpenQuickReplies={() => setQuickRepliesOpen(true)}
             onCrmDealSaved={() => setCrmPanelRefreshKey((n) => n + 1)}
           />

@@ -65,6 +65,11 @@ class Queue extends Model<Queue> {
   })
   schedules: [];
 
+  /** Quando true, tickets direcionados a esta fila vão direto para humano. */
+  @Default(false)
+  @Column
+  chatbotDisabled: boolean;
+
   @CreatedAt
   createdAt: Date;
 

@@ -81,6 +81,10 @@ import { WebhookModel } from "../../models/Webhook";
 
 import {differenceInMilliseconds} from "date-fns";
 import Whatsapp from "../../models/Whatsapp";
+import { shouldBypassChatbot } from "../../helpers/shouldBypassChatbot";
+import CreateTicketSystemMessageService from "../TicketServices/CreateTicketSystemMessageService";
+import Company from "../../models/Company";
+import { formatChatbotBypassSystemMessage } from "../../helpers/chatbotBypassMessages";
 
 const request = require("request");
 
@@ -811,7 +815,7 @@ const handleOpenAi = async (
 ): Promise<void> => {
 
   // REGRA PARA DESABILITAR O BOT PARA ALGUM CONTATO
-  if (contact.disableBot) {
+  if (contact.disableBot || contact.chatbotDisabled) {
     return;
   }
 
@@ -1397,6 +1401,57 @@ const verifyQueue = async (
     greetingMessage != null && String(greetingMessage).trim() !== ""
       ? String(greetingMessage).trim()
       : "";
+
+  const bypassDecision = await shouldBypassChatbot({
+    companyId: ticket.companyId,
+    contact,
+    queueId: ticket.queueId,
+    ticketId: ticket.id
+  });
+  /**
+   * Bypass do chatbot (contato/empresa/fila/horário): não executa integrações,
+   * mas garante que o ticket siga o fluxo humano (pending + fila aplicável).
+   */
+  if (bypassDecision.bypass) {
+    const fallbackQueueId =
+      ticket.queueId != null
+        ? ticket.queueId
+        : queues.length >= 1
+          ? head(queues)?.id ?? null
+          : null;
+    await UpdateTicketService({
+      ticketData: {
+        status: "pending",
+        queueId: fallbackQueueId,
+        chatbot: false,
+        useIntegration: false,
+        integrationId: null,
+        promptId: null
+      },
+      ticketId: ticket.id,
+      companyId: ticket.companyId
+    });
+
+    try {
+      const company = await Company.findByPk(ticket.companyId, {
+        attributes: ["language"]
+      });
+      const msg = formatChatbotBypassSystemMessage({
+        reason: bypassDecision.reason,
+        companyLanguage: (company as any)?.language ?? "pt"
+      });
+      if (msg) {
+        await CreateTicketSystemMessageService({
+          ticketId: ticket.id,
+          companyId: ticket.companyId,
+          body: msg
+        });
+      }
+    } catch {
+      // Mensagem interna é best-effort; não deve quebrar fluxo humano.
+    }
+    return;
+  }
 
   if (queues.length === 1) {
     const sendGreetingMessageOneQueues = await Setting.findOne({
@@ -2152,6 +2207,48 @@ const flowbuilderIntegration = async (
       { ticketId: ticket.id, companyId },
       "[FlowBuilder] flowbuilderIntegration: contact ausente; passe contact em handleMessageIntegration ou garanta ticket.contactId"
     );
+    return;
+  }
+
+  const bypassDecision = await shouldBypassChatbot({
+    companyId,
+    contact: contactForFlow,
+    queueId: ticket.queueId,
+    ticketId: ticket.id
+  });
+  /**
+   * Bypass do chatbot (contato/empresa/fila/horário): não executa FlowBuilder.
+   * Garante que o ticket fique visível no fluxo humano (pending).
+   */
+  if (bypassDecision.bypass) {
+    await UpdateTicketService({
+      ticketData: {
+        status: "pending",
+        chatbot: false,
+        useIntegration: false,
+        integrationId: null,
+        promptId: null
+      },
+      ticketId: ticket.id,
+      companyId
+    });
+
+    try {
+      const company = await Company.findByPk(companyId, { attributes: ["language"] });
+      const msg = formatChatbotBypassSystemMessage({
+        reason: bypassDecision.reason,
+        companyLanguage: (company as any)?.language ?? "pt"
+      });
+      if (msg) {
+        await CreateTicketSystemMessageService({
+          ticketId: ticket.id,
+          companyId,
+          body: msg
+        });
+      }
+    } catch {
+      // best-effort
+    }
     return;
   }
 

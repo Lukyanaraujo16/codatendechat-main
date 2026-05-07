@@ -367,3 +367,42 @@ export const toggleDisableBot = async (req: Request, res: Response): Promise<Res
 
   return res.status(200).json(contact);
 };
+
+export const updateChatbotForContact = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId } = req.params;
+  const { companyId, profile, supportMode } = req.user;
+
+  if (profile !== "admin" && profile !== "supervisor" && supportMode !== true) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  const schema = Yup.object().shape({
+    chatbotDisabled: Yup.boolean().required()
+  });
+
+  const { chatbotDisabled } = await schema.validate(req.body, {
+    abortEarly: false
+  });
+
+  const contactRow = await Contact.findByPk(contactId);
+  if (!contactRow) {
+    throw new AppError("ERR_NO_CONTACT_FOUND", 404);
+  }
+  if (contactRow.companyId !== companyId) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+  await contactRow.update({ chatbotDisabled });
+
+  const contact = await ShowContactService(contactId, companyId);
+
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
+    action: "update",
+    contact
+  });
+
+  return res.status(200).json(contact);
+};

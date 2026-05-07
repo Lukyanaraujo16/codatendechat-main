@@ -332,6 +332,10 @@ const messages = {
           stageUpdated: "Etapa actualizada.",
           priorityUpdated: "Prioridade actualizada.",
           attentionResolvedToast: "Atenção resolvida.",
+          chatbot: {
+            disableForContact: "Desativar chatbot para este contato",
+            enableForContact: "Ativar chatbot para este contato",
+          },
         },
         contact: {
           createOpportunity: "Criar no CRM",
@@ -1337,10 +1341,15 @@ const messages = {
         searchHelper: "Pesquise por nome, número, email ou notas.",
         openAttendance: "Abrir atendimento",
         scheduleMessage: "Agendar mensagem",
+        chatbotEnabled: "Chatbot ativo para este contato",
+        chatbotDisabled: "Chatbot desativado apenas para este contato",
+        chatbotToggle: "Alternar chatbot",
         lastInteractionTooltip: "Última interação",
         toasts: {
           deleted: "Contato excluído com sucesso!",
           deletedAll: "Todos contatos excluídos com sucesso!",
+          chatbotDisabled: "Chatbot desativado para este contato.",
+          chatbotEnabled: "Chatbot ativado para este contato.",
         },
         searchPlaceholder: "Pesquisar por nome, número, email ou notas…",
         confirmationModal: {
@@ -1632,6 +1641,9 @@ const messages = {
           token: "Token",
           orderQueue: "Ordem do setor (Bot)",
           integrationId: "Integração",
+          chatbotDisabled: "Desativar chatbot neste setor",
+          chatbotDisabledHint:
+            "Quando ativo, tickets direcionados a este setor irão direto para atendimento humano (pending), sem automações.",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -3997,6 +4009,24 @@ const messages = {
           description:
             "Visualize, baixe e exclua mídias da empresa para liberar espaço de armazenamento.",
           openButton: "Abrir gestão de mídias",
+        },
+        chatbotControl: {
+          title: "Controle do chatbot",
+          description:
+            "Centralize regras para pular automações. Quando bloqueado por qualquer regra, as mensagens vão direto para atendimento humano (pending).",
+          disableCompany: "Desativar chatbot para toda a empresa",
+          enableSchedule: "Ativar horário do chatbot",
+          weekdayStart: "Início (seg–sex)",
+          weekdayEnd: "Fim (seg–sex)",
+          weekdaysHint:
+            "Aplica de segunda a sexta. Sábado e domingo ficam desativados por padrão.",
+          buttons: {
+            save: "Salvar",
+            saving: "Salvando...",
+          },
+          toasts: {
+            saved: "Configuração do chatbot salva com sucesso.",
+          },
         },
         title: "Configurações",
         tabs: {

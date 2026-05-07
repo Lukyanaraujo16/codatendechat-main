@@ -150,6 +150,12 @@ class Ticket extends Model<Ticket> {
   @Column
   amountUsedBotQueues: number;
 
+  /** Contador de opções inválidas consecutivas no menu do FlowBuilder (fallback humano após limite). */
+  @AllowNull(false)
+  @Default(0)
+  @Column
+  invalidMenuAttempts: number;
+
   @Column
   flowWebhook: boolean;
 

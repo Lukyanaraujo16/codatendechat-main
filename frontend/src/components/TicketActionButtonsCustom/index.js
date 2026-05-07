@@ -3,6 +3,10 @@ import { useHistory } from "react-router-dom";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { Replay } from "@material-ui/icons";
+import Tooltip from "@material-ui/core/Tooltip";
+import IconButton from "@material-ui/core/IconButton";
+import SmartToyIcon from "@material-ui/icons/SmartToy";
+import SmartToyOutlinedIcon from "@material-ui/icons/SmartToyOutlined";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -36,12 +40,15 @@ const useStyles = makeStyles((theme) => ({
 
 const TicketActionButtonsCustom = ({
   ticket,
+  contact,
+  onContactUpdated,
   onOpenQuickReplies,
   onCrmDealSaved,
 }) => {
   const classes = useStyles();
   const history = useHistory();
   const [loading, setLoading] = useState(false);
+  const [chatbotToggleLoading, setChatbotToggleLoading] = useState(false);
   const { user } = useContext(AuthContext);
   const setCurrentTicket = useContext(TicketsSetContext);
   const planFlags = usePlanFlags();
@@ -68,6 +75,29 @@ const TicketActionButtonsCustom = ({
     } catch (err) {
       setLoading(false);
       toastError(err);
+    }
+  };
+
+  const handleToggleChatbotForContact = async () => {
+    if (!contact?.id) return;
+    setChatbotToggleLoading(true);
+    try {
+      const next = !Boolean(contact.chatbotDisabled);
+      const { data } = await api.put(`/contacts/${contact.id}/chatbot`, {
+        chatbotDisabled: next,
+      });
+      if (typeof onContactUpdated === "function") {
+        onContactUpdated(data);
+      }
+      toast.success(
+        next
+          ? i18n.t("contacts.toasts.chatbotDisabled")
+          : i18n.t("contacts.toasts.chatbotEnabled")
+      );
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setChatbotToggleLoading(false);
     }
   };
 
@@ -101,12 +131,38 @@ const TicketActionButtonsCustom = ({
               onDeleteClick={openDelete}
               onQuickRepliesClick={onOpenQuickReplies}
               extraIconActions={
-                fx["crm.pipeline"] === true ? (
-                  <TicketCrmDealButton
-                    ticket={ticket}
-                    onCrmDealSaved={onCrmDealSaved}
-                  />
-                ) : null
+                <>
+                  {contact?.id ? (
+                    <Tooltip
+                      title={
+                        contact.chatbotDisabled
+                          ? i18n.t("ticket.chatbot.enableForContact")
+                          : i18n.t("ticket.chatbot.disableForContact")
+                      }
+                    >
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={handleToggleChatbotForContact}
+                          disabled={loading || chatbotToggleLoading}
+                          aria-label={i18n.t("contacts.chatbotToggle")}
+                        >
+                          {contact.chatbotDisabled ? (
+                            <SmartToyOutlinedIcon fontSize="small" />
+                          ) : (
+                            <SmartToyIcon fontSize="small" />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                  {fx["crm.pipeline"] === true ? (
+                    <TicketCrmDealButton
+                      ticket={ticket}
+                      onCrmDealSaved={onCrmDealSaved}
+                    />
+                  ) : null}
+                </>
               }
             />
           )}

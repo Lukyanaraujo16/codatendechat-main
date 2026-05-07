@@ -323,6 +323,10 @@ const messages = {
           stageUpdated: "Etapa actualizada.",
           priorityUpdated: "Prioridad actualizada.",
           attentionResolvedToast: "Atención resuelta.",
+          chatbot: {
+            disableForContact: "Desactivar chatbot para este contacto",
+            enableForContact: "Activar chatbot para este contacto",
+          },
         },
         contact: { createOpportunity: "Crear en CRM" },
         reports: {
@@ -1264,10 +1268,15 @@ const messages = {
         searchHelper: "Busque por nombre, número, email o notas.",
         openAttendance: "Abrir atención",
         scheduleMessage: "Programar mensaje",
+        chatbotEnabled: "Chatbot activo para este contacto",
+        chatbotDisabled: "Chatbot desactivado solo para este contacto",
+        chatbotToggle: "Alternar chatbot",
         lastInteractionTooltip: "Última interacción",
         toasts: {
           deleted: "¡Contacto eliminado con éxito!",
           deletedAll: "¡Todos los contactos eliminados con éxito!",
+          chatbotDisabled: "Chatbot desactivado para este contacto.",
+          chatbotEnabled: "Chatbot activado para este contacto.",
         },
         searchPlaceholder: "Buscar por nombre, número, email o notas…",
         confirmationModal: {
@@ -1556,6 +1565,9 @@ const messages = {
           token: "Token",
           orderQueue: "Orden de la cola (Bot)",
           integrationId: "Integración",
+          chatbotDisabled: "Desactivar chatbot en este sector",
+          chatbotDisabledHint:
+            "Cuando está activo, los tickets dirigidos a este sector van directo a atención humana (pending), sin automatizaciones.",
         },
         buttons: {
           okAdd: "Agregar",

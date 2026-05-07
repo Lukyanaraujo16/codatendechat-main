@@ -52,6 +52,11 @@ class Contact extends Model<Contact> {
   @Column
   disableBot: boolean;
 
+  /** Quando true, pula o chatbot e encaminha direto para humano. */
+  @Default(false)
+  @Column
+  chatbotDisabled: boolean;
+
   @AllowNull(true)
   @Column(DataType.TEXT)
   notes: string;

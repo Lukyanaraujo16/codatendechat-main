@@ -34,6 +34,19 @@ companyRoutes.post(
   requireTenantAdminOrSupport,
   CompanyController.recalculateMyCompanyStorage
 );
+
+companyRoutes.get(
+  "/companies/chatbot-control",
+  isAuth,
+  requireTenantAdminOrSupport,
+  CompanyController.getMyCompanyChatbotControl
+);
+companyRoutes.put(
+  "/companies/chatbot-control",
+  isAuth,
+  requireTenantAdminOrSupport,
+  CompanyController.updateMyCompanyChatbotControl
+);
 companyRoutes.get(
   "/companies/storage/snapshots",
   isAuth,

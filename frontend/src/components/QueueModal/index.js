@@ -26,6 +26,7 @@ import useFeature from "../../hooks/useFeature";
 import Alert from "@material-ui/lab/Alert";
 import {
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
   InputAdornment,
@@ -35,6 +36,7 @@ import {
   Select,
   Tab,
   Tabs,
+  Checkbox,
 } from "@material-ui/core";
 import { Colorize } from "@material-ui/icons";
 import { QueueOptions } from "../QueueOptions";
@@ -116,6 +118,7 @@ const QueueModal = ({ open, onClose, queueId, reload }) => {
     color: DEFAULT_QUEUE_COLOR,
     greetingMessage: "",
     outOfHoursMessage: "",
+    chatbotDisabled: false,
     orderQueue: "",
     integrationId: "",
     promptId: "",
@@ -246,6 +249,7 @@ const QueueModal = ({ open, onClose, queueId, reload }) => {
         color: "",
         greetingMessage: "",
         outOfHoursMessage: "",
+        chatbotDisabled: false,
         orderQueue: "",
         integrationId: "",
       });
@@ -428,6 +432,22 @@ const QueueModal = ({ open, onClose, queueId, reload }) => {
                       margin="dense"
                       className={classes.textField1}
                     />
+                    <Box mt={1}>
+                      <FormControlLabel
+                        control={
+                          <Field
+                            as={Checkbox}
+                            name="chatbotDisabled"
+                            color="primary"
+                            checked={Boolean(values.chatbotDisabled)}
+                          />
+                        }
+                        label={i18n.t("queueModal.form.chatbotDisabled")}
+                      />
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        {i18n.t("queueModal.form.chatbotDisabledHint")}
+                      </Typography>
+                    </Box>
                     <div>
                       <FormControl
                         variant="outlined"

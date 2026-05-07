@@ -97,6 +97,20 @@ class Company extends Model<Company> {
   @Column({ type: DataType.SMALLINT, allowNull: false, defaultValue: 0 })
   storageAlertWatermark: number;
 
+  /** Quando true, nenhuma conversa passa pelo chatbot (bypass global). */
+  @Default(false)
+  @Column
+  chatbotDisabled: boolean;
+
+  /** Quando true, respeita `chatbotSchedule` para decidir bypass por horário. */
+  @Default(false)
+  @Column
+  chatbotScheduleEnabled: boolean;
+
+  /** Horário de chatbot por empresa (timezone + dias). */
+  @Column({ type: DataType.JSONB, allowNull: true, defaultValue: null })
+  chatbotSchedule: unknown | null;
+
   /** Segmento de negócio (templates de CRM ao criar pipeline padrão). */
   @Default("general")
   @Column

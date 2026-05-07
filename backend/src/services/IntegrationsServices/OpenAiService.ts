@@ -76,7 +76,7 @@ export const handleOpenAi = async (
   ticketTraking: TicketTraking
 ): Promise<void> => {
   // REGRA PARA DESABILITAR O BOT PARA ALGUM CONTATO
-  if (contact.disableBot) {
+  if (contact.disableBot || contact.chatbotDisabled) {
     return;
   }
 

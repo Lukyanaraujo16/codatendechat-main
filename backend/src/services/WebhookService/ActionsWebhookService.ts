@@ -14,6 +14,7 @@ import { SendMessage } from "../../helpers/SendMessage";
 import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import Ticket from "../../models/Ticket";
+import Company from "../../models/Company";
 import User from "../../models/User";
 import fs from "fs";
 import GetWhatsappWbot from "../../helpers/GetWhatsappWbot";
@@ -35,6 +36,8 @@ import { randomString } from "../../utils/randomCode";
 import ShowQueueService from "../QueueService/ShowQueueService";
 import { getIO } from "../../libs/socket";
 import UpdateTicketService from "../TicketServices/UpdateTicketService";
+import CreateTicketSystemMessageService from "../TicketServices/CreateTicketSystemMessageService";
+import { formatChatbotInvalidMenuFallbackSystemMessage } from "../../helpers/chatbotBypassMessages";
 import TicketTag from "../../models/TicketTag";
 import FindOrCreateATicketTrakingService from "../TicketServices/FindOrCreateATicketTrakingService";
 import ShowTicketUUIDService from "../TicketServices/ShowTicketFromUUIDService";
@@ -1517,6 +1520,96 @@ export const ActionsWebhookService = async (
                   quotedMsg: null
                 });
                 await intervalWhats("1");
+              }
+            }
+          }
+
+          // Controle operacional: fallback automático para humano após X opções inválidas consecutivas.
+          // Conta como "inválida" quando não houve match para uma opção numérica do menu.
+          if (ticket && idTicket) {
+            const hasValidNumbers = validNumbers.size > 0;
+            const isInvalidAttempt = hasValidNumbers && filterTwo.length === 0 && String(pressKey || "").trim() !== "";
+
+            if (!isInvalidAttempt) {
+              // reset ao escolher uma opção válida (ou quando não é caso de tentativa inválida)
+              if ((ticket as any).invalidMenuAttempts && (ticket as any).invalidMenuAttempts > 0) {
+                await ticket.update({ invalidMenuAttempts: 0 });
+              }
+            } else {
+              const current = Number((ticket as any).invalidMenuAttempts) || 0;
+              const nextAttempts = current + 1;
+              await ticket.update({ invalidMenuAttempts: nextAttempts });
+
+              if (nextAttempts >= 3) {
+                let fallbackQueueId: number | null =
+                  ticket.queueId != null ? ticket.queueId : null;
+                if (fallbackQueueId == null) {
+                  try {
+                    const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
+                    fallbackQueueId =
+                      Array.isArray((whatsapp as any)?.queues) && (whatsapp as any).queues.length > 0
+                        ? (whatsapp as any).queues[0]?.id ?? null
+                        : null;
+                  } catch {
+                    fallbackQueueId = null;
+                  }
+                }
+
+                logger.info(
+                  {
+                    companyId,
+                    contactId: ticket.contactId,
+                    ticketId: ticket.id,
+                    queueId: fallbackQueueId,
+                    invalidMenuAttempts: nextAttempts
+                  },
+                  "[ChatbotFallback] invalid menu attempts threshold reached"
+                );
+
+                // limpa estado do fluxo + trava automações; depois garante fluxo humano via UpdateTicketService
+                await ticket.update({
+                  invalidMenuAttempts: 0,
+                  flowWebhook: false,
+                  lastFlowId: null,
+                  hashFlowId: null,
+                  flowStopped: null,
+                  dataWebhook: null,
+                  chatbot: false,
+                  useIntegration: false,
+                  integrationId: null,
+                  promptId: null
+                });
+
+                await UpdateTicketService({
+                  ticketData: {
+                    status: "pending",
+                    queueId: fallbackQueueId,
+                    chatbot: false,
+                    useIntegration: false,
+                    integrationId: null,
+                    promptId: null
+                  },
+                  ticketId: ticket.id,
+                  companyId
+                });
+
+                try {
+                  const company = await Company.findByPk(companyId, { attributes: ["language"] });
+                  const body = formatChatbotInvalidMenuFallbackSystemMessage({
+                    companyLanguage: (company as any)?.language ?? "pt",
+                    attempts: nextAttempts
+                  });
+                  await CreateTicketSystemMessageService({
+                    ticketId: ticket.id,
+                    companyId,
+                    body
+                  });
+                } catch {
+                  // best-effort
+                }
+
+                // interrompe o loop do fluxo atual
+                break;
               }
             }
           }

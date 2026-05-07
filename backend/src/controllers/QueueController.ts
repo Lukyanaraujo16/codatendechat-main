@@ -27,7 +27,17 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { name, color, greetingMessage, outOfHoursMessage, schedules, orderQueue, integrationId, promptId } =
+  const {
+    name,
+    color,
+    greetingMessage,
+    outOfHoursMessage,
+    schedules,
+    orderQueue,
+    integrationId,
+    promptId,
+    chatbotDisabled
+  } =
     req.body;
   const { companyId } = req.user;
 
@@ -38,6 +48,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     companyId,
     outOfHoursMessage,
     schedules,
+    chatbotDisabled: Boolean(chatbotDisabled),
     orderQueue: orderQueue === "" ? null : orderQueue,
     integrationId: integrationId === "" ? null : integrationId,
     promptId: promptId === "" ? null : promptId
@@ -76,7 +87,17 @@ export const update = async (
 ): Promise<Response> => {
   const { queueId } = req.params;
   const { companyId } = req.user;
-  const { name, color, greetingMessage, outOfHoursMessage, schedules, orderQueue, integrationId, promptId } =
+  const {
+    name,
+    color,
+    greetingMessage,
+    outOfHoursMessage,
+    schedules,
+    orderQueue,
+    integrationId,
+    promptId,
+    chatbotDisabled
+  } =
     req.body;
   const queue = await UpdateQueueService(queueId, {
     name,
@@ -84,6 +105,7 @@ export const update = async (
     greetingMessage,
     outOfHoursMessage,
     schedules,
+    ...(chatbotDisabled !== undefined ? { chatbotDisabled: Boolean(chatbotDisabled) } : {}),
     orderQueue: orderQueue === "" ? null : orderQueue,
     integrationId: integrationId === "" ? null : integrationId,
     promptId: promptId === "" ? null : promptId

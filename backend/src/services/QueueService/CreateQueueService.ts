@@ -13,6 +13,7 @@ interface QueueData {
   greetingMessage?: string;
   outOfHoursMessage?: string;
   schedules?: any[];
+  chatbotDisabled?: boolean;
   orderQueue?: number;
   integrationId?: number;
   promptId?: number;

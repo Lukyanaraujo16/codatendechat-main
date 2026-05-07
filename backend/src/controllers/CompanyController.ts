@@ -53,6 +53,7 @@ import {
   isValidBusinessSegment,
   normalizeBusinessSegment
 } from "../config/businessSegment";
+import moment from "moment-timezone";
 
 function parseListPlanAuthToken(req: Request): string | null {
   const authHeader = req.headers.authorization;
@@ -592,6 +593,120 @@ export const recalculateMyCompanyStorage = async (
     const payload = await GetMyCompanyStorageService(companyId);
     return res.status(200).json({ ...payload, recalculated: false, error: true });
   }
+};
+
+type ChatbotScheduleDayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+type ChatbotScheduleRange = { start: string; end: string };
+type ChatbotSchedule = {
+  timezone?: string;
+  days?: Partial<Record<ChatbotScheduleDayKey, ChatbotScheduleRange[]>>;
+};
+
+function validateChatbotSchedule(schedule: unknown, fallbackTz: string): ChatbotSchedule | null {
+  if (schedule === null || schedule === undefined || schedule === "") return null;
+  if (typeof schedule !== "object") {
+    throw new AppError("ERR_VALIDATION", 400, "chatbotSchedule inválido.");
+  }
+  const s = schedule as ChatbotSchedule;
+  const tz = String(s.timezone || fallbackTz || "America/Sao_Paulo").trim();
+  if (!moment.tz.zone(tz)) {
+    throw new AppError("ERR_VALIDATION", 400, "Timezone inválida no horário do chatbot.");
+  }
+  const days = (s.days || {}) as ChatbotSchedule["days"];
+  const allowedDays: ChatbotScheduleDayKey[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  for (const k of Object.keys(days || {})) {
+    if (!allowedDays.includes(k as ChatbotScheduleDayKey)) {
+      throw new AppError("ERR_VALIDATION", 400, "Dia inválido no horário do chatbot.");
+    }
+    const ranges = (days as any)[k];
+    if (!Array.isArray(ranges)) {
+      throw new AppError("ERR_VALIDATION", 400, "Faixas inválidas no horário do chatbot.");
+    }
+    for (const r of ranges as ChatbotScheduleRange[]) {
+      const start = String(r?.start || "").trim();
+      const end = String(r?.end || "").trim();
+      if (!/^\d{1,2}:\d{2}$/.test(start) || !/^\d{1,2}:\d{2}$/.test(end)) {
+        throw new AppError("ERR_VALIDATION", 400, "Hora inválida no horário do chatbot.");
+      }
+    }
+  }
+  return { timezone: tz, days };
+}
+
+export const getMyCompanyChatbotControl = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const companyId = Number(req.user?.companyId);
+  if (!Number.isFinite(companyId)) {
+    throw new AppError("ERR_COMPANY_REQUIRED", 403);
+  }
+  const company = await Company.findByPk(companyId, {
+    attributes: ["id", "timezone", "chatbotDisabled", "chatbotScheduleEnabled", "chatbotSchedule"]
+  });
+  if (!company) {
+    throw new AppError("ERR_NO_COMPANY_FOUND", 404);
+  }
+  return res.status(200).json({
+    chatbotDisabled: Boolean((company as any).chatbotDisabled),
+    chatbotScheduleEnabled: Boolean((company as any).chatbotScheduleEnabled),
+    chatbotSchedule: (company as any).chatbotSchedule ?? null,
+    timezone: (company as any).timezone ?? "America/Sao_Paulo"
+  });
+};
+
+export const updateMyCompanyChatbotControl = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const companyId = Number(req.user?.companyId);
+  if (!Number.isFinite(companyId)) {
+    throw new AppError("ERR_COMPANY_REQUIRED", 403);
+  }
+  const company = await Company.findByPk(companyId, {
+    attributes: ["id", "timezone", "chatbotDisabled", "chatbotScheduleEnabled", "chatbotSchedule"]
+  });
+  if (!company) {
+    throw new AppError("ERR_NO_COMPANY_FOUND", 404);
+  }
+
+  const schema = Yup.object({
+    chatbotDisabled: Yup.boolean().nullable(),
+    chatbotScheduleEnabled: Yup.boolean().nullable(),
+    chatbotSchedule: Yup.mixed().nullable()
+  });
+  await schema.validate(req.body, { abortEarly: false });
+
+  const nextDisabled =
+    Object.prototype.hasOwnProperty.call(req.body as object, "chatbotDisabled")
+      ? Boolean((req.body as any).chatbotDisabled)
+      : (company as any).chatbotDisabled;
+
+  const nextScheduleEnabled =
+    Object.prototype.hasOwnProperty.call(req.body as object, "chatbotScheduleEnabled")
+      ? Boolean((req.body as any).chatbotScheduleEnabled)
+      : (company as any).chatbotScheduleEnabled;
+
+  let nextSchedule =
+    Object.prototype.hasOwnProperty.call(req.body as object, "chatbotSchedule")
+      ? validateChatbotSchedule(
+          (req.body as any).chatbotSchedule,
+          String((company as any).timezone || "America/Sao_Paulo")
+        )
+      : ((company as any).chatbotSchedule ?? null);
+
+  await company.update({
+    chatbotDisabled: nextDisabled,
+    chatbotScheduleEnabled: nextScheduleEnabled,
+    chatbotSchedule: nextSchedule
+  });
+
+  return res.status(200).json({
+    chatbotDisabled: Boolean((company as any).chatbotDisabled),
+    chatbotScheduleEnabled: Boolean((company as any).chatbotScheduleEnabled),
+    chatbotSchedule: (company as any).chatbotSchedule ?? null,
+    timezone: (company as any).timezone ?? "America/Sao_Paulo"
+  });
 };
 
 export const recalculateCompanyStorage = async (

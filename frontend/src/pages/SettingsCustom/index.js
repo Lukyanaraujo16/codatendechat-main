@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useLocation, useHistory, Link as RouterLink } from "react-router-dom";
 import MainContainer from "../../components/MainContainer";
-import { Box, Button, makeStyles, Paper, Tabs, Tab, Typography } from "@material-ui/core";
+import {
+  Box,
+  Button,
+  makeStyles,
+  Paper,
+  Tabs,
+  Tab,
+  Typography,
+  Switch,
+  FormControlLabel,
+  TextField,
+} from "@material-ui/core";
 import PermMediaIcon from "@material-ui/icons/PermMedia";
 import { AppPageHeader, AppSectionCard } from "../../ui";
 import Alert from "@material-ui/lab/Alert";
@@ -22,6 +33,8 @@ import OnlyForSuperUser from "../../components/OnlyForSuperUser";
 import CompanyTimezoneSettings from "../../components/CompanyTimezoneSettings";
 import CompanyCrmVisibilitySettings from "../../components/CompanyCrmVisibilitySettings";
 import PushNotificationPreferences from "../../components/PushNotificationPreferences";
+import api from "../../services/api";
+import toastError from "../../errors/toastError";
 
 const PLATFORM_QUICK_LINKS = [
   { to: "/saas/companies", labelKey: "platform.tabs.companies" },
@@ -117,6 +130,11 @@ const SettingsCustom = () => {
   const [currentUser, setCurrentUser] = useState({});
   const [settings, setSettings] = useState({});
   const [schedulesEnabled, setSchedulesEnabled] = useState(false);
+  const [chatbotControl, setChatbotControl] = useState(null);
+  const [chatbotControlLoading, setChatbotControlLoading] = useState(false);
+  const [chatbotControlSaving, setChatbotControlSaving] = useState(false);
+  const [chatbotWeekdayStart, setChatbotWeekdayStart] = useState("08:00");
+  const [chatbotWeekdayEnd, setChatbotWeekdayEnd] = useState("18:00");
 
   const { getCurrentUserInfo } = useContext(AuthContext);
   const { find, updateSchedules } = useCompanies();
@@ -170,6 +188,69 @@ const SettingsCustom = () => {
     if (!allowed.includes(t)) return;
     setTab(t);
   }, [location.search]);
+
+  useEffect(() => {
+    const canEdit =
+      currentUser?.profile === "admin" || currentUser?.supportMode === true;
+    if (!canEdit || !company?.id) return;
+    let cancelled = false;
+    setChatbotControlLoading(true);
+    api
+      .get("/companies/chatbot-control")
+      .then(({ data }) => {
+        if (cancelled) return;
+        setChatbotControl(data || null);
+        const mon = data?.chatbotSchedule?.days?.mon?.[0];
+        if (mon?.start) setChatbotWeekdayStart(String(mon.start));
+        if (mon?.end) setChatbotWeekdayEnd(String(mon.end));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setChatbotControl(null);
+        toastError(err);
+      })
+      .finally(() => {
+        if (!cancelled) setChatbotControlLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [company?.id, currentUser?.profile, currentUser?.supportMode]);
+
+  const handleSaveChatbotControl = async () => {
+    if (!company?.id) return;
+    setChatbotControlSaving(true);
+    try {
+      const enabled = Boolean(chatbotControl?.chatbotScheduleEnabled);
+      const schedule =
+        enabled
+          ? {
+              timezone: chatbotControl?.timezone || company?.timezone,
+              days: {
+                mon: [{ start: chatbotWeekdayStart, end: chatbotWeekdayEnd }],
+                tue: [{ start: chatbotWeekdayStart, end: chatbotWeekdayEnd }],
+                wed: [{ start: chatbotWeekdayStart, end: chatbotWeekdayEnd }],
+                thu: [{ start: chatbotWeekdayStart, end: chatbotWeekdayEnd }],
+                fri: [{ start: chatbotWeekdayStart, end: chatbotWeekdayEnd }],
+                sat: [],
+                sun: [],
+              },
+            }
+          : null;
+
+      const { data } = await api.put("/companies/chatbot-control", {
+        chatbotDisabled: Boolean(chatbotControl?.chatbotDisabled),
+        chatbotScheduleEnabled: enabled,
+        chatbotSchedule: schedule,
+      });
+      setChatbotControl(data || null);
+      toast.success(i18n.t("settings.chatbotControl.toasts.saved"));
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setChatbotControlSaving(false);
+    }
+  };
 
   const handleTabChange = (event, newValue) => {
       async function findData() {
@@ -286,6 +367,99 @@ const SettingsCustom = () => {
                     {i18n.t("settings.mediaManagerCard.openButton")}
                   </Button>
                 </Box>
+              </Box>
+            </AppSectionCard>
+          </Box>
+        ) : null}
+
+        {(currentUser?.profile === "admin" || currentUser?.supportMode === true) &&
+        company?.id ? (
+          <Box className={classes.pageContextWrap}>
+            <AppSectionCard>
+              <Typography className={classes.superCardTitle} component="h2">
+                {i18n.t("settings.chatbotControl.title")}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" style={{ lineHeight: 1.5, margin: 0 }}>
+                {i18n.t("settings.chatbotControl.description")}
+              </Typography>
+
+              <Box mt={2}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      color="primary"
+                      checked={Boolean(chatbotControl?.chatbotDisabled)}
+                      onChange={(e) =>
+                        setChatbotControl((prev) => ({
+                          ...(prev || {}),
+                          chatbotDisabled: e.target.checked,
+                        }))
+                      }
+                      disabled={chatbotControlLoading}
+                    />
+                  }
+                  label={i18n.t("settings.chatbotControl.disableCompany")}
+                />
+              </Box>
+
+              <Box mt={1}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      color="primary"
+                      checked={Boolean(chatbotControl?.chatbotScheduleEnabled)}
+                      onChange={(e) =>
+                        setChatbotControl((prev) => ({
+                          ...(prev || {}),
+                          chatbotScheduleEnabled: e.target.checked,
+                        }))
+                      }
+                      disabled={chatbotControlLoading}
+                    />
+                  }
+                  label={i18n.t("settings.chatbotControl.enableSchedule")}
+                />
+              </Box>
+
+              {Boolean(chatbotControl?.chatbotScheduleEnabled) && (
+                <Box mt={1} display="flex" flexWrap="wrap" gridGap={12}>
+                  <TextField
+                    label={i18n.t("settings.chatbotControl.weekdayStart")}
+                    type="time"
+                    value={chatbotWeekdayStart}
+                    onChange={(e) => setChatbotWeekdayStart(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
+                    variant="outlined"
+                    size="small"
+                  />
+                  <TextField
+                    label={i18n.t("settings.chatbotControl.weekdayEnd")}
+                    type="time"
+                    value={chatbotWeekdayEnd}
+                    onChange={(e) => setChatbotWeekdayEnd(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
+                    variant="outlined"
+                    size="small"
+                  />
+                  <Typography variant="caption" color="textSecondary" style={{ alignSelf: "center" }}>
+                    {i18n.t("settings.chatbotControl.weekdaysHint")}
+                  </Typography>
+                </Box>
+              )}
+
+              <Box mt={2}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleSaveChatbotControl}
+                  disabled={chatbotControlSaving || chatbotControlLoading}
+                >
+                  {chatbotControlSaving
+                    ? i18n.t("settings.chatbotControl.buttons.saving")
+                    : i18n.t("settings.chatbotControl.buttons.save")}
+                </Button>
               </Box>
             </AppSectionCard>
           </Box>
