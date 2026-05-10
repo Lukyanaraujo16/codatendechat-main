@@ -191,6 +191,10 @@ const ScheduleModal = ({
 
 	const [schedule, setSchedule] = useState(initialState);
 	const [contacts, setContacts] = useState([initialContact]);
+	/** Texto digitado no Autocomplete — separado do valor selecionado (evita apagar ao re-render / flush do MUI). */
+	const [contactSearchInput, setContactSearchInput] = useState("");
+	/** Só monta o Formik depois de contacts + schedule finais (evita enableReinitialize no meio da digitação). */
+	const [scheduleHydrated, setScheduleHydrated] = useState(false);
 	const [attachment, setAttachment] = useState(null);
 	const attachmentFile = useRef(null);
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
@@ -212,25 +216,30 @@ const ScheduleModal = ({
 	}, [open]);
 
 	useEffect(() => {
-		if (!open) return;
+		if (!open) {
+			setScheduleHydrated(false);
+			setContactSearchInput("");
+			return;
+		}
+
+		let cancelled = false;
 		const effectiveCompanyId = resolveEffectiveCompanyId(user);
 
 		(async () => {
 			let tz = "America/Sao_Paulo";
 
-			// Timezone da empresa (opcional): não bloquear lista de contatos se falhar.
 			if (effectiveCompanyId != null) {
 				try {
 					const { data: company } = await api.get(`/companies/${effectiveCompanyId}`);
 					tz = company?.timezone || tz;
-					setCompanyTz(tz);
 				} catch (_) {
-					setCompanyTz(tz);
+					/* mantém tz default */
 				}
 			}
+			if (cancelled) return;
+			setCompanyTz(tz);
 
-			// Lista vem sempre do tenant do JWT (req.user.companyId no backend). Não depende
-			// de companyId no contexto React — evita /companies/undefined e falha em cadeia.
+			let contactRows = [{ id: "", name: "" }];
 			try {
 				const { data } = await api.get("/contacts/list");
 				const contactList = normalizeContactListPayload(data);
@@ -238,25 +247,30 @@ const ScheduleModal = ({
 					id: c.id,
 					name: c.name || c.number || String(c.id),
 				}));
-				if (isArray(customList)) {
-					setContacts([{ id: "", name: "" }, ...customList]);
+				if (isArray(customList) && customList.length) {
+					contactRows = [{ id: "", name: "" }, ...customList];
 				}
 			} catch (err) {
 				toastError(err);
-				setContacts([{ id: "", name: "" }]);
 			}
+			if (cancelled) return;
 
 			try {
 				if (!scheduleId) {
+					setContacts(contactRows);
 					setSchedule({
 						...initialState,
 						contactIds: contactId ? [Number(contactId)] : [],
 						sendAt: moment.tz(tz).add(1, "hour").format("YYYY-MM-DDTHH:mm"),
 					});
+					setContactSearchInput("");
+					setScheduleHydrated(true);
 					return;
 				}
 
 				const { data } = await api.get(`/schedules/${scheduleId}`);
+				if (cancelled) return;
+
 				const ids =
 					data.scheduleContacts && data.scheduleContacts.length
 						? data.scheduleContacts.map(sc => sc.contactId)
@@ -265,17 +279,13 @@ const ScheduleModal = ({
 							: [];
 
 				const extra = (data.scheduleContacts || []).map(sc => sc.contact).filter(Boolean);
-				if (extra.length) {
-					setContacts(prev => {
-						const merged = [...prev];
-						extra.forEach(c => {
-							if (c && !merged.find(x => x.id === c.id)) {
-								merged.push({ id: c.id, name: c.name });
-							}
-						});
-						return merged;
-					});
-				}
+				const mergedContacts = [...contactRows];
+				extra.forEach(c => {
+					if (c && !mergedContacts.find(x => x.id === c.id)) {
+						mergedContacts.push({ id: c.id, name: c.name || c.number || String(c.id) });
+					}
+				});
+				setContacts(mergedContacts);
 
 				const sendAtFormatted =
 					data.scheduleType === "recurring" && data.nextRunAt
@@ -297,13 +307,38 @@ const ScheduleModal = ({
 					recurrenceDayOfMonth: data.recurrenceDayOfMonth || 1,
 					timeToSend: data.timeToSend || "09:00",
 				});
+				setContactSearchInput("");
+				setScheduleHydrated(true);
 			} catch (err) {
 				toastError(err);
+				if (!cancelled && scheduleId) {
+					setContacts(contactRows);
+					setScheduleHydrated(false);
+					setAttachment(null);
+					setSchedule(initialState);
+					setContactSearchInput("");
+					onClose();
+				} else if (!cancelled) {
+					setContacts(contactRows);
+					setSchedule({
+						...initialState,
+						contactIds: contactId ? [Number(contactId)] : [],
+						sendAt: moment.tz(tz).add(1, "hour").format("YYYY-MM-DDTHH:mm"),
+					});
+					setContactSearchInput("");
+					setScheduleHydrated(true);
+				}
 			}
 		})();
+
+		return () => {
+			cancelled = true;
+		};
 	}, [scheduleId, open, contactId, user?.companyId]);
 
 	const handleClose = () => {
+		setContactSearchInput("");
+		setScheduleHydrated(false);
 		onClose();
 		setAttachment(null);
 		setSchedule(initialState);
@@ -446,9 +481,23 @@ const ScheduleModal = ({
 						onChange={e => handleAttachmentFile(e)}
 					/>
 				</div>
+				{!scheduleHydrated ? (
+					<>
+						<AppDialogContent dividers>
+							<div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+								<CircularProgress />
+							</div>
+						</AppDialogContent>
+						<AppDialogActions>
+							<AppNeutralButton type="button" onClick={handleClose}>
+								{i18n.t("scheduleModal.buttons.cancel")}
+							</AppNeutralButton>
+						</AppDialogActions>
+					</>
+				) : (
 				<Formik
 					initialValues={schedule}
-					enableReinitialize={true}
+					enableReinitialize={false}
 					validationSchema={buildSchema()}
 					onSubmit={(values, actions) => {
 						setTimeout(() => {
@@ -491,14 +540,22 @@ const ScheduleModal = ({
 											<Autocomplete
 												multiple
 												value={selectedContacts}
+												inputValue={contactSearchInput}
+												onInputChange={(event, newInputValue, reason) => {
+													if (reason === "reset") {
+														return;
+													}
+													setContactSearchInput(newInputValue);
+												}}
 												options={contacts.filter(c => c.id)}
 												onChange={(e, opts) => {
 													setFieldValue(
 														"contactIds",
 														(opts || []).map(o => o.id)
 													);
+													setContactSearchInput("");
 												}}
-												getOptionLabel={option => option.name}
+												getOptionLabel={option => option.name || ""}
 												getOptionSelected={(option, value) => value.id === option.id}
 												renderInput={params => (
 													<TextField
@@ -714,6 +771,7 @@ const ScheduleModal = ({
 						);
 					}}
 				</Formik>
+				)}
 			</AppDialog>
 		</div>
 	);

@@ -24,6 +24,8 @@ import DialogActions from "@material-ui/core/DialogActions";
 import Tooltip from "@material-ui/core/Tooltip";
 import Chip from "@material-ui/core/Chip";
 import LinearProgress from "@material-ui/core/LinearProgress";
+import Switch from "@material-ui/core/Switch";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
 
 import RefreshIcon from "@material-ui/icons/Refresh";
 import ExitToAppIcon from "@material-ui/icons/ExitToApp";
@@ -36,9 +38,11 @@ import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
+import { AuthContext } from "../../context/Auth/AuthContext";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   paper: {
@@ -134,6 +138,7 @@ const GroupManager = () => {
   const classes = useStyles();
   const history = useHistory();
   const { whatsApps, loading: loadingWhats } = useContext(WhatsAppsContext);
+  const { user } = useContext(AuthContext);
 
   const [whatsappId, setWhatsappId] = useState("");
   const [tab, setTab] = useState(0);
@@ -175,6 +180,30 @@ const GroupManager = () => {
     }
   }, [whatsappId]);
 
+  const canManageVisibility = useMemo(() => {
+    return user?.profile === "admin" || user?.profile === "supervisor" || user?.supportMode === true;
+  }, [user]);
+
+  const handleToggleGroupVisible = async (g) => {
+    if (!g?.contactId) return;
+    try {
+      const next = !Boolean(g.groupVisible);
+      await api.put(`/contacts/${g.contactId}/group-visibility`, { groupVisible: next });
+      setGroups((prev) =>
+        (Array.isArray(prev) ? prev : []).map((x) =>
+          x.id === g.id ? { ...x, groupVisible: next } : x
+        )
+      );
+      toast.success(
+        next
+          ? i18n.t("groups.visibility.toastEnabled")
+          : i18n.t("groups.visibility.toastDisabled")
+      );
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   useEffect(() => {
     if (whatsappId) {
       fetchGroups();
@@ -195,7 +224,7 @@ const GroupManager = () => {
 
   const handleOpenConversation = async (g) => {
     if (!whatsappId) {
-      toast.warning("Selecione uma conexão WhatsApp.");
+      toast.warning(i18n.t("groups.manager.selectConnection"));
       return;
     }
     setOpeningGroupId(g.id);
@@ -205,7 +234,7 @@ const GroupManager = () => {
         groupId: g.id,
       });
       if (data?.uuid) {
-        toast.success("Abrindo conversa do grupo…");
+        toast.success(i18n.t("groups.manager.openingConversation"));
         history.push(`/tickets/${data.uuid}?inboxTab=groups`);
       }
     } catch (err) {
@@ -217,7 +246,7 @@ const GroupManager = () => {
 
   const handleCreate = async () => {
     if (!whatsappId) {
-      toast.warning("Selecione uma conexão WhatsApp.");
+      toast.warning(i18n.t("groups.manager.selectConnection"));
       return;
     }
     const lines = createParticipants
@@ -225,7 +254,7 @@ const GroupManager = () => {
       .map((s) => s.trim())
       .filter(Boolean);
     if (!createName.trim() || lines.length < 1) {
-      toast.warning("Informe o nome do grupo e pelo menos um número.");
+      toast.warning(i18n.t("groups.manager.createMissingFields"));
       return;
     }
     setCreating(true);
@@ -235,7 +264,7 @@ const GroupManager = () => {
         name: createName.trim(),
         participants: lines,
       });
-      toast.success("Grupo criado com sucesso.");
+      toast.success(i18n.t("groups.manager.createSuccess"));
       setCreateName("");
       setCreateParticipants("");
       setTab(0);
@@ -249,11 +278,11 @@ const GroupManager = () => {
 
   const handleJoin = async () => {
     if (!whatsappId) {
-      toast.warning("Selecione uma conexão WhatsApp.");
+      toast.warning(i18n.t("groups.manager.selectConnection"));
       return;
     }
     if (!inviteInput.trim()) {
-      toast.warning("Cole o link ou o código do convite.");
+      toast.warning(i18n.t("groups.manager.inviteRequired"));
       return;
     }
     setJoining(true);
@@ -262,7 +291,7 @@ const GroupManager = () => {
         whatsappId: Number(whatsappId),
         inviteCode: inviteInput.trim(),
       });
-      toast.success("Entrada no grupo processada.");
+      toast.success(i18n.t("groups.manager.joinSuccess"));
       setInviteInput("");
       setTab(0);
       await fetchGroups();
@@ -282,7 +311,7 @@ const GroupManager = () => {
         whatsappId: Number(whatsappId),
         groupId: g.id,
       });
-      toast.success("Você saiu do grupo.");
+      toast.success(i18n.t("groups.manager.leaveSuccess"));
       setLeaveModal({ open: false, group: null });
       await fetchGroups();
     } catch (err) {
@@ -411,32 +440,32 @@ const GroupManager = () => {
                 onClick={fetchGroups}
                 disabled={!whatsappId || loadingList}
               >
-                Atualizar
+                {i18n.t("groups.manager.refresh")}
               </Button>
             </Box>
             {whatsappId && loadingList && (
               <Box mb={2}>
                 <LinearProgress />
                 <Typography variant="caption" color="textSecondary" paragraph style={{ marginTop: 8 }}>
-                  Carregando grupos da conexão…
+                  {i18n.t("groups.manager.loading")}
                 </Typography>
               </Box>
             )}
             {!whatsappId && (
               <div className={classes.emptyWrap}>
                 <GroupIcon className={classes.emptyIcon} />
-                <Typography variant="body1">Selecione uma conexão WhatsApp conectada</Typography>
+                <Typography variant="body1">{i18n.t("groups.manager.emptySelectTitle")}</Typography>
                 <Typography variant="body2" style={{ marginTop: 8 }}>
-                  Depois você verá os grupos em que esta sessão participa.
+                  {i18n.t("groups.manager.emptySelectSubtitle")}
                 </Typography>
               </div>
             )}
             {whatsappId && !loadingList && filteredGroups.length === 0 && (
               <div className={classes.emptyWrap}>
                 <ForumIcon className={classes.emptyIcon} />
-                <Typography variant="body1">Nenhum grupo encontrado</Typography>
+                <Typography variant="body1">{i18n.t("groups.manager.emptyNoGroupsTitle")}</Typography>
                 <Typography variant="body2" style={{ marginTop: 8 }}>
-                  Tente &quot;Atualizar&quot;, confira a busca ou verifique se a sessão está conectada e participa de grupos.
+                  {i18n.t("groups.manager.emptyNoGroupsSubtitle")}
                 </Typography>
               </div>
             )}
@@ -449,18 +478,42 @@ const GroupManager = () => {
                         {g.name || "—"}
                       </Typography>
                       <div className={classes.cardMeta}>
-                        <Chip size="small" label={`${g.participantCount ?? 0} participantes`} variant="outlined" />
-                        <Chip size="small" label={`${g.adminCount ?? 0} admins`} variant="outlined" />
+                        <Chip size="small" label={i18n.t("groups.manager.participantsChip", { count: g.participantCount ?? 0 })} variant="outlined" />
+                        <Chip size="small" label={i18n.t("groups.manager.adminsChip", { count: g.adminCount ?? 0 })} variant="outlined" />
+                        {canManageVisibility && g.groupVisible !== true ? (
+                          <Chip size="small" color="default" label={i18n.t("groups.visibility.hiddenChip")} variant="outlined" />
+                        ) : null}
                       </div>
                       <Typography className={classes.adminLine}>{renderAdminSummary(g)}</Typography>
                       <Tooltip title={g.id || ""} placement="top">
                         <Typography className={classes.jidHint} component="div">
                           <InfoOutlinedIcon fontSize="inherit" />
-                          <span>Passe o mouse para ver o ID do grupo (uso interno)</span>
+                          <span>{i18n.t("groups.manager.idHint")}</span>
                         </Typography>
                       </Tooltip>
                     </CardContent>
                     <CardActions style={{ padding: "8px 16px 16px", flexWrap: "wrap", gap: 8 }}>
+                      {canManageVisibility && (
+                        <Tooltip
+                          title={
+                            g.groupVisible
+                              ? i18n.t("groups.visibility.hideTooltip")
+                              : i18n.t("groups.visibility.showTooltip")
+                          }
+                        >
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                color="primary"
+                                checked={Boolean(g.groupVisible)}
+                                onChange={() => handleToggleGroupVisible(g)}
+                                disabled={!g.contactId}
+                              />
+                            }
+                            label={i18n.t("groups.visibility.label")}
+                          />
+                        </Tooltip>
+                      )}
                       <Button
                         size="small"
                         variant="contained"
@@ -475,7 +528,7 @@ const GroupManager = () => {
                         onClick={() => handleOpenConversation(g)}
                         disabled={loadingList || openingGroupId === g.id}
                       >
-                        Abrir conversa
+                        {i18n.t("groups.manager.openConversation")}
                       </Button>
                       <Button
                         size="small"
@@ -485,7 +538,7 @@ const GroupManager = () => {
                         onClick={() => setLeaveModal({ open: true, group: g })}
                         disabled={loadingList || !!openingGroupId}
                       >
-                        Sair
+                        {i18n.t("groups.manager.leave")}
                       </Button>
                     </CardActions>
                   </Card>

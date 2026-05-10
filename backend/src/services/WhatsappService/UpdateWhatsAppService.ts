@@ -30,6 +30,7 @@ interface WhatsappData {
   flowIdWelcome?: number;
   flowIdNotPhrase?: number;
   autoReadMessages?: boolean;
+  defaultGroupVisible?: boolean;
 }
 
 interface Request {
@@ -77,7 +78,8 @@ const UpdateWhatsAppService = async ({
     integrationId,
     flowIdWelcome,
     flowIdNotPhrase,
-    autoReadMessages
+    autoReadMessages,
+    defaultGroupVisible
   } = whatsappData;
 
   try {
@@ -165,6 +167,9 @@ const UpdateWhatsAppService = async ({
   }
   if (autoReadMessages !== undefined) {
     updateData.autoReadMessages = autoReadMessages;
+  }
+  if (defaultGroupVisible !== undefined) {
+    updateData.defaultGroupVisible = Boolean(defaultGroupVisible);
   }
 
   await whatsapp.update(updateData);

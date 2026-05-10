@@ -11,6 +11,38 @@ const messages = {
         blockedBody:
           "Este recurso no está incluido en su plan. Contacte al administrador de la plataforma para más opciones.",
       },
+      groups: {
+        manager: {
+          selectConnection: "Seleccione una conexión de WhatsApp.",
+          openingConversation: "Abriendo conversación del grupo…",
+          createMissingFields: "Indique el nombre del grupo y al menos un número.",
+          createSuccess: "Grupo creado con éxito.",
+          inviteRequired: "Pegue el enlace o el código de invitación.",
+          joinSuccess: "Entrada al grupo procesada.",
+          leaveSuccess: "Has salido del grupo.",
+          refresh: "Actualizar",
+          loading: "Cargando grupos de la conexión…",
+          emptySelectTitle: "Seleccione una conexión de WhatsApp conectada",
+          emptySelectSubtitle:
+            "Luego verás los grupos en los que participa esta sesión.",
+          emptyNoGroupsTitle: "No se encontraron grupos",
+          emptyNoGroupsSubtitle:
+            "Pruebe “Actualizar”, revise la búsqueda o verifique que la sesión esté conectada y participe en grupos.",
+          participantsChip: "{{count}} participantes",
+          adminsChip: "{{count}} admins",
+          idHint: "Pase el mouse para ver el ID del grupo (uso interno)",
+          openConversation: "Abrir conversación",
+          leave: "Salir",
+        },
+        visibility: {
+          label: "Visible para usuarios",
+          showTooltip: "Permitir grupo para usuarios",
+          hideTooltip: "Ocultar grupo de los usuarios",
+          hiddenChip: "Oculto para usuarios",
+          toastEnabled: "El grupo ahora es visible para los usuarios.",
+          toastDisabled: "El grupo ahora está oculto para los usuarios.",
+        },
+      },
       crm: {
         common: { cancel: "Cancelar", save: "Guardar" },
         summary: {
@@ -1225,6 +1257,11 @@ const messages = {
           autoReadMessages: "Enviar lectura en WhatsApp al ver el chat en el panel",
           autoReadMessagesHint:
             "Si está activo, al cargar la lista de mensajes del ticket en el panel (vista humana), el sistema envía la lectura a WhatsApp. Automatizaciones y la API de mensajes no la disparan. Si está desactivado, los no leídos locales se reinician, pero el cliente no verá las dobles azules desde esta sesión.",
+          defaultGroupVisible: "Nuevos grupos visibles para usuarios por defecto",
+          defaultGroupVisibleHint:
+            "Cuando está activo, los nuevos grupos encontrados en esta conexión serán visibles automáticamente para usuarios comunes. Aún podrás cambiar la visibilidad de cada grupo en la Gestión de Grupos.",
+          defaultGroupVisibleExistingHint:
+            "Los grupos existentes no serán modificados. Para cambiar grupos ya guardados, use la Gestión de Grupos.",
         },
         buttons: {
           okAdd: "Agregar",

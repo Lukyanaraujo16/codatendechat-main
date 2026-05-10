@@ -86,6 +86,11 @@ class Whatsapp extends Model<Whatsapp> {
   @Column
   autoReadMessages: boolean;
 
+  /** Se true, novos grupos (contatos isGroup) criados por esta conexão já nascem visíveis para usuários comuns. */
+  @Default(false)
+  @Column
+  defaultGroupVisible: boolean;
+
   @CreatedAt
   createdAt: Date;
 

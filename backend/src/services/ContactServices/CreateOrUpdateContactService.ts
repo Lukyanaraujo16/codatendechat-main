@@ -11,6 +11,8 @@ interface Request {
   name: string;
   number: string;
   isGroup: boolean;
+  /** Apenas para grupos: controla visibilidade inicial para usuários comuns. */
+  groupVisible?: boolean;
   email?: string;
   profilePicUrl?: string;
   companyId: number;
@@ -23,6 +25,7 @@ const CreateOrUpdateContactService = async ({
   number: rawNumber,
   profilePicUrl,
   isGroup,
+  groupVisible,
   email = "",
   companyId,
   extraInfo = [],
@@ -59,6 +62,7 @@ const CreateOrUpdateContactService = async ({
       profilePicUrl,
       email,
       isGroup,
+      ...(isGroup && groupVisible !== undefined ? { groupVisible: Boolean(groupVisible) } : {}),
       extraInfo,
       companyId,
       whatsappId

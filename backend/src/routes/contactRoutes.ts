@@ -46,6 +46,12 @@ contactRoutes.delete("/contacts/:contactId", isAuth, ContactController.remove);
 
 contactRoutes.put("/contacts/:contactId/chatbot", isAuth, ContactController.updateChatbotForContact);
 
+contactRoutes.put(
+  "/contacts/:contactId/group-visibility",
+  isAuth,
+  ContactController.updateGroupVisibilityForContact
+);
+
 contactRoutes.put("/contacts/toggleDisableBot/:contactId", isAuth, ContactController.toggleDisableBot);
 
 export default contactRoutes;

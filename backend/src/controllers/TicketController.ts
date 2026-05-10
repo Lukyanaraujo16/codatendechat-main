@@ -61,7 +61,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   } = req.query as IndexQuery;
 
   const userId = req.user.id;
-  const { companyId } = req.user;
+  const { companyId, profile, supportMode } = req.user;
 
   let queueIds: number[] = [];
   let tagsIds: number[] = [];
@@ -92,7 +92,9 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     queueIds,
     withUnreadMessages,
     companyId,
-    isGroup
+    isGroup,
+    userProfile: profile,
+    supportMode
   });
   return res.status(200).json({ tickets, count, hasMore });
 };
@@ -139,7 +141,7 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
 
 
   const userId = req.user.id;
-  const { companyId } = req.user;
+  const { companyId, profile, supportMode } = req.user;
 
   let queueIds: number[] = [];
   let tagsIds: number[] = [];
@@ -169,7 +171,9 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
     userId,
     queueIds,
     withUnreadMessages,
-    companyId
+    companyId,
+    userProfile: profile,
+    supportMode
 
   });
 
@@ -178,10 +182,20 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
-  const { companyId } = req.user;
+  const { companyId, profile, supportMode } = req.user;
 
-  const contact = await ShowTicketService(ticketId, companyId);
-  return res.status(200).json(contact);
+  const ticket = await ShowTicketService(ticketId, companyId);
+
+  const privileged =
+    profile === "admin" || profile === "supervisor" || supportMode === true;
+  if (!privileged && ticket.isGroup === true) {
+    const gv = (ticket.contact as any)?.groupVisible;
+    if (gv !== true) {
+      throw new AppError("ERR_GROUP_NOT_VISIBLE", 403);
+    }
+  }
+
+  return res.status(200).json(ticket);
 };
 
 export const showFromUUID = async (
@@ -191,6 +205,16 @@ export const showFromUUID = async (
   const { uuid } = req.params;
 
   const ticket: Ticket = await ShowTicketUUIDService(uuid);
+
+  const { profile, supportMode, companyId } = req.user;
+  const privileged =
+    profile === "admin" || profile === "supervisor" || supportMode === true;
+  if (!privileged && ticket.companyId === companyId && (ticket as any).isGroup === true) {
+    const gv = (ticket as any)?.contact?.groupVisible;
+    if (gv !== true) {
+      throw new AppError("ERR_GROUP_NOT_VISIBLE", 403);
+    }
+  }
 
   return res.status(200).json(ticket);
 };

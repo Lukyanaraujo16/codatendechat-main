@@ -82,6 +82,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     ratingMessage: "",
     isDefault: false,
     autoReadMessages: true,
+    defaultGroupVisible: false,
     token: "",
     provider: "beta",
     //timeSendQueue: 0,
@@ -351,6 +352,25 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                       />
                       <Typography variant="caption" color="textSecondary" display="block">
                         {i18n.t("whatsappModal.form.autoReadMessagesHint")}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControlLabel
+                        control={
+                          <Field
+                            as={Switch}
+                            color="primary"
+                            name="defaultGroupVisible"
+                            checked={values.defaultGroupVisible === true}
+                          />
+                        }
+                        label={i18n.t("whatsappModal.form.defaultGroupVisible")}
+                      />
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        {i18n.t("whatsappModal.form.defaultGroupVisibleHint")}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        {i18n.t("whatsappModal.form.defaultGroupVisibleExistingHint")}
                       </Typography>
                     </Grid>
                   </Grid>

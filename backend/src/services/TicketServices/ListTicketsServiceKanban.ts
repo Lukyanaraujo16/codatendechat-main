@@ -28,6 +28,8 @@ interface Request {
   tags: number[];
   users: number[];
   companyId: number;
+  userProfile?: string;
+  supportMode?: boolean;
 }
 
 interface Response {
@@ -48,16 +50,31 @@ const ListTicketsServiceKanban = async ({
   showAll,
   userId,
   withUnreadMessages,
-  companyId
+  companyId,
+  userProfile,
+  supportMode
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"];
   let includeCondition: Includeable[];
+
+  const privileged =
+    userProfile === "admin" || userProfile === "supervisor" || supportMode === true;
 
   includeCondition = [
     {
       model: Contact,
       as: "contact",
-      attributes: ["id", "name", "number", "email"]
+      attributes: ["id", "name", "number", "email", "isGroup", "groupVisible"],
+      ...(privileged
+        ? {}
+        : {
+            where: {
+              [Op.or]: [
+                { isGroup: false },
+                { isGroup: true, groupVisible: true }
+              ]
+            }
+          })
     },
     {
       model: Queue,

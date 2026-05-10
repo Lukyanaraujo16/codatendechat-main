@@ -11,6 +11,37 @@ const messages = {
 				blockedBody:
 					"This feature is not included in your plan. Contact your platform administrator for upgrade options.",
 			},
+			groups: {
+				manager: {
+					selectConnection: "Select a WhatsApp connection.",
+					openingConversation: "Opening group conversation…",
+					createMissingFields: "Enter a group name and at least one number.",
+					createSuccess: "Group created successfully.",
+					inviteRequired: "Paste the invite link or code.",
+					joinSuccess: "Group join processed.",
+					leaveSuccess: "You left the group.",
+					refresh: "Refresh",
+					loading: "Loading groups from the connection…",
+					emptySelectTitle: "Select a connected WhatsApp connection",
+					emptySelectSubtitle: "Then you’ll see the groups this session participates in.",
+					emptyNoGroupsTitle: "No groups found",
+					emptyNoGroupsSubtitle:
+						"Try “Refresh”, check your search, or verify the session is connected and participates in groups.",
+					participantsChip: "{{count}} participants",
+					adminsChip: "{{count}} admins",
+					idHint: "Hover to see the group ID (internal use)",
+					openConversation: "Open conversation",
+					leave: "Leave",
+				},
+				visibility: {
+					label: "Visible to users",
+					showTooltip: "Allow group for users",
+					hideTooltip: "Hide group from users",
+					hiddenChip: "Hidden from users",
+					toastEnabled: "Group is now visible to users.",
+					toastDisabled: "Group is now hidden from users.",
+				},
+			},
 			crm: {
 				common: { cancel: "Cancel", save: "Save" },
 				summary: {
@@ -1216,9 +1247,14 @@ const messages = {
 					tokenCopied: "Token copied!",
 					tokenCreatedTitle: "API Token created",
 					tokenCreatedMessage: "Save this token in a safe place. Use it on the Messages API page to send messages through this connection.",
-					autoReadMessages: "Send WhatsApp read receipt when viewing the chat in the panel",
+					autoReadMessages: "Send read receipts on WhatsApp when viewing the chat in the panel",
 					autoReadMessagesHint:
-						"When enabled, loading the ticket message list in the panel (human view) sends a read receipt to WhatsApp. Automations and the messages API do not trigger it. When disabled, local unread counts still clear, but the customer will not see blue ticks from this session.",
+						"When enabled, when loading the ticket message list in the panel (human view), the system sends a read receipt to WhatsApp. Automations and API calls do not trigger it. When disabled, the panel still clears local unread count, but the customer won’t see the blue ticks from this session.",
+					defaultGroupVisible: "New groups visible to users by default",
+					defaultGroupVisibleHint:
+						"When enabled, new groups found on this connection will automatically be visible to regular users. You can still change each group’s visibility in Group Management.",
+					defaultGroupVisibleExistingHint:
+						"Existing groups will not be changed. To update already saved groups, use Group Management.",
 				},
 				buttons: {
 					okAdd: "Add",

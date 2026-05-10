@@ -5,9 +5,15 @@ import { FindOptions, Op } from "sequelize";
 export interface SearchContactParams {
   companyId: string | number;
   name?: string;
+  /** Quando false, oculta grupos não liberados para usuários comuns. */
+  includeHiddenGroups?: boolean;
 }
 
-const SimpleListService = async ({ name, companyId }: SearchContactParams): Promise<Contact[]> => {
+const SimpleListService = async ({
+  name,
+  companyId,
+  includeHiddenGroups = true
+}: SearchContactParams): Promise<Contact[]> => {
   let options: FindOptions = {
     order: [
       ['name', 'ASC']
@@ -24,7 +30,15 @@ const SimpleListService = async ({ name, companyId }: SearchContactParams): Prom
 
   options.where = {
     ...options.where,
-    companyId
+    companyId,
+    ...(includeHiddenGroups
+      ? {}
+      : {
+          [Op.or]: [
+            { isGroup: false },
+            { isGroup: true, groupVisible: true }
+          ]
+        })
   }
 
   const contacts = await Contact.findAll(options);

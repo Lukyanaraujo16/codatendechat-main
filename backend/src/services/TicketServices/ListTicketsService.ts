@@ -33,6 +33,8 @@ interface Request {
   companyId: number;
   /** "true" = só tickets de grupo; omitido/"false" = exclui grupos das listas normais */
   isGroup?: string;
+  userProfile?: string;
+  supportMode?: boolean;
 }
 
 interface Response {
@@ -54,7 +56,9 @@ const ListTicketsService = async ({
   userId,
   withUnreadMessages,
   companyId,
-  isGroup
+  isGroup,
+  userProfile,
+  supportMode
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"];
 
@@ -73,11 +77,24 @@ const ListTicketsService = async ({
 
   let includeCondition: Includeable[];
 
+  const privileged =
+    userProfile === "admin" || userProfile === "supervisor" || supportMode === true;
+
   includeCondition = [
     {
       model: Contact,
       as: "contact",
-      attributes: ["id", "name", "number", "email", "profilePicUrl"]
+      attributes: ["id", "name", "number", "email", "profilePicUrl", "isGroup", "groupVisible"],
+      ...(privileged
+        ? {}
+        : {
+            where: {
+              [Op.or]: [
+                { isGroup: false },
+                { isGroup: true, groupVisible: true }
+              ]
+            }
+          })
     },
     {
       model: Queue,

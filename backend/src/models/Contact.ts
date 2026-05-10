@@ -48,6 +48,11 @@ class Contact extends Model<Contact> {
   @Column
   isGroup: boolean;
 
+  /** Se true (e isGroup=true), usuários comuns podem visualizar/atender o grupo. */
+  @Default(false)
+  @Column
+  groupVisible: boolean;
+
   @Default(false)
   @Column
   disableBot: boolean;

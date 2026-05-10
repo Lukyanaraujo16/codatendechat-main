@@ -11,6 +11,38 @@ const messages = {
         blockedBody:
           "Este recurso não está disponível no seu plano. Contacte o administrador da plataforma para mais opções.",
       },
+      groups: {
+        manager: {
+          selectConnection: "Selecione uma conexão WhatsApp.",
+          openingConversation: "Abrindo conversa do grupo…",
+          createMissingFields: "Informe o nome do grupo e pelo menos um número.",
+          createSuccess: "Grupo criado com sucesso.",
+          inviteRequired: "Cole o link ou o código do convite.",
+          joinSuccess: "Entrada no grupo processada.",
+          leaveSuccess: "Você saiu do grupo.",
+          refresh: "Atualizar",
+          loading: "Carregando grupos da conexão…",
+          emptySelectTitle: "Selecione uma conexão WhatsApp conectada",
+          emptySelectSubtitle:
+            "Depois você verá os grupos em que esta sessão participa.",
+          emptyNoGroupsTitle: "Nenhum grupo encontrado",
+          emptyNoGroupsSubtitle:
+            "Tente “Atualizar”, confira a busca ou verifique se a sessão está conectada e participa de grupos.",
+          participantsChip: "{{count}} participantes",
+          adminsChip: "{{count}} admins",
+          idHint: "Passe o mouse para ver o ID do grupo (uso interno)",
+          openConversation: "Abrir conversa",
+          leave: "Sair",
+        },
+        visibility: {
+          label: "Visível para usuários",
+          showTooltip: "Liberar grupo para usuários",
+          hideTooltip: "Ocultar grupo dos usuários",
+          hiddenChip: "Oculto para usuários",
+          toastEnabled: "Grupo liberado para usuários.",
+          toastDisabled: "Grupo oculto para usuários.",
+        },
+      },
       crm: {
         common: {
           cancel: "Cancelar",
@@ -1298,6 +1330,11 @@ const messages = {
           autoReadMessages: "Enviar visto no WhatsApp ao visualizar a conversa no painel",
           autoReadMessagesHint:
             "Quando ativo, ao carregar a lista de mensagens do ticket no painel (visualização humana), o sistema envia confirmação de leitura ao WhatsApp. Automações e API não disparam o visto. Desligado: o painel continua zerando não lidas localmente, mas o cliente não recebe os dois risquinhos azuis.",
+          defaultGroupVisible: "Novos grupos visíveis para usuários por padrão",
+          defaultGroupVisibleHint:
+            "Quando ativado, novos grupos encontrados nesta conexão ficarão visíveis para usuários comuns automaticamente. Você ainda poderá alterar a visibilidade de cada grupo na Gestão de Grupos.",
+          defaultGroupVisibleExistingHint:
+            "Grupos existentes não serão alterados. Para alterar grupos já salvos, use a Gestão de Grupos.",
         },
         buttons: {
           okAdd: "Adicionar",

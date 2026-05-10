@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { Boom } from "@hapi/boom";
 import AppError from "../errors/AppError";
 import { getWbot } from "../libs/wbot";
+import Contact from "../models/Contact";
+import Whatsapp from "../models/Whatsapp";
 import GroupOpenConversationService from "../services/GroupServices/GroupOpenConversationService";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import { logger } from "../utils/logger";
@@ -74,16 +76,82 @@ function mapGroupListEntry(id: string, meta: any) {
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
   const { whatsappId } = req.params;
-  const { companyId } = req.user;
+  const { companyId, profile, supportMode } = req.user;
 
   await ShowWhatsAppService(whatsappId, companyId);
 
   try {
     const wbot = getWbot(Number(whatsappId));
     const data = await wbot.groupFetchAllParticipating();
-    const groups = Object.entries(data || {}).map(([jid, meta]) =>
+    const rawGroups = Object.entries(data || {}).map(([jid, meta]) =>
       mapGroupListEntry(jid, meta)
     );
+
+    const privileged =
+      profile === "admin" || profile === "supervisor" || supportMode === true;
+
+    const digitsByJid = new Map<string, string>();
+    rawGroups.forEach(g => {
+      const digits = String(g.id || "").replace(/\D/g, "");
+      if (digits) digitsByJid.set(String(g.id), digits);
+    });
+    const digitsList = Array.from(new Set(Array.from(digitsByJid.values())));
+
+    const contactRows =
+      digitsList.length > 0
+        ? await Contact.findAll({
+            where: { companyId, isGroup: true, number: digitsList },
+            attributes: ["id", "number", "groupVisible"]
+          })
+        : [];
+    const byDigits = new Map<string, { id: number; groupVisible: boolean }>();
+    contactRows.forEach(c => {
+      byDigits.set(String(c.number), { id: c.id, groupVisible: Boolean((c as any).groupVisible) });
+    });
+
+    // Admin/supervisor: garante existência do contato para poder configurar visibilidade.
+    if (privileged && digitsList.length > 0) {
+      const wpp = await Whatsapp.findByPk(Number(whatsappId), {
+        attributes: ["id", "companyId", "defaultGroupVisible"]
+      });
+      const defaultGroupVisible = Boolean((wpp as any)?.defaultGroupVisible);
+      const missing = digitsList.filter(d => !byDigits.has(d));
+      if (missing.length > 0) {
+        const created = await Promise.all(
+          missing.map(async d => {
+            try {
+              const row = await Contact.create({
+                name: d,
+                number: d,
+                isGroup: true,
+                groupVisible: defaultGroupVisible,
+                companyId,
+                whatsappId: Number(whatsappId)
+              } as any);
+              return row;
+            } catch {
+              return null;
+            }
+          })
+        );
+        created.filter(Boolean).forEach((c: any) => {
+          byDigits.set(String(c.number), { id: c.id, groupVisible: Boolean(c.groupVisible) });
+        });
+      }
+    }
+
+    const groups = rawGroups
+      .map(g => {
+        const digits = digitsByJid.get(String(g.id)) || "";
+        const cfg = digits ? byDigits.get(digits) : undefined;
+        return {
+          ...g,
+          contactId: cfg?.id ?? null,
+          groupVisible: cfg?.groupVisible ?? false
+        };
+      })
+      .filter(g => (privileged ? true : g.groupVisible === true));
+
     return res.status(200).json({ groups });
   } catch (err: any) {
     if (err instanceof AppError) {
@@ -177,13 +245,28 @@ export const openConversation = async (
     whatsappId?: number;
     groupId?: string;
   };
-  const { companyId } = req.user;
+  const { companyId, profile, supportMode } = req.user;
 
   if (!whatsappId || !groupId) {
     throw new AppError("ERR_GROUP_OPEN_PARAMS", 400);
   }
 
   try {
+    const privileged =
+      profile === "admin" || profile === "supervisor" || supportMode === true;
+    if (!privileged) {
+      const digits = String(groupId).includes("@g.us")
+        ? String(groupId).replace(/\D/g, "")
+        : String(groupId).replace(/\D/g, "");
+      const groupContact = await Contact.findOne({
+        where: { companyId, isGroup: true, number: digits },
+        attributes: ["id", "groupVisible"]
+      });
+      if (!groupContact || (groupContact as any).groupVisible !== true) {
+        throw new AppError("ERR_GROUP_NOT_VISIBLE", 403);
+      }
+    }
+
     const { uuid } = await GroupOpenConversationService({
       companyId,
       whatsappId: Number(whatsappId),

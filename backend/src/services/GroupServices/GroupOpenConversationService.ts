@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import { getWbot } from "../../libs/wbot";
 import Contact from "../../models/Contact";
+import Whatsapp from "../../models/Whatsapp";
 import CreateOrUpdateContactService from "../ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../TicketServices/FindOrCreateTicketService";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
@@ -39,6 +40,10 @@ const GroupOpenConversationService = async ({
   await ShowWhatsAppService(whatsappId, companyId);
   const wbot = getWbot(whatsappId);
 
+  const whatsappRow = await Whatsapp.findByPk(whatsappId, {
+    attributes: ["id", "companyId", "defaultGroupVisible"]
+  });
+
   let groupContact = await Contact.findOne({
     where: { companyId, isGroup: true, number: digits }
   });
@@ -66,6 +71,7 @@ const GroupOpenConversationService = async ({
       name: subject,
       number: digits,
       isGroup: true,
+      groupVisible: Boolean((whatsappRow as any)?.defaultGroupVisible),
       companyId,
       whatsappId,
       profilePicUrl

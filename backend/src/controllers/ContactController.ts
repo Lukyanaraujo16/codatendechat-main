@@ -285,9 +285,16 @@ export const remove = async (
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
   const { name } = req.query as unknown as SearchContactParams;
-  const { companyId } = req.user;
+  const { companyId, profile, supportMode } = req.user;
 
-  const contacts = await SimpleListService({ name, companyId });
+  const privileged =
+    profile === "admin" || profile === "supervisor" || supportMode === true;
+
+  const contacts = await SimpleListService({
+    name,
+    companyId,
+    includeHiddenGroups: privileged
+  });
 
   return res.json(contacts);
 };
@@ -395,6 +402,47 @@ export const updateChatbotForContact = async (
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
   await contactRow.update({ chatbotDisabled });
+
+  const contact = await ShowContactService(contactId, companyId);
+
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
+    action: "update",
+    contact
+  });
+
+  return res.status(200).json(contact);
+};
+
+export const updateGroupVisibilityForContact = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId } = req.params;
+  const { companyId, profile, supportMode } = req.user;
+
+  if (profile !== "admin" && profile !== "supervisor" && supportMode !== true) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  const schema = Yup.object().shape({
+    groupVisible: Yup.boolean().required()
+  });
+
+  const { groupVisible } = await schema.validate(req.body, { abortEarly: false });
+
+  const contactRow = await Contact.findByPk(contactId);
+  if (!contactRow) {
+    throw new AppError("ERR_NO_CONTACT_FOUND", 404);
+  }
+  if (contactRow.companyId !== companyId) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+  if (contactRow.isGroup !== true) {
+    throw new AppError("ERR_CONTACT_NOT_GROUP", 400);
+  }
+
+  await contactRow.update({ groupVisible: Boolean(groupVisible) });
 
   const contact = await ShowContactService(contactId, companyId);
 
