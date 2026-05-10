@@ -35,7 +35,8 @@ const ShowTicketUUIDService = async (uuid: string): Promise<Ticket> => {
       {
         model: Whatsapp,
         as: "whatsapp",
-        attributes: ["name"]
+        attributes: ["name", "status"],
+        required: false
       },
       {
         model: Tag,

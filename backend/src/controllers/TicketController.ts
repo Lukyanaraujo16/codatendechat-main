@@ -207,14 +207,26 @@ export const reassignWhatsapp = async (
     return res.status(400).json({ error: "ERR_INVALID_BODY" });
   }
 
-  const ticket = await ReassignOrphanTicketWhatsappService({
-    ticketId: Number(ticketId),
-    companyId,
-    newWhatsappId: Number(whatsappId),
-    actionUserId: id
-  });
-
-  return res.status(200).json(ticket);
+  try {
+    const ticket = await ReassignOrphanTicketWhatsappService({
+      ticketId: Number(ticketId),
+      companyId,
+      newWhatsappId: Number(whatsappId),
+      actionUserId: id
+    });
+    return res.status(200).json(ticket);
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        ticketId: Number(ticketId),
+        companyId,
+        whatsappId
+      },
+      "[TicketMoveError] reassign-whatsapp failed"
+    );
+    throw err;
+  }
 };
 
 export const update = async (
@@ -242,8 +254,6 @@ export const remove = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
   const { companyId } = req.user;
-
-  await ShowTicketService(ticketId, companyId);
 
   const ticket = await DeleteTicketService(ticketId, companyId);
 

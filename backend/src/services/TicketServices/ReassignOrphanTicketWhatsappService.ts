@@ -7,13 +7,9 @@ import Whatsapp from "../../models/Whatsapp";
 import TicketTraking from "../../models/TicketTraking";
 import ShowTicketService from "./ShowTicketService";
 import { logger } from "../../utils/logger";
+import { ticketNeedsWhatsappReassign } from "../../helpers/ticketOrphan";
 
 const CONNECTED = "CONNECTED";
-
-function ticketIsOrphan(ticket: Ticket, linkedWhatsapp: Whatsapp | null): boolean {
-  if (ticket.whatsappId == null) return true;
-  return linkedWhatsapp == null;
-}
 
 interface Request {
   ticketId: number;
@@ -47,11 +43,11 @@ const ReassignOrphanTicketWhatsappService = async ({
         })
       : null;
 
-  if (!ticketIsOrphan(ticket, linkedWhatsapp)) {
+  if (!ticketNeedsWhatsappReassign(ticket, linkedWhatsapp)) {
     throw new AppError(
       "ERR_TICKET_NOT_ORPHAN",
       400,
-      "Só é possível reatribuir conexão em atendimentos sem vínculo ativo com o WhatsApp."
+      "Este ticket já está ligado a uma conexão WhatsApp ativa (CONNECTED)."
     );
   }
 
@@ -84,7 +80,14 @@ const ReassignOrphanTicketWhatsappService = async ({
   }
 
   logger.info(
-    `[TicketOrphan] reassign whatsapp ticketId=${ticket.id} oldWhatsappId=${oldWhatsappId ?? "null"} newWhatsappId=${newWhatsappId} companyId=${companyId} userId=${actionUserId ?? "null"}`
+    {
+      ticketId: ticket.id,
+      oldWhatsappId: oldWhatsappId ?? null,
+      newWhatsappId,
+      companyId,
+      userId: actionUserId ?? null
+    },
+    "[TicketMove] reassign-whatsapp success"
   );
 
   const ticketForEmit = await ShowTicketService(ticketId, companyId);
