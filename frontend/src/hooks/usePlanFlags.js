@@ -109,5 +109,9 @@ export default function usePlanFlags() {
     }
   }, []);
 
-  return flags;
+  return {
+    ...flags,
+    /** Alias explícito: permissões/features do plano já foram carregadas da API. */
+    ready: flags.loaded,
+  };
 }

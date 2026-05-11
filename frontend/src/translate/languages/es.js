@@ -11,6 +11,9 @@ const messages = {
         blockedBody:
           "Este recurso no está incluido en su plan. Contacte al administrador de la plataforma para más opciones.",
       },
+      planFlags: {
+        loadingPermissions: "Cargando permisos…",
+      },
       groups: {
         manager: {
           selectConnection: "Seleccione una conexión de WhatsApp.",

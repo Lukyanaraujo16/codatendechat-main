@@ -2,6 +2,7 @@ import React, { useContext, useMemo } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
 import Box from "@material-ui/core/Box";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import Typography from "@material-ui/core/Typography";
 import { AuthContext } from "../context/Auth/AuthContext";
 import { Can } from "../components/Can";
 import usePlanFlags from "../hooks/usePlanFlags";
@@ -48,10 +49,29 @@ import CrmBoard from "../pages/CRM";
 import CRMReports from "../pages/CRMReports";
 import CrmAutomations from "../pages/CrmAutomations";
 
+function PlanFlagsLoadingState() {
+  return (
+    <Box
+      display="flex"
+      flexDirection="column"
+      justifyContent="center"
+      alignItems="center"
+      minHeight={240}
+      width="100%"
+      px={2}
+    >
+      <CircularProgress size={36} />
+      <Typography variant="body2" color="textSecondary" style={{ marginTop: 12 }}>
+        {i18n.t("planFlags.loadingPermissions")}
+      </Typography>
+    </Box>
+  );
+}
+
 function DashboardRouteGuard() {
   const { user } = useContext(AuthContext);
-  const { loaded, effectiveFeatures } = usePlanFlags();
-  const fx = effectiveFeatures || {};
+  const planFlags = usePlanFlags();
+  const fx = planFlags.effectiveFeatures || {};
   const allowed =
     fx["dashboard.main"] === true || fx["dashboard.reports"] === true;
   return (
@@ -59,24 +79,19 @@ function DashboardRouteGuard() {
       role={user.profile}
       perform="dashboard:view"
       yes={() => {
-        if (!loaded) {
-          return (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-              <CircularProgress size={36} />
-            </Box>
-          );
+        if (!planFlags.loaded) {
+          return <PlanFlagsLoadingState />;
         }
         if (!allowed) return <PlanFeatureBlocked />;
-        return <DashboardModule />;
+        return <DashboardModule planFlags={planFlags} />;
       }}
       no={() => <Redirect to="/tickets" />}
     />
   );
 }
 
-function DashboardModule() {
-  const { effectiveFeatures } = usePlanFlags();
-  const fx = effectiveFeatures || {};
+function DashboardModule({ planFlags }) {
+  const fx = planFlags.effectiveFeatures || {};
   const tabs = useMemo(() => {
     const t = [];
     if (fx["dashboard.main"] === true) {
@@ -131,11 +146,7 @@ function AtendimentoModule({ planFlags, isAdmin }) {
           path="/kanban"
           render={() => {
             if (!planFlags.loaded) {
-              return (
-                <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                  <CircularProgress size={36} />
-                </Box>
-              );
+              return <PlanFlagsLoadingState />;
             }
             return planFlags.useKanban ? <Kanban /> : <PlanFeatureBlocked />;
           }}
@@ -146,11 +157,7 @@ function AtendimentoModule({ planFlags, isAdmin }) {
           path="/group-manager"
           render={() => {
             if (!planFlags.loaded) {
-              return (
-                <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                  <CircularProgress size={36} />
-                </Box>
-              );
+              return <PlanFlagsLoadingState />;
             }
             return isAdmin && planFlags.useGroups ? (
               <GroupManager />
@@ -205,11 +212,7 @@ function AutomacaoModule({ planFlags, isAdmin }) {
   }, [isAdmin, showChatbot, showKeywords, showIntegrations, showOpenAi, showQuickReplies, i18n.language]);
 
   if (!planFlags.loaded) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-        <CircularProgress size={36} />
-      </Box>
-    );
+    return <PlanFlagsLoadingState />;
   }
 
   if (!tabs.length) {
@@ -311,11 +314,7 @@ function EquipeModule({ isAdmin, planFlags }) {
   }, [isAdmin, usersOk, queuesOk, i18n.language]);
 
   if (!planFlags.loaded) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-        <CircularProgress size={36} />
-      </Box>
-    );
+    return <PlanFlagsLoadingState />;
   }
 
   if (isAdmin && !usersOk && !queuesOk) {
@@ -345,7 +344,7 @@ function EquipeModule({ isAdmin, planFlags }) {
   );
 }
 
-function ConfiguracoesModule({ showExternalApi, showMediaManager, showGroupsManager }) {
+function ConfiguracoesModule({ planFlagsLoaded, showExternalApi, showMediaManager, showGroupsManager }) {
   const tabs = useMemo(() => {
     const t = [{ path: "/connections", label: i18n.t("mainDrawer.listItems.connections") }];
     if (showExternalApi) {
@@ -360,6 +359,10 @@ function ConfiguracoesModule({ showExternalApi, showMediaManager, showGroupsMana
     }
     return t;
   }, [showExternalApi, showMediaManager, showGroupsManager, i18n.language]);
+
+  if (!planFlagsLoaded) {
+    return <PlanFlagsLoadingState />;
+  }
 
   return (
     <ModuleTabsLayout tabs={tabs}>
@@ -438,11 +441,7 @@ export default function LoggedInRoutesContent() {
         path="/chats"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return planFlags.useInternalChat ? <Chat /> : <PlanFeatureBlocked />;
         }}
@@ -452,11 +451,7 @@ export default function LoggedInRoutesContent() {
         path="/chats/:id"
         render={(routeProps) => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return planFlags.useInternalChat ? (
             <Chat {...routeProps} />
@@ -474,11 +469,7 @@ export default function LoggedInRoutesContent() {
         path="/agenda"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return fx["agenda.calendar"] === true ? <Agenda /> : <PlanFeatureBlocked />;
         }}
@@ -488,11 +479,7 @@ export default function LoggedInRoutesContent() {
         path="/schedules"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return planFlags.useSchedules ? <Schedules /> : <PlanFeatureBlocked />;
         }}
@@ -500,16 +487,18 @@ export default function LoggedInRoutesContent() {
 
       <Route path={automacaoPaths} render={() => <AutomacaoModule planFlags={planFlags} isAdmin={isAdmin} />} />
 
-      {!planFlags.useCampaigns && (
-        <Route
-          path={["/campaigns", "/contact-lists", "/campaigns-config", "/campaign/:campaignId/report"]}
-          render={() => <PlanFeatureBlocked />}
-        />
-      )}
-
-      {planFlags.useCampaigns && (
-        <Route path={campanhasPaths} render={() => <CampanhasModule />} />
-      )}
+      <Route
+        path={campanhasPaths}
+        render={() => {
+          if (!planFlags.loaded) {
+            return <PlanFlagsLoadingState />;
+          }
+          if (!planFlags.useCampaigns) {
+            return <PlanFeatureBlocked />;
+          }
+          return <CampanhasModule />;
+        }}
+      />
 
       <Route
         path={equipePaths}
@@ -520,6 +509,7 @@ export default function LoggedInRoutesContent() {
         path={configPaths}
         render={() => (
           <ConfiguracoesModule
+            planFlagsLoaded={planFlags.loaded}
             showExternalApi={planFlags.useExternalApi}
             showMediaManager={showMediaManager}
             showGroupsManager={planFlags.useGroups && isPrivileged}
@@ -532,11 +522,7 @@ export default function LoggedInRoutesContent() {
         path="/financeiro"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           const finOk =
             fx["finance.subscription"] === true || fx["finance.invoices"] === true;
@@ -549,11 +535,7 @@ export default function LoggedInRoutesContent() {
         path="/avaliacao"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return fx["team.ratings"] === true ? <Evaluation /> : <PlanFeatureBlocked />;
         }}
@@ -563,11 +545,7 @@ export default function LoggedInRoutesContent() {
         path="/tags"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return fx["contacts.tags"] === true ? <Tags /> : <PlanFeatureBlocked />;
         }}
@@ -577,11 +555,7 @@ export default function LoggedInRoutesContent() {
         path="/files"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return fx["contacts.files"] === true ? <Files /> : <PlanFeatureBlocked />;
         }}
@@ -597,11 +571,7 @@ export default function LoggedInRoutesContent() {
         path="/subscription"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return fx["finance.subscription"] === true ? (
             <Subscription />
@@ -616,11 +586,7 @@ export default function LoggedInRoutesContent() {
         path="/crm/reports"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return fx["crm.pipeline"] === true ? <CRMReports /> : <PlanFeatureBlocked />;
         }}
@@ -631,11 +597,7 @@ export default function LoggedInRoutesContent() {
         path="/crm/automations"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return fx["crm.pipeline"] === true ? <CrmAutomations /> : <PlanFeatureBlocked />;
         }}
@@ -646,11 +608,7 @@ export default function LoggedInRoutesContent() {
         path="/crm"
         render={() => {
           if (!planFlags.loaded) {
-            return (
-              <Box display="flex" justifyContent="center" alignItems="center" minHeight={240} width="100%">
-                <CircularProgress size={36} />
-              </Box>
-            );
+            return <PlanFlagsLoadingState />;
           }
           return fx["crm.pipeline"] === true ? <CrmBoard /> : <PlanFeatureBlocked />;
         }}
