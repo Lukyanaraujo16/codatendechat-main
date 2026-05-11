@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { makeStyles } from "@material-ui/core/styles";
+import { alpha, makeStyles } from "@material-ui/core/styles";
 import toastError from "../../errors/toastError";
 import Popover from "@material-ui/core/Popover";
 import ForumIcon from "@material-ui/icons/Forum";
@@ -36,6 +36,21 @@ const useStyles = makeStyles((theme) => ({
   },
   headerIconButton: {
     color: theme.palette.action.active,
+  },
+  listItem: {
+    border: `1px solid ${theme.palette.divider}`,
+    cursor: "pointer",
+    marginBottom: 4,
+    backgroundColor: theme.palette.background.paper,
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+  listItemAlt: {
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? alpha(theme.palette.common.white, 0.04)
+        : alpha(theme.palette.common.black, 0.03),
   },
 }));
 
@@ -283,12 +298,7 @@ export default function ChatPopover() {
               chats.map((item, key) => (
                 <ListItem
                   key={key}
-                  style={{
-                    background: key % 2 === 0 ? "#f9f9f9" : "white",
-                    border: "1px solid #eee",
-                    cursor: "pointer",
-                    marginBottom: 4,
-                  }}
+                  className={`${classes.listItem} ${key % 2 === 0 ? classes.listItemAlt : ""}`}
                   onClick={() => goToMessages(item)}
                   button
                 >

@@ -11,8 +11,10 @@ import {
   MenuItem,
   Tooltip,
 } from "@material-ui/core";
+import { alpha } from "@material-ui/core/styles";
 
 import { useHistory, useParams } from "react-router-dom";
+import { useTheme } from "@material-ui/core/styles";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
 
@@ -33,7 +35,8 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     overflow: "hidden",
     borderRadius: 0,
-    backgroundColor: "#fff",
+    backgroundColor: theme.palette.background.paper,
+    borderRight: `1px solid ${theme.palette.divider}`,
   },
   chatList: {
     flex: 1,
@@ -44,16 +47,35 @@ const useStyles = makeStyles((theme) => ({
     cursor: "pointer",
     paddingLeft: 12,
     paddingRight: 8,
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+  listItemSelected: {
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? alpha(theme.palette.primary.main, 0.16)
+        : alpha(theme.palette.primary.main, 0.08),
+    "&:hover": {
+      backgroundColor:
+        theme.palette.type === "dark"
+          ? alpha(theme.palette.primary.main, 0.22)
+          : alpha(theme.palette.primary.main, 0.12),
+    },
   },
   avatar: {
     width: 48,
     height: 48,
-    backgroundColor: "#1a1a1a",
-    color: "#fff",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? alpha(theme.palette.primary.main, 0.28)
+        : theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
   },
   primaryText: {
     fontWeight: 500,
     fontSize: "0.9375rem",
+    color: theme.palette.text.primary,
   },
   secondaryText: {
     fontSize: "0.8125rem",
@@ -89,12 +111,12 @@ export default function ChatList({
   const classes = useStyles();
   const history = useHistory();
   const { user } = useContext(AuthContext);
+  const { id } = useParams();
+  const theme = useTheme();
   const { datetimeToClient } = useDate();
 
   const [confirmationModal, setConfirmModalOpen] = useState(false);
   const [selectedChat, setSelectedChat] = useState({});
-
-  const { id } = useParams();
 
   const goToMessages = async (chat) => {
     if (unreadMessages(chat) > 0) {
@@ -154,8 +176,10 @@ export default function ChatList({
 
   const getItemStyle = (chat) => {
     return {
-      borderLeft: chat.uuid === id ? "4px solid #0c6" : "4px solid transparent",
-      backgroundColor: chat.uuid === id ? "rgba(0,0,0,0.04)" : "transparent",
+      borderLeft:
+        chat.uuid === id
+          ? `4px solid ${theme.palette.success.main}`
+          : "4px solid transparent",
     };
   };
 
@@ -226,6 +250,8 @@ export default function ChatList({
                   key={key}
                   className={classes.listItem}
                   style={getItemStyle(chat)}
+                  selected={chat.uuid === id}
+                  classes={{ selected: classes.listItemSelected }}
                   button
                 >
                   <ListItemAvatar>

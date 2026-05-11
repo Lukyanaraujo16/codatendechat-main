@@ -66,7 +66,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    borderRight: "1px solid rgba(0,0,0,0.08)",
+    borderRight: `1px solid ${theme.palette.divider}`,
   },
   gridItemRight: {
     height: "100%",

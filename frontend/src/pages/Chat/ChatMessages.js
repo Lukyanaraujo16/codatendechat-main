@@ -8,6 +8,7 @@ import {
   Tooltip,
   Typography,
 } from "@material-ui/core";
+import { alpha } from "@material-ui/core/styles";
 import SendIcon from "@material-ui/icons/Send";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
 
@@ -28,22 +29,24 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     borderRadius: 0,
     height: "100%",
-    borderLeft: "1px solid rgba(0, 0, 0, 0.08)",
-    backgroundColor: "#fff",
+    borderLeft: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
   },
   chatHeader: {
     display: "flex",
     alignItems: "center",
     padding: theme.spacing(1.5, 2),
-    borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-    backgroundColor: "#fff",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
   },
   headerAvatar: {
     width: 40,
     height: 40,
     borderRadius: "50%",
-    backgroundColor: "#2196f3",
-    color: "#fff",
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -66,21 +69,25 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     minHeight: 0,
     ...theme.scrollbarStyles,
-    backgroundColor: "#fafafa",
+    backgroundColor: theme.palette.background.default,
   },
   inputBar: {
     display: "flex",
     alignItems: "center",
     padding: theme.spacing(1, 2),
-    borderTop: "1px solid rgba(0, 0, 0, 0.08)",
-    backgroundColor: "#fff",
+    borderTop: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
   },
   input: {
     flex: 1,
     margin: "0 8px",
     padding: "10px 14px",
     fontSize: "0.9375rem",
-    backgroundColor: "#f0f0f0",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? alpha(theme.palette.common.white, 0.06)
+        : alpha(theme.palette.common.black, 0.05),
+    color: theme.palette.text.primary,
     borderRadius: 20,
   },
   boxLeft: {
@@ -89,8 +96,12 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: 280,
     borderRadius: 12,
     borderBottomLeftRadius: 4,
-    backgroundColor: "#e8e8e8",
-    border: "1px solid rgba(0, 0, 0, 0.06)",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? alpha(theme.palette.common.white, 0.08)
+        : theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
   },
   boxRight: {
     padding: "10px 12px",
@@ -98,17 +109,21 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: 280,
     borderRadius: 12,
     borderBottomRightRadius: 4,
-    backgroundColor: "#dcf8c6",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? alpha(theme.palette.primary.main, 0.28)
+        : alpha(theme.palette.primary.main, 0.12),
+    color: theme.palette.text.primary,
     textAlign: "right",
-    border: "1px solid rgba(0, 0, 0, 0.06)",
+    border: `1px solid ${alpha(theme.palette.divider, 0.8)}`,
   },
   mediaPreview: {
     display: "block",
     marginTop: 6,
     maxWidth: 260,
     borderRadius: 10,
-    border: "1px solid rgba(0, 0, 0, 0.08)",
-    backgroundColor: "#fff",
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
   },
   mediaLink: {
     display: "inline-block",

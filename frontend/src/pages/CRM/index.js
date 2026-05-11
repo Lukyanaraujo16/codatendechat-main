@@ -1516,7 +1516,10 @@ export default function CrmBoardPage() {
                                   : classes.dealCard
                               }
                               elevation={dragSnapshot.isDragging ? 4 : 0}
-                              style={staleAccentStyle(staleLevel, theme)}
+                              style={{
+                                ...(dragProvided.draggableProps?.style || {}),
+                                ...staleAccentStyle(staleLevel, theme),
+                              }}
                             >
                               <Box display="flex" alignItems="flex-start">
                                 <Box flex={1} minWidth={0}>
