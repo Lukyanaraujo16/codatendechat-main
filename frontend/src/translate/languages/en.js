@@ -1757,6 +1757,12 @@ const messages = {
 					emptySelectSub: "Pick one from the list to view messages.",
 					newConversationButton: "New conversation",
 					tabsAria: "Conversations and messages",
+					attachFile: "Attach file",
+					attachment: "Attachment",
+					openFile: "Open file",
+					sendingFile: "File ready to send:",
+					uploadingFile: "Uploading file...",
+					cancelFile: "Cancel",
 				},
 				modal: {
 					title: "Conversation",
@@ -3926,6 +3932,12 @@ const messages = {
 						"View, download, and delete company media to free storage space.",
 					openButton: "Open media management",
 				},
+				groupManagerCard: {
+					title: "Group management",
+					description:
+						"Control which WhatsApp groups are visible to regular users and which remain restricted.",
+					openButton: "Open group management",
+				},
 				title: "Settings",
 				tabs: {
 					options: "Options",
@@ -3935,6 +3947,7 @@ const messages = {
 					helps: "Help",
 					notifications: "Notifications",
 					mediaManager: "Media management",
+					groupManager: "Group management",
 				},
 				pushPreferences: {
 					title: "Push notifications",
@@ -4445,6 +4458,12 @@ const messages = {
 					"Per-minute request limit exceeded. Wait and try again.",
 				ERR_MESSAGE_SEND_FAILED:
 					"The message could not be sent.",
+				ERR_INTERNAL_CHAT_FILE_REQUIRED: "Select a file to upload.",
+				ERR_INTERNAL_CHAT_FILE_TYPE_NOT_ALLOWED: "File type is not allowed.",
+				ERR_INTERNAL_CHAT_FILE_TOO_LARGE:
+					"The file exceeds the maximum allowed size.",
+				ERR_INTERNAL_CHAT_UPLOAD_FAILED:
+					"Could not upload the file. Please try again.",
 				ERR_INVOICE_NOT_FOUND: "Invoice not found.",
 				ERR_FORBIDDEN_INVOICE: "This invoice does not belong to your company.",
 				ERR_INVOICE_ALREADY_PAID: "This invoice is already paid.",

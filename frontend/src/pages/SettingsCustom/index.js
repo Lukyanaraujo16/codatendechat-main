@@ -14,6 +14,7 @@ import {
   TextField,
 } from "@material-ui/core";
 import PermMediaIcon from "@material-ui/icons/PermMedia";
+import GroupIcon from "@material-ui/icons/Group";
 import { AppPageHeader, AppSectionCard } from "../../ui";
 import Alert from "@material-ui/lab/Alert";
 
@@ -325,6 +326,40 @@ const SettingsCustom = () => {
                 canEdit
                 onSaved={(c) => setCompany({ ...company, ...c })}
               />
+            </AppSectionCard>
+          </Box>
+        ) : null}
+
+        {(currentUser?.profile === "admin" ||
+          currentUser?.profile === "supervisor" ||
+          currentUser?.supportMode === true) &&
+        company?.id ? (
+          <Box className={classes.pageContextWrap}>
+            <AppSectionCard>
+              <Box className={classes.mediaManagerCard}>
+                <Box className={classes.mediaManagerIconWrap} aria-hidden>
+                  <GroupIcon className={classes.mediaManagerIcon} color="primary" />
+                </Box>
+                <Box flex={1} minWidth={0}>
+                  <Typography className={classes.superCardTitle} component="h2">
+                    {i18n.t("settings.groupManagerCard.title")}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    style={{ marginBottom: 12, lineHeight: 1.5 }}
+                  >
+                    {i18n.t("settings.groupManagerCard.description")}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => history.push("/settings/groups")}
+                  >
+                    {i18n.t("settings.groupManagerCard.openButton")}
+                  </Button>
+                </Box>
+              </Box>
             </AppSectionCard>
           </Box>
         ) : null}

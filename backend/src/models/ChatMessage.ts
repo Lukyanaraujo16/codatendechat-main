@@ -36,6 +36,15 @@ class ChatMessage extends Model<ChatMessage> {
   @Column
   mediaName: string;
 
+  @Column
+  mediaType: string;
+
+  @Column
+  mimeType: string;
+
+  @Column
+  mediaSize: number;
+
   @CreatedAt
   createdAt: Date;
 

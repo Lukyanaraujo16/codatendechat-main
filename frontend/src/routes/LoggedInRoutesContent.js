@@ -345,7 +345,7 @@ function EquipeModule({ isAdmin, planFlags }) {
   );
 }
 
-function ConfiguracoesModule({ showExternalApi, showMediaManager }) {
+function ConfiguracoesModule({ showExternalApi, showMediaManager, showGroupsManager }) {
   const tabs = useMemo(() => {
     const t = [{ path: "/connections", label: i18n.t("mainDrawer.listItems.connections") }];
     if (showExternalApi) {
@@ -355,8 +355,11 @@ function ConfiguracoesModule({ showExternalApi, showMediaManager }) {
     if (showMediaManager) {
       t.push({ path: "/settings/media-manager", label: i18n.t("settings.tabs.mediaManager") });
     }
+    if (showGroupsManager) {
+      t.push({ path: "/settings/groups", label: i18n.t("settings.tabs.groupManager") });
+    }
     return t;
-  }, [showExternalApi, showMediaManager, i18n.language]);
+  }, [showExternalApi, showMediaManager, showGroupsManager, i18n.language]);
 
   return (
     <ModuleTabsLayout tabs={tabs}>
@@ -373,6 +376,11 @@ function ConfiguracoesModule({ showExternalApi, showMediaManager }) {
           path="/settings/media-manager"
           render={() => (showMediaManager ? <MediaManager /> : <PlanFeatureBlocked />)}
         />
+        <Route
+          exact
+          path="/settings/groups"
+          render={() => (showGroupsManager ? <GroupManager /> : <PlanFeatureBlocked />)}
+        />
       </Switch>
     </ModuleTabsLayout>
   );
@@ -382,6 +390,8 @@ export default function LoggedInRoutesContent() {
   const { user } = useContext(AuthContext);
   const planFlags = usePlanFlags();
   const isAdmin = user?.profile === "admin";
+  const isPrivileged =
+    user?.profile === "admin" || user?.profile === "supervisor" || user?.supportMode === true;
   const showMediaManager = isAdmin || user?.supportMode === true;
   const fx = planFlags.effectiveFeatures || {};
 
@@ -406,7 +416,13 @@ export default function LoggedInRoutesContent() {
 
   const equipePaths = ["/users", "/setores", "/queues"];
 
-  const configPaths = ["/connections", "/messages-api", "/settings", "/settings/media-manager"];
+  const configPaths = [
+    "/connections",
+    "/messages-api",
+    "/settings",
+    "/settings/media-manager",
+    "/settings/groups"
+  ];
 
   return (
     <Switch>
@@ -506,6 +522,7 @@ export default function LoggedInRoutesContent() {
           <ConfiguracoesModule
             showExternalApi={planFlags.useExternalApi}
             showMediaManager={showMediaManager}
+            showGroupsManager={planFlags.useGroups && isPrivileged}
           />
         )}
       />

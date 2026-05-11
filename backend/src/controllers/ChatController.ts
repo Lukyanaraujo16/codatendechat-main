@@ -11,8 +11,13 @@ import MarkChatAsReadService from "../services/ChatService/MarkChatAsReadService
 
 import Chat from "../models/Chat";
 import CreateMessageService from "../services/ChatService/CreateMessageService";
+import CreateMediaMessageService from "../services/ChatService/CreateMediaMessageService";
 import User from "../models/User";
 import ChatUser from "../models/ChatUser";
+import path from "path";
+import AppError from "../errors/AppError";
+import { logger } from "../utils/logger";
+import { incrementCompanyStorageUsage } from "../services/CompanyService/adjustCompanyStorageUsage";
 
 type IndexQuery = {
   pageNumber: string;
@@ -135,6 +140,75 @@ export const saveMessage = async (
     message,
     companyId
   });
+
+  const chat = await Chat.findByPk(chatId, {
+    include: [
+      { model: User, as: "owner" },
+      { model: ChatUser, as: "users" }
+    ]
+  });
+
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-chat-${chatId}`, {
+    action: "new-message",
+    newMessage,
+    chat
+  });
+
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-chat`, {
+    action: "new-message",
+    newMessage,
+    chat
+  });
+
+  return res.json(newMessage);
+};
+
+export const saveMessageWithMedia = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const companyId = +req.user.companyId;
+  const { id } = req.params;
+  const senderId = +req.user.id;
+  const chatId = +id;
+
+  const uploadErr = (req as any).fileValidationError as string | undefined;
+  if (uploadErr === "ERR_INTERNAL_CHAT_FILE_TYPE_NOT_ALLOWED") {
+    throw new AppError("ERR_INTERNAL_CHAT_FILE_TYPE_NOT_ALLOWED", 400);
+  }
+
+  const file = (req as any).file as Express.Multer.File | undefined;
+  if (!file) {
+    throw new AppError("ERR_INTERNAL_CHAT_FILE_REQUIRED", 400);
+  }
+
+  const message = String((req.body as any)?.message || "");
+  const rel = path
+    .join("internal-chat", String(companyId), file.filename)
+    .replace(/\\/g, "/");
+
+  const newMessage = await CreateMediaMessageService({
+    chatId,
+    senderId,
+    message,
+    companyId,
+    mediaPath: rel,
+    mediaName: file.originalname,
+    mimeType: file.mimetype,
+    mediaSize: file.size
+  });
+
+  try {
+    if (file.size && file.size > 0) {
+      await incrementCompanyStorageUsage(companyId, file.size);
+    }
+  } catch (err) {
+    logger.warn(
+      { err, companyId, chatId, size: file.size },
+      "[InternalChat] failed to increment storage"
+    );
+  }
 
   const chat = await Chat.findByPk(chatId, {
     include: [

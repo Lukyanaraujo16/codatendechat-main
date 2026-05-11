@@ -1840,6 +1840,12 @@ const messages = {
           emptySelectSub: "Escolha uma conversa na lista para ver as mensagens.",
           newConversationButton: "Nova conversa",
           tabsAria: "Conversas e mensagens",
+          attachFile: "Anexar arquivo",
+          attachment: "Anexo",
+          openFile: "Abrir arquivo",
+          sendingFile: "Arquivo pronto para enviar:",
+          uploadingFile: "Enviando arquivo...",
+          cancelFile: "Cancelar",
         },
         modal: {
           title: "Conversa",
@@ -4047,6 +4053,12 @@ const messages = {
             "Visualize, baixe e exclua mídias da empresa para liberar espaço de armazenamento.",
           openButton: "Abrir gestão de mídias",
         },
+        groupManagerCard: {
+          title: "Gestão de Grupos",
+          description:
+            "Defina quais grupos do WhatsApp ficam visíveis para usuários comuns e quais permanecem restritos.",
+          openButton: "Abrir gestão de grupos",
+        },
         chatbotControl: {
           title: "Controle do chatbot",
           description:
@@ -4074,6 +4086,7 @@ const messages = {
           helps: "Ajuda",
           notifications: "Notificações",
           mediaManager: "Gestão de mídias",
+          groupManager: "Gestão de Grupos",
         },
         pushPreferences: {
           title: "Notificações push",
@@ -4605,6 +4618,12 @@ const messages = {
             "Limite de requisições por minuto excedido. Aguarde e tente novamente.",
         ERR_MESSAGE_SEND_FAILED:
             "Não foi possível concluir o envio da mensagem.",
+        ERR_INTERNAL_CHAT_FILE_REQUIRED: "Selecione um arquivo para enviar.",
+        ERR_INTERNAL_CHAT_FILE_TYPE_NOT_ALLOWED: "Tipo de arquivo não permitido.",
+        ERR_INTERNAL_CHAT_FILE_TOO_LARGE:
+          "O arquivo excede o tamanho máximo permitido.",
+        ERR_INTERNAL_CHAT_UPLOAD_FAILED:
+          "Não foi possível enviar o arquivo. Tente novamente.",
         ERR_INVOICE_NOT_FOUND: "Fatura não encontrada.",
         ERR_FORBIDDEN_INVOICE: "Esta fatura não pertence à sua empresa.",
         ERR_INVOICE_ALREADY_PAID: "Esta fatura já está paga.",

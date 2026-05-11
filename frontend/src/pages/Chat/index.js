@@ -408,6 +408,25 @@ function Chat(props) {
     setMessagesLoading(false);
   };
 
+  const sendMessageWithMedia = async ({ message, file }) => {
+    setMessagesLoading(true);
+    try {
+      const form = new FormData();
+      if (message != null) form.append("message", message);
+      form.append("file", file);
+
+      await api.post(`/chats/${currentChat.id}/messages/media`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setMessagesLoading(false);
+      return true;
+    } catch (err) {
+      toastError(err);
+      setMessagesLoading(false);
+      return false;
+    }
+  };
+
   const deleteChat = async (chat) => {
     try {
       await api.delete(`/chats/${chat.id}`);
@@ -567,6 +586,7 @@ function Chat(props) {
               messages={messages}
               loading={messagesLoading}
               handleSendMessage={sendMessage}
+              handleSendMessageWithMedia={sendMessageWithMedia}
               handleLoadMore={loadMoreMessages}
             />
           ) : (
@@ -685,6 +705,7 @@ function Chat(props) {
                 messages={messages}
                 loading={messagesLoading}
                 handleSendMessage={sendMessage}
+                handleSendMessageWithMedia={sendMessageWithMedia}
                 handleLoadMore={loadMoreMessages}
               />
             ) : (
