@@ -3942,6 +3942,72 @@ const messages = {
 					openButton: "Open group management",
 				},
 				title: "Settings",
+				sections: {
+					generalTitle: "General",
+					generalDescription: "Company timezone and base information.",
+					crmTitle: "CRM",
+					crmDescription: "Who can see contacts and CRM data for this company.",
+					storageTitle: "Storage",
+					storageDescription: "Manage company files and media to free up space.",
+					ratingsScheduleTitle: "Ratings & business hours",
+					ratingsScheduleDescription:
+						"Post-service ratings and where business hours come from.",
+					tooltips: {
+						ratingsSchedule:
+							"Enable post-service ratings and choose queue-level or company-wide schedules.",
+						callsCard: "Accept or reject calls and what to send when rejecting.",
+						groupsCard:
+							"Receive or ignore group messages. For per-user visibility, use group management.",
+						autoMessagesCard:
+							"Greeting when accepting a ticket, transfers, and when there is only one queue.",
+						chatbotAutomation:
+							"Disable the chatbot for the company, set its schedule, and choose how messages are shown. Full flows live under Automation.",
+						chatbotFlow:
+							"How options are shown to the customer. Full flows are under Automation.",
+						integrations:
+							"External service connections. Visible only to platform super administrators.",
+						asaasNotice:
+							"The API token grants access to your Asaas account. Store it securely and limit who can change it.",
+						expedientCompany:
+							"Company mode: one business-hours rule applies to the whole company. Queue mode: each queue uses its own.",
+					},
+					attendanceCallsCardTitle: "Calls",
+					attendanceGroupsCardTitle: "Groups",
+					attendanceAutoMsgCardTitle: "Automatic messages",
+					chatbotSectionStateTitle: "Status & schedule",
+					chatbotSectionMessagesTitle: "Type & flows",
+					attendanceTitle: "Service",
+					attendanceDescription:
+						"WhatsApp calls, groups, and automatic messages.",
+					groupsConfigSubtitle: "WhatsApp groups",
+					groupsConfigDescription:
+						"Receive or ignore group messages. For per-user visibility, use group management.",
+					callsSubtitle: "Calls",
+					callsDescription: "Accept or reject calls and what to send when rejecting.",
+					autoMessagesSubtitle: "Automatic messages",
+					autoMessagesDescription:
+						"Greeting when accepting a ticket, transfers, and when there is only one queue.",
+					chatbotAutomationTitle: "Chatbot / Automation",
+					chatbotAutomationDescription:
+						"Global bot control, schedule, and how messages appear to customers.",
+					chatbotFlowTitle: "Chatbot type (messages)",
+					chatbotFlowDescription:
+						"How options appear in WhatsApp.",
+					openFlowsButton: "Open automation flows",
+					groupManagerButton: "Open group management",
+					integrationsTitle: "Advanced integrations",
+					integrationsDescription:
+						"External APIs and services (superadmin).",
+					asaasTitle: "Asaas",
+					asaasTokenLabel: "Asaas token",
+				},
+				ux: {
+					autoSaveHint: "Changes in this card save when you pick an option.",
+					pageContextShort:
+						"Settings for the current company. Super Admins: global management is under Platform.",
+					moreInfoAria: "More information",
+					saveCardHint: "Save to apply changes in this card.",
+				},
 				tabs: {
 					options: "Options",
 					schedules: "Schedules",
@@ -3983,6 +4049,8 @@ const messages = {
 						"These options change WhatsApp behavior and flows for all tickets in this company.",
 					expedientCompanyWarning:
 						"Company mode: one business-hours rule applies to the whole company. Queue mode: each queue uses its own.",
+					expedientCompanyWarningShort:
+						"Single schedule for the whole company (set under the Schedules tab).",
 					toasts: {
 						success: "Operation updated successfully.",
 					},
@@ -4131,6 +4199,10 @@ const messages = {
 							"Schedules and recurrences use this timezone; data is still stored in UTC.",
 						timezoneFooter:
 							"Choose the timezone for your main office or operation.",
+						timezoneShortHint:
+							"Timezone used for schedules and rules in this company.",
+						timezoneTooltip:
+							"Schedules and recurrences use this timezone; data is still stored in UTC. Choose the timezone for your main office or operation.",
 						timezoneHelperField:
 							"IANA format as in the list below (e.g. America/Sao_Paulo).",
 						usersSectionTitle: "Company users",

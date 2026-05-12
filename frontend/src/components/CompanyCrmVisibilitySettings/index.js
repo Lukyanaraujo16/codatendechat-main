@@ -20,7 +20,7 @@ const useStyles = makeStyles((theme) => ({
   actions: { marginTop: theme.spacing(2) },
 }));
 
-export default function CompanyCrmVisibilitySettings({ company, onSaved, canEdit }) {
+export default function CompanyCrmVisibilitySettings({ company, onSaved, canEdit, embedded }) {
   const classes = useStyles();
   const { updateCrmVisibility } = useCompanies();
   const [value, setValue] = useState(company?.crmVisibilityMode || "all");
@@ -48,12 +48,16 @@ export default function CompanyCrmVisibilitySettings({ company, onSaved, canEdit
 
   return (
     <Box className={classes.root}>
-      <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
-        {i18n.t("settings.company.crmVisibility.title")}
-      </Typography>
-      <Typography variant="body2" color="textSecondary" paragraph style={{ marginTop: 8 }}>
-        {i18n.t("settings.company.crmVisibility.description")}
-      </Typography>
+      {!embedded ? (
+        <>
+          <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
+            {i18n.t("settings.company.crmVisibility.title")}
+          </Typography>
+          <Typography variant="body2" color="textSecondary" paragraph style={{ marginTop: 8 }}>
+            {i18n.t("settings.company.crmVisibility.description")}
+          </Typography>
+        </>
+      ) : null}
       <FormControl component="fieldset" variant="standard" disabled={!canEdit}>
         <FormLabel component="legend">{i18n.t("settings.company.crmVisibility.label")}</FormLabel>
         <RadioGroup

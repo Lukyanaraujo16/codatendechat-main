@@ -9,7 +9,10 @@ import {
   MenuItem,
   Button,
   FormHelperText,
+  Tooltip,
+  IconButton,
 } from "@material-ui/core";
+import InfoOutlined from "@material-ui/icons/InfoOutlined";
 import Alert from "@material-ui/lab/Alert";
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
@@ -22,6 +25,10 @@ const useStyles = makeStyles((theme) => ({
   root: {
     padding: theme.spacing(2),
     marginBottom: theme.spacing(2),
+  },
+  embeddedRoot: {
+    padding: 0,
+    marginBottom: 0,
   },
   contextAlert: {
     marginBottom: theme.spacing(2),
@@ -42,7 +49,7 @@ const useStyles = makeStyles((theme) => ({
 
 const DEFAULT_TZ = "America/Sao_Paulo";
 
-export default function CompanyTimezoneSettings({ company, onSaved }) {
+export default function CompanyTimezoneSettings({ company, onSaved, embedded }) {
   const classes = useStyles();
   const { updateTimezone } = useCompanies();
   const [tz, setTz] = useState(DEFAULT_TZ);
@@ -72,21 +79,41 @@ export default function CompanyTimezoneSettings({ company, onSaved }) {
     return null;
   }
 
+  const Root = embedded ? Box : Paper;
+  const rootProps = embedded
+    ? { className: classes.embeddedRoot }
+    : { className: classes.root, variant: "outlined" };
+
   return (
-    <Paper className={classes.root} variant="outlined">
-      <Typography variant="subtitle1" gutterBottom>
-        {i18n.t("settings.company.form.timezone")}
-      </Typography>
-      <Alert severity="info" variant="outlined" className={classes.contextAlert}>
-        <Box className={classes.contextAlertBody}>
-          <Typography variant="body2" component="p">
-            {i18n.t("settings.company.form.timezoneHint")}
+    <Root {...rootProps}>
+      {!embedded && (
+        <Typography variant="subtitle1" gutterBottom>
+          {i18n.t("settings.company.form.timezone")}
+        </Typography>
+      )}
+      {embedded ? (
+        <Box display="flex" alignItems="center" mb={1.5}>
+          <Typography variant="body2" color="textSecondary" style={{ flex: 1 }}>
+            {i18n.t("settings.company.form.timezoneShortHint")}
           </Typography>
-          <Typography variant="body2" color="textSecondary" component="p">
-            {i18n.t("settings.company.form.timezoneFooter")}
-          </Typography>
+          <Tooltip title={i18n.t("settings.company.form.timezoneTooltip")}>
+            <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+              <InfoOutlined fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
-      </Alert>
+      ) : (
+        <Alert severity="info" variant="outlined" className={classes.contextAlert}>
+          <Box className={classes.contextAlertBody}>
+            <Typography variant="body2" component="p">
+              {i18n.t("settings.company.form.timezoneHint")}
+            </Typography>
+            <Typography variant="body2" color="textSecondary" component="p">
+              {i18n.t("settings.company.form.timezoneFooter")}
+            </Typography>
+          </Box>
+        </Alert>
+      )}
       <FormControl variant="outlined" fullWidth margin="dense">
         <InputLabel id="company-timezone-label">
           {i18n.t("settings.company.form.timezone")}
@@ -116,6 +143,6 @@ export default function CompanyTimezoneSettings({ company, onSaved }) {
       >
         {i18n.t("settings.company.buttons.saveTimezone")}
       </Button>
-    </Paper>
+    </Root>
   );
 }

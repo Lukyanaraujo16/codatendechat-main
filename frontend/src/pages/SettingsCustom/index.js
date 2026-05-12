@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { useLocation, useHistory, Link as RouterLink } from "react-router-dom";
 import MainContainer from "../../components/MainContainer";
 import {
@@ -9,14 +9,12 @@ import {
   Tabs,
   Tab,
   Typography,
-  Switch,
-  FormControlLabel,
-  TextField,
+  Tooltip,
+  IconButton,
 } from "@material-ui/core";
 import PermMediaIcon from "@material-ui/icons/PermMedia";
-import GroupIcon from "@material-ui/icons/Group";
+import InfoOutlined from "@material-ui/icons/InfoOutlined";
 import { AppPageHeader, AppSectionCard } from "../../ui";
-import Alert from "@material-ui/lab/Alert";
 
 import TabPanel from "../../components/TabPanel";
 
@@ -83,12 +81,6 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing(1),
     width: "100%",
   },
-  pageContextAlert: {
-    width: "100%",
-    "& .MuiAlert-message": {
-      width: "100%",
-    },
-  },
   superLinks: {
     display: "flex",
     flexWrap: "wrap",
@@ -118,13 +110,36 @@ const useStyles = makeStyles((theme) => ({
   mediaManagerIcon: {
     fontSize: 28,
   },
+  pageSectionsStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(3),
+    padding: theme.spacing(2),
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  sectionPaper: {
+    padding: theme.spacing(3),
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  sectionTitle: {
+    fontWeight: 600,
+  },
+  sectionCardHeaderRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(2),
+  },
 }));
 
 const SettingsCustom = () => {
   const classes = useStyles();
   const location = useLocation();
   const history = useHistory();
-  const [tab, setTab] = useState("options");
+  const [tab, setTab] = useState("notifications");
   const [schedules, setSchedules] = useState([]);
   const [company, setCompany] = useState({});
   const [loading, setLoading] = useState(false);
@@ -184,11 +199,16 @@ const SettingsCustom = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const t = params.get("tab");
+    if (t === "options") {
+      history.replace({ pathname: "/settings", search: "?tab=notifications" });
+      setTab("notifications");
+      return;
+    }
     if (!t) return;
-    const allowed = ["options", "schedules", "notifications"];
+    const allowed = ["schedules", "notifications"];
     if (!allowed.includes(t)) return;
     setTab(t);
-  }, [location.search]);
+  }, [location.search, history]);
 
   useEffect(() => {
     const canEdit =
@@ -298,6 +318,26 @@ const SettingsCustom = () => {
     setLoading(false);
   };
 
+  const showPlatformIntegrations =
+    currentUser?.profile === "superadmin" || currentUser?.super === true;
+  const showGroupManagerButton =
+    currentUser?.profile === "admin" ||
+    currentUser?.profile === "supervisor" ||
+    currentUser?.supportMode === true;
+  const showChatbotControl =
+    (currentUser?.profile === "admin" || currentUser?.supportMode === true) &&
+    Boolean(company?.id);
+  const showNotificationsTab = Boolean(currentUser?.super || currentUser?.companyId);
+  const showSettingsTabs = schedulesEnabled || showNotificationsTab;
+
+  const effectiveTab = useMemo(() => {
+    if (tab === "schedules" && schedulesEnabled) return "schedules";
+    if (tab === "notifications" && showNotificationsTab) return "notifications";
+    if (schedulesEnabled) return "schedules";
+    if (showNotificationsTab) return "notifications";
+    return "schedules";
+  }, [tab, schedulesEnabled, showNotificationsTab]);
+
   return (
     <MainContainer className={classes.root}>
       <AppPageHeader
@@ -313,192 +353,37 @@ const SettingsCustom = () => {
         }
       />
       <Paper className={classes.mainPaper} elevation={1}>
-        <CompanyTimezoneSettings
-          company={company}
-          onSaved={(c) => setCompany(c)}
-        />
-        {(currentUser?.profile === "admin" || currentUser?.supportMode === true) &&
-        company?.id ? (
-          <Box className={classes.pageContextWrap}>
-            <AppSectionCard>
-              <CompanyCrmVisibilitySettings
-                company={company}
-                canEdit
-                onSaved={(c) => setCompany({ ...company, ...c })}
-              />
-            </AppSectionCard>
-          </Box>
-        ) : null}
-
-        {(currentUser?.profile === "admin" ||
-          currentUser?.profile === "supervisor" ||
-          currentUser?.supportMode === true) &&
-        company?.id ? (
-          <Box className={classes.pageContextWrap}>
-            <AppSectionCard>
-              <Box className={classes.mediaManagerCard}>
-                <Box className={classes.mediaManagerIconWrap} aria-hidden>
-                  <GroupIcon className={classes.mediaManagerIcon} color="primary" />
-                </Box>
-                <Box flex={1} minWidth={0}>
-                  <Typography className={classes.superCardTitle} component="h2">
-                    {i18n.t("settings.groupManagerCard.title")}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="textSecondary"
-                    style={{ marginBottom: 12, lineHeight: 1.5 }}
-                  >
-                    {i18n.t("settings.groupManagerCard.description")}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => history.push("/settings/groups")}
-                  >
-                    {i18n.t("settings.groupManagerCard.openButton")}
-                  </Button>
-                </Box>
-              </Box>
-            </AppSectionCard>
-          </Box>
-        ) : null}
-        <Box className={classes.pageContextWrap}>
-          <Alert
-            severity="info"
-            variant="outlined"
-            className={classes.pageContextAlert}
-          >
-            <Typography variant="body2" component="p">
-              {i18n.t("settings.customPageIntro")}
-            </Typography>
-          </Alert>
-        </Box>
-
-        {(currentUser?.profile === "admin" || currentUser?.supportMode === true) &&
-        company?.id ? (
-          <Box className={classes.pageContextWrap}>
-            <AppSectionCard>
-              <Box className={classes.mediaManagerCard}>
-                <Box className={classes.mediaManagerIconWrap} aria-hidden>
-                  <PermMediaIcon className={classes.mediaManagerIcon} color="primary" />
-                </Box>
-                <Box flex={1} minWidth={0}>
-                  <Typography className={classes.superCardTitle} component="h2">
-                    {i18n.t("settings.mediaManagerCard.title")}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="textSecondary"
-                    style={{ marginBottom: 12, lineHeight: 1.5 }}
-                  >
-                    {i18n.t("settings.mediaManagerCard.description")}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => history.push("/settings/media-manager")}
-                  >
-                    {i18n.t("settings.mediaManagerCard.openButton")}
-                  </Button>
-                </Box>
-              </Box>
-            </AppSectionCard>
-          </Box>
-        ) : null}
-
-        {(currentUser?.profile === "admin" || currentUser?.supportMode === true) &&
-        company?.id ? (
-          <Box className={classes.pageContextWrap}>
-            <AppSectionCard>
-              <Typography className={classes.superCardTitle} component="h2">
-                {i18n.t("settings.chatbotControl.title")}
+        <Box className={classes.pageSectionsStack}>
+          {company?.id ? (
+            <Paper elevation={1} className={classes.sectionPaper}>
+              <Typography variant="h6" className={classes.sectionTitle}>
+                {i18n.t("settings.sections.generalTitle")}
               </Typography>
-              <Typography variant="body2" color="textSecondary" style={{ lineHeight: 1.5, margin: 0 }}>
-                {i18n.t("settings.chatbotControl.description")}
+              <Typography variant="body2" color="textSecondary" component="p" style={{ marginBottom: 16 }}>
+                {i18n.t("settings.sections.generalDescription")}
               </Typography>
-
               <Box mt={2}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      color="primary"
-                      checked={Boolean(chatbotControl?.chatbotDisabled)}
-                      onChange={(e) =>
-                        setChatbotControl((prev) => ({
-                          ...(prev || {}),
-                          chatbotDisabled: e.target.checked,
-                        }))
-                      }
-                      disabled={chatbotControlLoading}
-                    />
-                  }
-                  label={i18n.t("settings.chatbotControl.disableCompany")}
+                <CompanyTimezoneSettings
+                  company={company}
+                  onSaved={(c) => setCompany(c)}
+                  embedded
                 />
               </Box>
+            </Paper>
+          ) : null}
 
-              <Box mt={1}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      color="primary"
-                      checked={Boolean(chatbotControl?.chatbotScheduleEnabled)}
-                      onChange={(e) =>
-                        setChatbotControl((prev) => ({
-                          ...(prev || {}),
-                          chatbotScheduleEnabled: e.target.checked,
-                        }))
-                      }
-                      disabled={chatbotControlLoading}
-                    />
-                  }
-                  label={i18n.t("settings.chatbotControl.enableSchedule")}
-                />
-              </Box>
-
-              {Boolean(chatbotControl?.chatbotScheduleEnabled) && (
-                <Box mt={1} display="flex" flexWrap="wrap" gridGap={12}>
-                  <TextField
-                    label={i18n.t("settings.chatbotControl.weekdayStart")}
-                    type="time"
-                    value={chatbotWeekdayStart}
-                    onChange={(e) => setChatbotWeekdayStart(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
-                    variant="outlined"
-                    size="small"
-                  />
-                  <TextField
-                    label={i18n.t("settings.chatbotControl.weekdayEnd")}
-                    type="time"
-                    value={chatbotWeekdayEnd}
-                    onChange={(e) => setChatbotWeekdayEnd(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
-                    variant="outlined"
-                    size="small"
-                  />
-                  <Typography variant="caption" color="textSecondary" style={{ alignSelf: "center" }}>
-                    {i18n.t("settings.chatbotControl.weekdaysHint")}
-                  </Typography>
-                </Box>
-              )}
-
-              <Box mt={2}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleSaveChatbotControl}
-                  disabled={chatbotControlSaving || chatbotControlLoading}
-                >
-                  {chatbotControlSaving
-                    ? i18n.t("settings.chatbotControl.buttons.saving")
-                    : i18n.t("settings.chatbotControl.buttons.save")}
-                </Button>
-              </Box>
-            </AppSectionCard>
+          <Box className={classes.pageContextWrap} style={{ paddingLeft: 0, paddingRight: 0 }}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="body2" color="textSecondary" style={{ flex: 1, lineHeight: 1.5 }}>
+                {i18n.t("settings.ux.pageContextShort")}
+              </Typography>
+              <Tooltip title={i18n.t("settings.customPageIntro")}>
+                <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+                  <InfoOutlined fontSize="small" color="action" />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
-        ) : null}
 
         <OnlyForSuperUser
           user={currentUser}
@@ -530,49 +415,143 @@ const SettingsCustom = () => {
           )}
         />
 
-        <Tabs
-          value={tab}
-          indicatorColor="primary"
-          textColor="primary"
-          scrollButtons="on"
-          variant="scrollable"
-          onChange={handleTabChange}
-          className={classes.tab}
-        >
-          <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
-          {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
-          {(currentUser?.super || currentUser?.companyId) && (
-            <Tab label={i18n.t("settings.tabs.notifications")} value={"notifications"} />
-          )}
-        </Tabs>
-        <Paper className={classes.paper} elevation={0}>
-          <TabPanel
-            className={classes.container}
-            value={tab}
-            name={"schedules"}
-          >
-            <SchedulesForm
-              loading={loading}
-              onSubmit={handleSubmitSchedules}
-              initialValues={schedules}
-            />
-          </TabPanel>
-          <TabPanel className={classes.container} value={tab} name={"options"}>
-            <Options
-              settings={settings}
-              scheduleTypeChanged={(value) =>
-                setSchedulesEnabled(value === "company")
-              }
-            />
-          </TabPanel>
-          <TabPanel
-            className={classes.container}
-            value={tab}
-            name={"notifications"}
-          >
-            <PushNotificationPreferences />
-          </TabPanel>
-        </Paper>
+        <Options
+          variant="main"
+          settings={settings}
+          scheduleTypeChanged={(value) =>
+            setSchedulesEnabled(value === "company")
+          }
+          showPlatformIntegrations={showPlatformIntegrations}
+          showGroupManagerButton={showGroupManagerButton}
+          showChatbotControl={showChatbotControl}
+          chatbotControl={chatbotControl}
+          setChatbotControl={setChatbotControl}
+          chatbotControlLoading={chatbotControlLoading}
+          chatbotControlSaving={chatbotControlSaving}
+          chatbotWeekdayStart={chatbotWeekdayStart}
+          setChatbotWeekdayStart={setChatbotWeekdayStart}
+          chatbotWeekdayEnd={chatbotWeekdayEnd}
+          setChatbotWeekdayEnd={setChatbotWeekdayEnd}
+          onSaveChatbotControl={handleSaveChatbotControl}
+        />
+
+          {(currentUser?.profile === "admin" || currentUser?.supportMode === true) &&
+          company?.id ? (
+            <Paper elevation={1} className={classes.sectionPaper}>
+              <Box className={classes.sectionCardHeaderRow}>
+                <Box flex={1} minWidth={0}>
+                  <Typography variant="h6" className={classes.sectionTitle}>
+                    {i18n.t("settings.sections.crmTitle")}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {i18n.t("settings.sections.crmDescription")}
+                  </Typography>
+                </Box>
+                <Tooltip title={i18n.t("settings.company.crmVisibility.description")}>
+                  <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+                    <InfoOutlined fontSize="small" color="action" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Box mt={2}>
+                <CompanyCrmVisibilitySettings
+                  embedded
+                  company={company}
+                  canEdit
+                  onSaved={(c) => setCompany({ ...company, ...c })}
+                />
+              </Box>
+              <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 16 }}>
+                {i18n.t("settings.ux.saveCardHint")}
+              </Typography>
+            </Paper>
+          ) : null}
+
+          {(currentUser?.profile === "admin" || currentUser?.supportMode === true) &&
+          company?.id ? (
+            <Paper elevation={1} className={classes.sectionPaper}>
+              <Box className={classes.sectionCardHeaderRow}>
+                <Box flex={1} minWidth={0}>
+                  <Typography variant="h6" className={classes.sectionTitle}>
+                    {i18n.t("settings.sections.storageTitle")}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {i18n.t("settings.sections.storageDescription")}
+                  </Typography>
+                </Box>
+                <Tooltip title={i18n.t("settings.mediaManagerCard.description")}>
+                  <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+                    <InfoOutlined fontSize="small" color="action" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Box mt={2} className={classes.mediaManagerCard}>
+                <Box className={classes.mediaManagerIconWrap} aria-hidden>
+                  <PermMediaIcon className={classes.mediaManagerIcon} color="primary" />
+                </Box>
+                <Box flex={1} minWidth={0}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => history.push("/settings/media-manager")}
+                  >
+                    {i18n.t("settings.mediaManagerCard.openButton")}
+                  </Button>
+                </Box>
+              </Box>
+            </Paper>
+          ) : null}
+
+        {showPlatformIntegrations ? (
+          <Options
+            variant="integrations"
+            settings={settings}
+            showPlatformIntegrations={showPlatformIntegrations}
+            scheduleTypeChanged={() => {}}
+          />
+        ) : null}
+
+        {showSettingsTabs ? (
+          <>
+            <Tabs
+              value={effectiveTab}
+              indicatorColor="primary"
+              textColor="primary"
+              scrollButtons="on"
+              variant="scrollable"
+              onChange={handleTabChange}
+              className={classes.tab}
+            >
+              {schedulesEnabled ? (
+                <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />
+              ) : null}
+              {showNotificationsTab ? (
+                <Tab label={i18n.t("settings.tabs.notifications")} value={"notifications"} />
+              ) : null}
+            </Tabs>
+            <Paper className={classes.paper} elevation={0}>
+              <TabPanel
+                className={classes.container}
+                value={effectiveTab}
+                name={"schedules"}
+              >
+                <SchedulesForm
+                  loading={loading}
+                  onSubmit={handleSubmitSchedules}
+                  initialValues={schedules}
+                />
+              </TabPanel>
+              <TabPanel
+                className={classes.container}
+                value={effectiveTab}
+                name={"notifications"}
+              >
+                <PushNotificationPreferences />
+              </TabPanel>
+            </Paper>
+          </>
+        ) : null}
+        </Box>
       </Paper>
     </MainContainer>
   );

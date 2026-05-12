@@ -3850,6 +3850,73 @@ const messages = {
           openButton: "Abrir gestión de grupos",
         },
         title: "Configuración",
+        sections: {
+          generalTitle: "General",
+          generalDescription: "Zona horaria e información base de la empresa.",
+          crmTitle: "CRM",
+          crmDescription: "Quién puede ver contactos y datos del CRM en esta empresa.",
+          storageTitle: "Almacenamiento",
+          storageDescription: "Gestione archivos y medios de la empresa para liberar espacio.",
+          ratingsScheduleTitle: "Evaluaciones y horario",
+          ratingsScheduleDescription:
+            "Evaluaciones tras el servicio y origen del horario comercial.",
+          tooltips: {
+            ratingsSchedule:
+              "Activar evaluación tras el servicio y definir si el horario es por cola o por empresa.",
+            callsCard: "Aceptar o rechazar llamadas y qué enviar al rechazar.",
+            groupsCard:
+              "Recibir o ignorar mensajes de grupos. Para visibilidad por usuario, use la gestión de grupos.",
+            autoMessagesCard:
+              "Saludo al aceptar ticket, transferencias y cuando solo hay una cola.",
+            chatbotAutomation:
+              "Desactive el chatbot para la empresa, defina el horario y el formato de los mensajes. Los flujos completos están en Automatización.",
+            chatbotFlow:
+              "Modo de presentación al cliente. Los flujos completos están en Automatización.",
+            integrations:
+              "Conexiones a servicios externos. Solo visible para super administradores de la plataforma.",
+            asaasNotice:
+              "El token de API da acceso a su cuenta Asaas. Guárdelo con seguridad y limite quién puede cambiarlo.",
+            expedientCompany:
+              "Modo Empresa: un mismo horario aplica a toda la empresa. En modo Cola, cada cola usa el suyo.",
+          },
+          attendanceCallsCardTitle: "Llamadas",
+          attendanceGroupsCardTitle: "Grupos",
+          attendanceAutoMsgCardTitle: "Mensajes automáticos",
+          chatbotSectionStateTitle: "Estado y horario",
+          chatbotSectionMessagesTitle: "Tipo y flujos",
+          attendanceTitle: "Atención",
+          attendanceDescription:
+            "Llamadas, grupos de WhatsApp y mensajes automáticos.",
+          groupsConfigSubtitle: "Grupos de WhatsApp",
+          groupsConfigDescription:
+            "Recibir o ignorar mensajes de grupos. Para visibilidad por usuario, use la gestión de grupos.",
+          callsSubtitle: "Llamadas",
+          callsDescription:
+            "Aceptar o rechazar llamadas y qué enviar al rechazar.",
+          autoMessagesSubtitle: "Mensajes automáticos",
+          autoMessagesDescription:
+            "Saludo al aceptar ticket, transferencias y cuando solo hay una cola.",
+          chatbotAutomationTitle: "Chatbot / Automatización",
+          chatbotAutomationDescription:
+            "Control global del bot, horario y formato de los mensajes al cliente.",
+          chatbotFlowTitle: "Tipo de chatbot (mensajes)",
+          chatbotFlowDescription:
+            "Cómo se muestran las opciones en WhatsApp.",
+          openFlowsButton: "Abrir flujos de automatización",
+          groupManagerButton: "Abrir gestión de grupos",
+          integrationsTitle: "Integraciones avanzadas",
+          integrationsDescription:
+            "APIs y servicios externos (superadmin).",
+          asaasTitle: "Asaas",
+          asaasTokenLabel: "Token Asaas",
+        },
+        ux: {
+          autoSaveHint: "Los cambios en esta tarjeta se guardan al elegir una opción.",
+          pageContextShort:
+            "Ajustes de la empresa actual. Super Admins: la gestión global está en Plataforma.",
+          moreInfoAria: "Más información",
+          saveCardHint: "Guarde para aplicar los cambios de esta tarjeta.",
+        },
         tabs: {
           options: "Opciones",
           schedules: "Horarios",
@@ -3891,6 +3958,8 @@ const messages = {
             "Estas opciones cambian el comportamiento de WhatsApp y los flujos para todos los tickets de esta empresa.",
           expedientCompanyWarning:
             "Modo Empresa: un mismo horario aplica a toda la empresa. En modo Cola, cada cola usa el suyo.",
+          expedientCompanyWarningShort:
+            "Un solo horario para toda la empresa (configúrelo en la pestaña Horarios).",
           toasts: {
             success: "Operación actualizada con éxito.",
           },
@@ -4039,6 +4108,10 @@ const messages = {
               "Los agendamientos y recurrencias usan esta zona; el almacenamiento sigue en UTC.",
             timezoneFooter:
               "Elija la zona de la sede o de la operación principal.",
+            timezoneShortHint:
+              "Zona usada en agendamientos y reglas de esta empresa.",
+            timezoneTooltip:
+              "Los agendamientos y recurrencias usan esta zona; el almacenamiento sigue en UTC. Elija la zona de la sede o de la operación principal.",
             timezoneHelperField:
               "Formato IANA como en la lista (ej.: America/Sao_Paulo).",
             usersSectionTitle: "Usuarios de la empresa",

@@ -1,22 +1,28 @@
 import React, { useEffect, useState } from "react";
 
 import Grid from "@material-ui/core/Grid";
+import Box from "@material-ui/core/Box";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
 import FormHelperText from "@material-ui/core/FormHelperText";
 import TextField from "@material-ui/core/TextField";
-import Title from "../Title";
+import Button from "@material-ui/core/Button";
 import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
-import Alert from "@material-ui/lab/Alert";
+import Tooltip from "@material-ui/core/Tooltip";
+import IconButton from "@material-ui/core/IconButton";
+import InfoOutlined from "@material-ui/icons/InfoOutlined";
+import Divider from "@material-ui/core/Divider";
 import useSettings from "../../hooks/useSettings";
 import { ToastContainer, toast } from 'react-toastify';
 import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
-import { Tabs, Tab } from "@material-ui/core";
+import Switch from "@material-ui/core/Switch";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
 import { i18n } from "../../translate/i18n";
+import { useHistory } from "react-router-dom";
 
 //import 'react-toastify/dist/ReactToastify.css';
  
@@ -73,27 +79,70 @@ const useStyles = makeStyles((theme) => ({
   fullWidth: {
     width: "100%",
   },
-  pageIntroAlert: {
-    width: "100%",
-    "& .MuiAlert-message": {
-      width: "100%",
-    },
-  },
-  sectionAlert: {
-    width: "100%",
-    "& .MuiAlert-message": {
-      width: "100%",
-    },
-  },
   selectContainer: {
     width: "100%",
     textAlign: "left",
   },
+  sectionPaper: {
+    padding: theme.spacing(3),
+    width: "100%",
+  },
+  sectionTitle: {
+    fontWeight: 600,
+  },
+  sectionStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(3),
+    width: "100%",
+  },
+  subSectionLabel: {
+    marginTop: theme.spacing(2),
+    fontWeight: 600,
+  },
+  subSectionLabelFirst: {
+    marginTop: 0,
+  },
+  toggleHighlight: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(2),
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(255,255,255,0.04)"
+        : theme.palette.grey[50],
+  },
+  autoSaveFooter: {
+    marginTop: theme.spacing(2),
+    display: "block",
+  },
+  saveHintFooter: {
+    marginTop: theme.spacing(2),
+    display: "block",
+  },
 }));
 
 export default function Options(props) {
-  const { settings, scheduleTypeChanged } = props;
+  const {
+    variant = "main",
+    settings,
+    scheduleTypeChanged,
+    showPlatformIntegrations = false,
+    showGroupManagerButton = false,
+    showChatbotControl = false,
+    chatbotControl,
+    setChatbotControl,
+    chatbotControlLoading = false,
+    chatbotControlSaving = false,
+    chatbotWeekdayStart = "08:00",
+    setChatbotWeekdayStart,
+    chatbotWeekdayEnd = "18:00",
+    setChatbotWeekdayEnd,
+    onSaveChatbotControl,
+  } = props;
   const classes = useStyles();
+  const history = useHistory();
   const [userRating, setUserRating] = useState("disabled");
   const [scheduleType, setScheduleType] = useState("disabled");
   const [callType, setCallType] = useState("enabled");
@@ -413,289 +462,492 @@ export default function Options(props) {
     toast.success(i18n.t("settings.options.toasts.success"));
     setLoadingAsaasType(false);
   }
-  return (
-    <>
-      <Grid spacing={3} container>
-        <Grid item xs={12}>
-          <Alert
-            severity="info"
-            variant="outlined"
-            className={classes.pageIntroAlert}
-          >
-            <Typography variant="body2" component="p">
-              {i18n.t("settings.options.pageIntro")}
-            </Typography>
-          </Alert>
-        </Grid>
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="ratings-label">{i18n.t("settings.options.fields.ratings.title")}</InputLabel>
-            <Select
-              labelId="ratings-label"
-              value={userRating}
-              onChange={async (e) => {
-                handleChangeUserRating(e.target.value);
-              }}
-            >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.ratings.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.ratings.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingUserRating && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="schedule-type-label">
-              {i18n.t("settings.options.fields.expedientManager.title")}
-            </InputLabel>
-            <Select
-              labelId="schedule-type-label"
-              value={scheduleType}
-              onChange={async (e) => {
-                handleScheduleType(e.target.value);
-              }}
-            >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
-              <MenuItem value={"queue"}>{i18n.t("settings.options.fields.expedientManager.queue")}</MenuItem>
-              <MenuItem value={"company"}>{i18n.t("settings.options.fields.expedientManager.company")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingScheduleType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        {scheduleType === "company" && (
-          <Grid item xs={12}>
-            <Alert
-              severity="warning"
-              variant="outlined"
-              className={classes.sectionAlert}
-            >
-              <Typography variant="body2" component="p">
-                {i18n.t("settings.options.expedientCompanyWarning")}
+
+  if (variant === "integrations") {
+    if (!showPlatformIntegrations) {
+      return null;
+    }
+    return (
+      <Box className={classes.sectionStack}>
+        <Paper elevation={1} className={classes.sectionPaper}>
+          <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1} mb={2}>
+            <Box flex={1} minWidth={0}>
+              <Typography variant="h6" className={classes.sectionTitle}>
+                {i18n.t("settings.sections.integrationsTitle")}
               </Typography>
-            </Alert>
-          </Grid>
+              <Typography variant="body2" color="textSecondary">
+                {i18n.t("settings.sections.integrationsDescription")}
+              </Typography>
+            </Box>
+            <Tooltip title={i18n.t("settings.sections.tooltips.integrations")}>
+              <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+                <InfoOutlined fontSize="small" color="action" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Box display="flex" alignItems="center" gap={0.5} mb={2}>
+            <Typography variant="subtitle2" className={classes.subSectionLabelFirst}>
+              {i18n.t("settings.sections.asaasTitle")}
+            </Typography>
+            <Tooltip title={i18n.t("settings.sections.tooltips.asaasNotice")}>
+              <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+                <InfoOutlined fontSize="small" color="action" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <TextField
+            id="asaas"
+            name="asaas"
+            margin="dense"
+            label={i18n.t("settings.sections.asaasTokenLabel")}
+            variant="outlined"
+            fullWidth
+            value={asaasType}
+            onChange={async (e) => {
+              handleChangeAsaas(e.target.value);
+            }}
+            helperText={loadingAsaasType ? i18n.t("settings.options.updating") : undefined}
+          />
+          <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
+            {i18n.t("settings.ux.autoSaveHint")}
+          </Typography>
+        </Paper>
+      </Box>
+    );
+  }
+
+  const sectionHeader = (titleId, taglineId, tooltipKey) => (
+    <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1} mb={2}>
+      <Box flex={1} minWidth={0}>
+        <Typography variant="h6" className={classes.sectionTitle}>
+          {i18n.t(titleId)}
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          {i18n.t(taglineId)}
+        </Typography>
+      </Box>
+      <Tooltip title={i18n.t(tooltipKey)}>
+        <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+          <InfoOutlined fontSize="small" color="action" />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+
+  return (
+    <Box className={classes.sectionStack}>
+      <Paper elevation={1} className={classes.sectionPaper}>
+        {sectionHeader(
+          "settings.sections.ratingsScheduleTitle",
+          "settings.sections.ratingsScheduleDescription",
+          "settings.sections.tooltips.ratingsSchedule"
         )}
-        <Grid item xs={12}>
-          <Alert
-            severity="info"
-            variant="outlined"
-            className={classes.sectionAlert}
-          >
-            <Typography variant="body2" component="p">
-              {i18n.t("settings.options.fields.ignoreMessages.alertNotice")}
-            </Typography>
-          </Alert>
+        <Grid spacing={3} container>
+          <Grid xs={12} sm={6} md={4} item>
+            <FormControl className={classes.selectContainer}>
+              <InputLabel id="ratings-label">{i18n.t("settings.options.fields.ratings.title")}</InputLabel>
+              <Select
+                labelId="ratings-label"
+                value={userRating}
+                onChange={async (e) => {
+                  handleChangeUserRating(e.target.value);
+                }}
+              >
+                <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.ratings.disabled")}</MenuItem>
+                <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.ratings.enabled")}</MenuItem>
+              </Select>
+              <FormHelperText>
+                {loadingUserRating && i18n.t("settings.options.updating")}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} md={4} item>
+            <FormControl className={classes.selectContainer}>
+              <InputLabel id="schedule-type-label">
+                {i18n.t("settings.options.fields.expedientManager.title")}
+              </InputLabel>
+              <Select
+                labelId="schedule-type-label"
+                value={scheduleType}
+                onChange={async (e) => {
+                  handleScheduleType(e.target.value);
+                }}
+              >
+                <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
+                <MenuItem value={"queue"}>{i18n.t("settings.options.fields.expedientManager.queue")}</MenuItem>
+                <MenuItem value={"company"}>{i18n.t("settings.options.fields.expedientManager.company")}</MenuItem>
+              </Select>
+              <FormHelperText>
+                {scheduleType === "company"
+                  ? i18n.t("settings.options.expedientCompanyWarningShort")
+                  : loadingScheduleType && i18n.t("settings.options.updating")}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
         </Grid>
-        <Grid xs={12} sm={12} md={6} item>
-          <FormControl className={classes.selectContainer} fullWidth>
-            <InputLabel id="group-type-label">
-              {i18n.t("settings.options.fields.ignoreMessages.title")}
-            </InputLabel>
-            <Select
-              labelId="group-type-label"
-              value={CheckMsgIsGroup}
-              onChange={async (e) => {
-                handleGroupType(e.target.value);
-              }}
+        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
+          {i18n.t("settings.ux.autoSaveHint")}
+        </Typography>
+      </Paper>
+
+      <Paper elevation={1} className={classes.sectionPaper}>
+        {sectionHeader(
+          "settings.sections.attendanceCallsCardTitle",
+          "settings.sections.callsDescription",
+          "settings.sections.tooltips.callsCard"
+        )}
+        <Grid spacing={2} container>
+          <Grid xs={12} sm={6} md={4} item>
+            <FormControl className={classes.selectContainer} fullWidth>
+              <InputLabel id="call-type-label">
+                {i18n.t("settings.options.fields.acceptCall.title")}
+              </InputLabel>
+              <Select
+                labelId="call-type-label"
+                value={callType}
+                onChange={async (e) => {
+                  handleCallType(e.target.value);
+                }}
+              >
+                <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.acceptCall.enabled")}</MenuItem>
+                <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.acceptCall.disabled")}</MenuItem>
+              </Select>
+              <FormHelperText>
+                {loadingCallType && i18n.t("settings.options.updating")}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+          {callType === "disabled" && (
+            <>
+              <Grid xs={12} sm={6} md={4} item>
+                <FormControl className={classes.selectContainer} fullWidth>
+                  <InputLabel id="call-reject-send-label">
+                    {i18n.t("settings.options.fields.acceptCall.rejectSendTitle")}
+                  </InputLabel>
+                  <Select
+                    labelId="call-reject-send-label"
+                    value={callRejectSendMessage}
+                    onChange={async (e) => {
+                      handleCallRejectSendMessage(e.target.value);
+                    }}
+                  >
+                    <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.acceptCall.rejectSendYes")}</MenuItem>
+                    <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.acceptCall.rejectSendNo")}</MenuItem>
+                  </Select>
+                  <FormHelperText>
+                    {loadingCallRejectSendMessage && i18n.t("settings.options.updating")}
+                  </FormHelperText>
+                </FormControl>
+              </Grid>
+              <Grid xs={12} item>
+                <TextField
+                  label={i18n.t("settings.options.fields.acceptCall.rejectMessageLabel")}
+                  placeholder={i18n.t("settings.options.fields.acceptCall.rejectMessagePlaceholder")}
+                  value={callRejectMessage}
+                  onChange={(e) => setCallRejectMessage(e.target.value)}
+                  onBlur={() => handleCallRejectMessageSave()}
+                  disabled={callRejectSendMessage === "disabled"}
+                  multiline
+                  minRows={2}
+                  variant="outlined"
+                  fullWidth
+                  helperText={
+                    loadingCallRejectMessage
+                      ? i18n.t("settings.options.updating")
+                      : i18n.t("settings.options.fields.acceptCall.rejectMessageHelper")
+                  }
+                />
+              </Grid>
+            </>
+          )}
+        </Grid>
+        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
+          {i18n.t("settings.ux.autoSaveHint")}
+        </Typography>
+      </Paper>
+
+      <Paper elevation={1} className={classes.sectionPaper}>
+        {sectionHeader(
+          "settings.sections.attendanceGroupsCardTitle",
+          "settings.sections.groupsConfigDescription",
+          "settings.sections.tooltips.groupsCard"
+        )}
+        {showGroupManagerButton ? (
+          <Box mb={2}>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={() => history.push("/settings/groups")}
             >
-              <MenuItem value={"disabled"}>
-                {i18n.t("settings.options.fields.ignoreMessages.optionReceive")}
-              </MenuItem>
-              <MenuItem value={"enabled"}>
-                {i18n.t("settings.options.fields.ignoreMessages.optionIgnore")}
-              </MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingCheckMsgIsGroup && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
+              {i18n.t("settings.sections.groupManagerButton")}
+            </Button>
+          </Box>
+        ) : null}
+        <Grid spacing={2} container>
+          <Grid xs={12} sm={12} md={6} item>
+            <FormControl className={classes.selectContainer} fullWidth>
+              <InputLabel id="group-type-label">
+                {i18n.t("settings.options.fields.ignoreMessages.title")}
+              </InputLabel>
+              <Select
+                labelId="group-type-label"
+                value={CheckMsgIsGroup}
+                onChange={async (e) => {
+                  handleGroupType(e.target.value);
+                }}
+              >
+                <MenuItem value={"disabled"}>
+                  {i18n.t("settings.options.fields.ignoreMessages.optionReceive")}
+                </MenuItem>
+                <MenuItem value={"enabled"}>
+                  {i18n.t("settings.options.fields.ignoreMessages.optionIgnore")}
+                </MenuItem>
+              </Select>
+              <FormHelperText>
+                {loadingCheckMsgIsGroup && i18n.t("settings.options.updating")}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
         </Grid>
-        <Grid item xs={12}>
-          <Alert
-            severity="info"
-            variant="outlined"
-            className={classes.sectionAlert}
-          >
-            <Typography variant="body2" component="p">
-              {i18n.t("settings.options.fields.acceptCall.alertNotice")}
+        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
+          {i18n.t("settings.ux.autoSaveHint")}
+        </Typography>
+      </Paper>
+
+      <Paper elevation={1} className={classes.sectionPaper}>
+        {sectionHeader(
+          "settings.sections.attendanceAutoMsgCardTitle",
+          "settings.sections.autoMessagesDescription",
+          "settings.sections.tooltips.autoMessagesCard"
+        )}
+        <Grid spacing={2} container>
+          <Grid xs={12} sm={6} md={4} item>
+            <FormControl className={classes.selectContainer}>
+              <InputLabel id="sendGreetingAccepted-label">
+                {i18n.t("settings.options.fields.sendGreetingAccepted.title")}
+              </InputLabel>
+              <Select
+                labelId="sendGreetingAccepted-label"
+                value={SendGreetingAccepted}
+                onChange={async (e) => {
+                  handleSendGreetingAccepted(e.target.value);
+                }}
+              >
+                <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
+                <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
+              </Select>
+              <FormHelperText>
+                {loadingSendGreetingAccepted && i18n.t("settings.options.updating")}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} md={4} item>
+            <FormControl className={classes.selectContainer}>
+              <InputLabel id="sendMsgTransfTicket-label">
+                {i18n.t("settings.options.fields.sendMsgTransfTicket.title")}
+              </InputLabel>
+              <Select
+                labelId="sendMsgTransfTicket-label"
+                value={SettingsTransfTicket}
+                onChange={async (e) => {
+                  handleSettingsTransfTicket(e.target.value);
+                }}
+              >
+                <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
+                <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
+              </Select>
+              <FormHelperText>
+                {loadingSettingsTransfTicket && i18n.t("settings.options.updating")}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} md={4} item>
+            <FormControl className={classes.selectContainer}>
+              <InputLabel id="sendGreetingMessageOneQueues-label">
+                {i18n.t("settings.options.fields.sendGreetingMessageOneQueues.title")}
+              </InputLabel>
+              <Select
+                labelId="sendGreetingMessageOneQueues-label"
+                value={sendGreetingMessageOneQueues}
+                onChange={async (e) => {
+                  handleSendGreetingMessageOneQueues(e.target.value);
+                }}
+              >
+                <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
+                <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
+              </Select>
+              <FormHelperText>
+                {loadingSendGreetingMessageOneQueues && i18n.t("settings.options.updating")}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+        </Grid>
+        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
+          {i18n.t("settings.ux.autoSaveHint")}
+        </Typography>
+      </Paper>
+
+      <Paper elevation={1} className={classes.sectionPaper}>
+        <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1} mb={2}>
+          <Box flex={1} minWidth={0}>
+            <Typography variant="h6" className={classes.sectionTitle}>
+              {i18n.t("settings.sections.chatbotAutomationTitle")}
             </Typography>
-          </Alert>
-        </Grid>
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer} fullWidth>
-            <InputLabel id="call-type-label">
-              {i18n.t("settings.options.fields.acceptCall.title")}
-            </InputLabel>
-            <Select
-              labelId="call-type-label"
-              value={callType}
-              onChange={async (e) => {
-                handleCallType(e.target.value);
-              }}
-            >
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.acceptCall.enabled")}</MenuItem>
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.acceptCall.disabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingCallType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        {callType === "disabled" && (
+            <Typography variant="body2" color="textSecondary">
+              {i18n.t("settings.sections.chatbotAutomationDescription")}
+            </Typography>
+          </Box>
+          <Tooltip title={i18n.t("settings.sections.tooltips.chatbotAutomation")}>
+            <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+              <InfoOutlined fontSize="small" color="action" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        {showChatbotControl ? (
           <>
-            <Grid xs={12} sm={6} md={4} item>
-              <FormControl className={classes.selectContainer} fullWidth>
-                <InputLabel id="call-reject-send-label">
-                  {i18n.t("settings.options.fields.acceptCall.rejectSendTitle")}
-                </InputLabel>
-                <Select
-                  labelId="call-reject-send-label"
-                  value={callRejectSendMessage}
-                  onChange={async (e) => {
-                    handleCallRejectSendMessage(e.target.value);
-                  }}
-                >
-                  <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.acceptCall.rejectSendYes")}</MenuItem>
-                  <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.acceptCall.rejectSendNo")}</MenuItem>
-                </Select>
-                <FormHelperText>
-                  {loadingCallRejectSendMessage && i18n.t("settings.options.updating")}
-                </FormHelperText>
-              </FormControl>
-            </Grid>
-            <Grid xs={12} item>
-              <TextField
-                label={i18n.t("settings.options.fields.acceptCall.rejectMessageLabel")}
-                placeholder={i18n.t("settings.options.fields.acceptCall.rejectMessagePlaceholder")}
-                value={callRejectMessage}
-                onChange={(e) => setCallRejectMessage(e.target.value)}
-                onBlur={() => handleCallRejectMessageSave()}
-                disabled={callRejectSendMessage === "disabled"}
-                multiline
-                minRows={2}
-                variant="outlined"
-                fullWidth
-                helperText={
-                  loadingCallRejectMessage
-                    ? i18n.t("settings.options.updating")
-                    : i18n.t("settings.options.fields.acceptCall.rejectMessageHelper")
+            <Typography variant="subtitle2" className={classes.subSectionLabelFirst}>
+              {i18n.t("settings.sections.chatbotSectionStateTitle")}
+            </Typography>
+            <Box className={classes.toggleHighlight}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    color="primary"
+                    size="medium"
+                    checked={Boolean(chatbotControl?.chatbotDisabled)}
+                    onChange={(e) =>
+                      setChatbotControl((prev) => ({
+                        ...(prev || {}),
+                        chatbotDisabled: e.target.checked,
+                      }))
+                    }
+                    disabled={chatbotControlLoading}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1" component="span" style={{ fontWeight: 600 }}>
+                      {i18n.t("settings.chatbotControl.disableCompany")}
+                    </Typography>
+                  </Box>
                 }
               />
-            </Grid>
+            </Box>
+            <Box className={classes.toggleHighlight}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    color="primary"
+                    size="medium"
+                    checked={Boolean(chatbotControl?.chatbotScheduleEnabled)}
+                    onChange={(e) =>
+                      setChatbotControl((prev) => ({
+                        ...(prev || {}),
+                        chatbotScheduleEnabled: e.target.checked,
+                      }))
+                    }
+                    disabled={chatbotControlLoading}
+                  />
+                }
+                label={
+                  <Typography variant="body1" component="span" style={{ fontWeight: 600 }}>
+                    {i18n.t("settings.chatbotControl.enableSchedule")}
+                  </Typography>
+                }
+              />
+              {Boolean(chatbotControl?.chatbotScheduleEnabled) && (
+                <Box mt={2} display="flex" flexWrap="wrap" alignItems="flex-end" style={{ gap: 12 }}>
+                  <TextField
+                    label={i18n.t("settings.chatbotControl.weekdayStart")}
+                    type="time"
+                    value={chatbotWeekdayStart}
+                    onChange={(e) => setChatbotWeekdayStart(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
+                    variant="outlined"
+                    size="small"
+                    helperText={i18n.t("settings.chatbotControl.weekdaysHint")}
+                  />
+                  <TextField
+                    label={i18n.t("settings.chatbotControl.weekdayEnd")}
+                    type="time"
+                    value={chatbotWeekdayEnd}
+                    onChange={(e) => setChatbotWeekdayEnd(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ step: 300 }}
+                    variant="outlined"
+                    size="small"
+                  />
+                </Box>
+              )}
+            </Box>
+            <Box mt={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="medium"
+                onClick={onSaveChatbotControl}
+                disabled={chatbotControlSaving || chatbotControlLoading}
+              >
+                {chatbotControlSaving
+                  ? i18n.t("settings.chatbotControl.buttons.saving")
+                  : i18n.t("settings.chatbotControl.buttons.save")}
+              </Button>
+              <Typography variant="caption" color="textSecondary" display="block" className={classes.saveHintFooter}>
+                {i18n.t("settings.ux.saveCardHint")}
+              </Typography>
+            </Box>
           </>
-        )}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="chatbot-type-label">
-              {i18n.t("settings.options.fields.chatbotType.title")}
-            </InputLabel>
-            <Select
-              labelId="chatbot-type-label"
-              value={chatbotType}
-              onChange={async (e) => {
-                handleChatbotType(e.target.value);
-              }}
-            >
-              <MenuItem value={"text"}>{i18n.t("settings.options.fields.chatbotType.text")}</MenuItem>
-			 {/*<MenuItem value={"button"}>Botão</MenuItem>*/}
-             {/*<MenuItem value={"list"}>Lista</MenuItem>*/}
-            </Select>
-            <FormHelperText>
-              {loadingChatbotType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-		{/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendGreetingAccepted-label">
-              {i18n.t("settings.options.fields.sendGreetingAccepted.title")}
-            </InputLabel>
-            <Select
-              labelId="sendGreetingAccepted-label"
-              value={SendGreetingAccepted}
-              onChange={async (e) => {
-                handleSendGreetingAccepted(e.target.value);
-              }}
-            >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSendGreetingAccepted && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-		{/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
-		
-		{/* ENVIAR MENSAGEM DE TRANSFERENCIA DE SETOR/ATENDENTE */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendMsgTransfTicket-label">
-              {i18n.t("settings.options.fields.sendMsgTransfTicket.title")}
-            </InputLabel>
-            <Select
-              labelId="sendMsgTransfTicket-label"
-              value={SettingsTransfTicket}
-              onChange={async (e) => {
-                handleSettingsTransfTicket(e.target.value);
-              }}
-            >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSettingsTransfTicket && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-		
-		{/* ENVIAR SAUDAÇÃO QUANDO HOUVER SOMENTE 1 FILA */}
-        <Grid xs={12} sm={6} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <InputLabel id="sendGreetingMessageOneQueues-label">
-              {i18n.t("settings.options.fields.sendGreetingMessageOneQueues.title")}
-            </InputLabel>
-            <Select
-              labelId="sendGreetingMessageOneQueues-label"
-              value={sendGreetingMessageOneQueues}
-              onChange={async (e) => {
-                handleSendGreetingMessageOneQueues(e.target.value);
-              }}
-            >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
-            </Select>
-            <FormHelperText>
-              {loadingSendGreetingMessageOneQueues && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-		
-      </Grid>
-      <Grid spacing={3} container>
-        <Tabs
-          indicatorColor="primary"
-          textColor="primary"
-          scrollButtons="on"
-          variant="scrollable"
-          className={classes.tab}
-          style={{
-            marginBottom: 20,
-            marginTop: 20
-          }}
-        >
-          <Tab
+        ) : null}
 
-            label={i18n.t("settings.options.tabs.integrations")} />
+        {showChatbotControl ? (
+          <Divider style={{ marginTop: 24, marginBottom: 16 }} />
+        ) : null}
 
-        </Tabs>
-
-      </Grid>
+        <Typography variant="subtitle2" className={showChatbotControl ? classes.subSectionLabel : classes.subSectionLabelFirst}>
+          {i18n.t("settings.sections.chatbotSectionMessagesTitle")}
+        </Typography>
+        <Box display="flex" alignItems="flex-start" gap={1} mb={1}>
+          <Typography variant="body2" color="textSecondary" style={{ flex: 1 }}>
+            {i18n.t("settings.sections.chatbotFlowDescription")}
+          </Typography>
+          <Tooltip title={i18n.t("settings.sections.tooltips.chatbotFlow")}>
+            <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+              <InfoOutlined fontSize="small" color="action" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <Grid spacing={2} container alignItems="flex-end">
+          <Grid xs={12} sm={6} md={4} item>
+            <FormControl className={classes.selectContainer} fullWidth>
+              <InputLabel id="chatbot-type-label">
+                {i18n.t("settings.options.fields.chatbotType.title")}
+              </InputLabel>
+              <Select
+                labelId="chatbot-type-label"
+                value={chatbotType}
+                onChange={async (e) => {
+                  handleChatbotType(e.target.value);
+                }}
+              >
+                <MenuItem value={"text"}>{i18n.t("settings.options.fields.chatbotType.text")}</MenuItem>
+              </Select>
+              <FormHelperText>
+                {loadingChatbotType && i18n.t("settings.options.updating")}
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <Button variant="outlined" color="primary" onClick={() => history.push("/flowbuilders")}>
+              {i18n.t("settings.sections.openFlowsButton")}
+            </Button>
+          </Grid>
+        </Grid>
+        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
+          {i18n.t("settings.ux.autoSaveHint")}
+        </Typography>
+      </Paper>
       {/*-----------------IXC DESATIVADO 4.6.5-----------------*/}
       {/*<Grid spacing={3} container
         style={{ marginBottom: 10 }}>
@@ -821,50 +1073,6 @@ export default function Options(props) {
           </FormControl>
         </Grid>
       </Grid>*/}
-      {/*-----------------ASAAS-----------------*/}
-      <Grid spacing={3} container
-        style={{ marginBottom: 10 }}>
-        <Tabs
-          indicatorColor="primary"
-          textColor="primary"
-          scrollButtons="on"
-          variant="scrollable"
-          className={classes.tab}
-        >
-          <Tab label="ASAAS" />
-
-        </Tabs>
-        <Grid item xs={12}>
-          <Alert
-            severity="warning"
-            variant="outlined"
-            className={classes.sectionAlert}
-          >
-            <Typography variant="body2" component="p">
-              {i18n.t("settings.options.integrations.asaasNotice")}
-            </Typography>
-          </Alert>
-        </Grid>
-        <Grid xs={12} sm={12} md={12} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="asaas"
-              name="asaas"
-              margin="dense"
-              label="Token Asaas"
-              variant="outlined"
-              value={asaasType}
-              onChange={async (e) => {
-                handleChangeAsaas(e.target.value);
-              }}
-            >
-            </TextField>
-            <FormHelperText>
-              {loadingAsaasType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-      </Grid>
-    </>
+    </Box>
   );
 }

@@ -4081,6 +4081,71 @@ const messages = {
           },
         },
         title: "Configurações",
+        sections: {
+          generalTitle: "Geral",
+          generalDescription: "Fuso horário e informações base da empresa.",
+          crmTitle: "CRM",
+          crmDescription: "Quem pode ver contactos e dados do CRM nesta empresa.",
+          storageTitle: "Armazenamento",
+          storageDescription: "Gerir ficheiros e mídias da empresa para libertar espaço.",
+          ratingsScheduleTitle: "Avaliações e expediente",
+          ratingsScheduleDescription: "Avaliações pós-atendimento e origem do horário comercial.",
+          tooltips: {
+            ratingsSchedule:
+              "Ativar avaliação após atendimento e definir se o expediente é por fila ou pela empresa.",
+            callsCard: "Aceitar ou recusar chamadas e o que enviar ao recusar.",
+            groupsCard:
+              "Receber ou ignorar mensagens de grupos. Para visibilidade por utilizador, use a gestão de grupos.",
+            autoMessagesCard:
+              "Saudação ao aceitar ticket, mensagem em transferências e quando existe apenas uma fila.",
+            chatbotAutomation:
+              "Desative o chatbot para a empresa, defina horário de funcionamento e o formato das mensagens. Fluxos completos ficam em Automação.",
+            chatbotFlow:
+              "Modo de apresentação das opções ao cliente. Fluxos completos estão em Automação.",
+            integrations:
+              "Ligações a serviços externos. Visível apenas para super administradores da plataforma.",
+            asaasNotice:
+              "O token de API concede acesso à sua conta Asaas. Guarde-o com segurança e reveja quem pode alterá-lo.",
+            expedientCompany:
+              "Modo Empresa: o mesmo expediente vale para toda a empresa. No modo Fila, cada setor usa o seu.",
+          },
+          attendanceCallsCardTitle: "Chamadas",
+          attendanceGroupsCardTitle: "Grupos",
+          attendanceAutoMsgCardTitle: "Mensagens automáticas",
+          chatbotSectionStateTitle: "Estado e horário",
+          chatbotSectionMessagesTitle: "Tipo e fluxos",
+          attendanceTitle: "Atendimento",
+          attendanceDescription:
+            "Chamadas, grupos no WhatsApp e mensagens automáticas.",
+          groupsConfigSubtitle: "Grupos no WhatsApp",
+          groupsConfigDescription:
+            "Receber ou ignorar mensagens de grupos. Para visibilidade por utilizador, use a gestão de grupos.",
+          callsSubtitle: "Chamadas",
+          callsDescription:
+            "Aceitar ou recusar chamadas e o que enviar ao recusar.",
+          autoMessagesSubtitle: "Mensagens automáticas",
+          autoMessagesDescription:
+            "Saudação ao aceitar ticket, mensagem em transferências e quando existe apenas uma fila.",
+          chatbotAutomationTitle: "Chatbot / Automação",
+          chatbotAutomationDescription:
+            "Controlo global do bot, horário e formato das mensagens ao cliente.",
+          chatbotFlowTitle: "Tipo de chatbot (mensagens)",
+          chatbotFlowDescription:
+            "Como as opções são mostradas no WhatsApp.",
+          openFlowsButton: "Abrir fluxos de automação",
+          groupManagerButton: "Abrir gestão de grupos",
+          integrationsTitle: "Integrações avançadas",
+          integrationsDescription:
+            "APIs e serviços externos (superadmin).",
+          asaasTitle: "Asaas",
+          asaasTokenLabel: "Token Asaas",
+        },
+        ux: {
+          autoSaveHint: "As alterações neste cartão são guardadas ao escolher uma opção.",
+          pageContextShort: "Definições da empresa atual. Super Admins: gestão global em Plataforma.",
+          moreInfoAria: "Mais informação",
+          saveCardHint: "Guarde para aplicar as alterações deste cartão.",
+        },
         tabs: {
           options: "Opções",
           schedules: "Horários",
@@ -4122,6 +4187,8 @@ const messages = {
             "Estas opções alteram o comportamento do WhatsApp e dos fluxos para todos os atendimentos desta empresa.",
           expedientCompanyWarning:
             "Modo Empresa: o mesmo expediente vale para toda a empresa. No modo Fila, cada setor usa o seu.",
+          expedientCompanyWarningShort:
+            "Um único horário para toda a empresa (defina no separador Horários).",
           toasts: {
             success: "Operação atualizada com sucesso.",
           },
@@ -4272,6 +4339,10 @@ const messages = {
               "Agendamentos e recorrências usam este fuso; o armazenamento no servidor continua em UTC.",
             timezoneFooter:
               "Escolha o fuso da sede ou da operação principal.",
+            timezoneShortHint:
+              "Fuso usado em agendamentos e regras desta empresa.",
+            timezoneTooltip:
+              "Agendamentos e recorrências usam este fuso; o armazenamento no servidor continua em UTC. Escolha o fuso da sede ou da operação principal.",
             timezoneHelperField:
               "Formato IANA, como na lista abaixo (ex.: America/Sao_Paulo).",
             usersSectionTitle: "Utilizadores da empresa",
