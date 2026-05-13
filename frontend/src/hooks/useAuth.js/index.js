@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { useHistory } from "react-router-dom";
 import { has, isArray } from "lodash";
 
@@ -51,6 +51,11 @@ const useAuth = () => {
     },
     async (error) => {
       const originalRequest = error.config;
+
+      /** Pedidos “soft” (ex.: sync após alteração de permissões) — não limpar sessão nem deslogar. */
+      if (originalRequest?.skipLogoutOnAuthError) {
+        return Promise.reject(error);
+      }
 
       if (error?.response?.status === 403 && !originalRequest._retry) {
         const errCode = error?.response?.data?.error;
@@ -120,6 +125,46 @@ const useAuth = () => {
 
   const socketManager = useContext(SocketContext);
 
+  const permRefreshTimerRef = useRef(null);
+  const permRefreshInFlightRef = useRef(false);
+
+  const refreshSessionAfterPermissionChange = useCallback(async () => {
+    if (permRefreshInFlightRef.current) return;
+    permRefreshInFlightRef.current = true;
+    try {
+      const { data } = await api.post(
+        "/auth/refresh_token",
+        undefined,
+        { skipLogoutOnAuthError: true }
+      );
+      if (data?.token) {
+        localStorage.setItem("token", JSON.stringify(data.token));
+        api.defaults.headers.Authorization = `Bearer ${data.token}`;
+      }
+      if (data?.user) {
+        if (data.user.companyId != null && data.user.companyId !== "") {
+          localStorage.setItem("companyId", String(data.user.companyId));
+        } else {
+          localStorage.removeItem("companyId");
+        }
+        setUser(data.user);
+        toast.success(i18n.t("userPermissions.sessionRefreshedToast"), {
+          autoClose: 4000,
+        });
+      } else {
+        toast.info(i18n.t("userPermissions.sessionUpdatedFallbackToast"), {
+          autoClose: 12000,
+        });
+      }
+    } catch {
+      toast.info(i18n.t("userPermissions.sessionUpdatedFallbackToast"), {
+        autoClose: 12000,
+      });
+    } finally {
+      permRefreshInFlightRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     (async () => {
@@ -174,20 +219,28 @@ const useAuth = () => {
       const pid =
         payload?.companyId != null ? String(payload.companyId) : null;
       if (pid && pid !== companyId) return;
-      toast.info(i18n.t("userPermissions.sessionUpdatedToast"), {
-        autoClose: 12000,
-      });
+      if (permRefreshTimerRef.current) {
+        clearTimeout(permRefreshTimerRef.current);
+      }
+      permRefreshTimerRef.current = setTimeout(() => {
+        permRefreshTimerRef.current = null;
+        refreshSessionAfterPermissionChange();
+      }, 450);
     };
 
     socket.on(`company-${companyId}-user`, onCompanyUser);
     socket.on("user-permissions-updated", onPermissionsUpdated);
 
     return () => {
+      if (permRefreshTimerRef.current) {
+        clearTimeout(permRefreshTimerRef.current);
+        permRefreshTimerRef.current = null;
+      }
       socket.off(`company-${companyId}-user`, onCompanyUser);
       socket.off("user-permissions-updated", onPermissionsUpdated);
       socket.disconnect();
     };
-  }, [socketManager, user?.id, user?.companyId]);
+  }, [socketManager, user?.id, user?.companyId, refreshSessionAfterPermissionChange]);
 
   useEffect(() => {
     if (user?.companyId == null || user?.companyId === "") {

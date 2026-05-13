@@ -31,8 +31,9 @@ const messages = {
 				applyDefaultPermissions: "Apply default permissions",
 				selectAllPlanAllowed: "Select everything allowed by the plan",
 				clearPermissions: "Clear permissions",
-				sessionUpdatedToast:
-					"Your permissions were updated. Please reload the page.",
+				sessionRefreshedToast: "Your permissions were updated.",
+				sessionUpdatedFallbackToast:
+					"Your permissions were updated. Reload the page to apply them.",
 				categories: {
 					attendance: "Support",
 					management: "Management",
