@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 
 import AppError from "../errors/AppError";
 import { loadCompanyPlanContext } from "./loadCompanyEffectiveFeatures";
+import { isPlatformSuperUser } from "./platformSuperBypass";
 import {
   computeEffectiveUserFeatureMapForRequest,
   USER_FEATURE_DISABLED_MSG
@@ -18,6 +19,9 @@ const requireAnyPlanFeature =
   (...featureKeys: string[]) =>
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      if (await isPlatformSuperUser(req)) {
+        return next();
+      }
       const ctx = await loadCompanyPlanContext(req);
       if (!ctx) {
         return next(new AppError("ERR_NO_PERMISSION", 403));

@@ -1947,6 +1947,7 @@ const messages = {
 				button: "Preview",
 			},
 			mainDrawer: {
+				loadingModules: "Loading modules…",
 				sections: {
 					dashboard: "Dashboard",
 					atendimento: "Customer service",

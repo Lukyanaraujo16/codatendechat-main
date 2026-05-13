@@ -87,6 +87,7 @@ export function mergePlanWithUserFeatures(
 ): Record<string, boolean> {
   const bypass =
     userRow.super === true ||
+    userRow.profile === "superadmin" ||
     jwt.supportMode === true ||
     userRow.profile === "admin";
   const out: Record<string, boolean> = {};
@@ -331,6 +332,7 @@ export async function assertActorCanManageUsers(
   planMap: Record<string, boolean>
 ): Promise<void> {
   if (actor.super === true) return;
+  if (actor.profile === "superadmin") return;
   if (actor.profile === "admin") return;
   if (actor.profile === "supervisor") {
     const explicit = await loadExplicitUserFeatureMap(actor.id);

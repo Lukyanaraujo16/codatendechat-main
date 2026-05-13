@@ -4,6 +4,7 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
+import Typography from "@material-ui/core/Typography";
 import { Badge } from "@material-ui/core";
 import DashboardOutlinedIcon from "@material-ui/icons/DashboardOutlined";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
@@ -31,6 +32,7 @@ import { isArray } from "lodash";
 import api from "../services/api";
 import toastError from "../errors/toastError";
 import { makeStyles, alpha } from "@material-ui/core/styles";
+import Skeleton from "@material-ui/lab/Skeleton";
 import usePlanFlags from "../hooks/usePlanFlags";
 
 const useStyles = makeStyles((theme) => {
@@ -167,11 +169,47 @@ function defaultAutomacaoPath(planFlags, isTenantManager) {
   return "/tickets";
 }
 
+function MenuDrawerSkeleton({ classes }) {
+  const rows = 10;
+  return (
+    <>
+      {Array.from({ length: rows }, (_, i) => (
+        <ListItem key={i} dense component="div">
+          <ListItemIcon className={classes.listItemIcon}>
+            <Skeleton variant="circle" width={22} height={22} />
+          </ListItemIcon>
+          <ListItemText
+            primary={
+              <Skeleton
+                variant="text"
+                height={18}
+                style={{ maxWidth: `${58 + (i % 4) * 8}%` }}
+              />
+            }
+            className={classes.listItemText}
+          />
+        </ListItem>
+      ))}
+      <ListItem dense component="div">
+        <ListItemText
+          primary={
+            <Typography variant="caption" color="textSecondary" component="span">
+              {i18n.t("mainDrawer.loadingModules")}
+            </Typography>
+          }
+          className={classes.listItemText}
+        />
+      </ListItem>
+    </>
+  );
+}
+
 const MainListItems = (props) => {
   const classes = useStyles();
   const { drawerClose } = props;
   const { whatsApps } = useContext(WhatsAppsContext);
   const { user } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
   const [connectionWarning, setConnectionWarning] = useState(false);
 
   const [invisible, setInvisible] = useState(true);
@@ -180,8 +218,6 @@ const MainListItems = (props) => {
   const [chats, dispatch] = useReducer(reducer, []);
   const planFlags = usePlanFlags();
   const location = useLocation();
-
-  const socketManager = useContext(SocketContext);
 
   const isAdmin = user?.profile === "admin";
   const isSupervisor = user?.profile === "supervisor";
@@ -425,6 +461,20 @@ const MainListItems = (props) => {
       />
     </>
   );
+
+  const tenantAwaitingPlanFlags =
+    user?.companyId != null &&
+    user?.companyId !== "" &&
+    !user?.super &&
+    !planFlags.loaded;
+
+  if (tenantAwaitingPlanFlags) {
+    return (
+      <div onClick={drawerClose}>
+        <MenuDrawerSkeleton classes={classes} />
+      </div>
+    );
+  }
 
   return (
     <div onClick={drawerClose}>

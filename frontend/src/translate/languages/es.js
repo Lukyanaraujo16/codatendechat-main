@@ -1949,6 +1949,7 @@ const messages = {
         button: "Visualizar",
       },
       mainDrawer: {
+        loadingModules: "Cargando módulos…",
         sections: {
           dashboard: "Dashboard",
           atendimento: "Atención",

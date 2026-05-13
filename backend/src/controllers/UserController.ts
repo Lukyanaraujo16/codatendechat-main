@@ -13,6 +13,7 @@ import SimpleListService from "../services/UserServices/SimpleListService";
 import User from "../models/User";
 import SetLanguageCompanyService from "../services/UserServices/SetLanguageCompanyService";
 import { loadCompanyPlanContext } from "../middleware/loadCompanyEffectiveFeatures";
+import { isPlatformSuperUser } from "../middleware/platformSuperBypass";
 import {
   assertActorCanManageUsers,
   assertSupervisorTargetRules,
@@ -28,11 +29,17 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const actor = await User.findByPk(req.user.id, {
     attributes: ["id", "profile", "super"]
   });
-  const ctx = await loadCompanyPlanContext(req);
-  if (!ctx) {
+  if (!actor) {
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
-  await assertActorCanManageUsers(actor, ctx.featureMap);
+  const ctx = await loadCompanyPlanContext(req);
+  const featureMap =
+    ctx?.featureMap ??
+    ((await isPlatformSuperUser(req)) ? ({} as Record<string, boolean>) : null);
+  if (featureMap === null) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+  await assertActorCanManageUsers(actor, featureMap);
 
   const { searchParam, pageNumber } = req.query as IndexQuery;
   const { companyId } = req.user;
@@ -81,10 +88,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       throw new AppError("ERR_NO_PERMISSION", 403);
     }
     const ctx = await loadCompanyPlanContext(req);
-    if (!ctx) {
+    const featureMap =
+      ctx?.featureMap ??
+      ((await isPlatformSuperUser(req)) ? ({} as Record<string, boolean>) : null);
+    if (featureMap === null) {
       throw new AppError("ERR_NO_PERMISSION", 403);
     }
-    await assertActorCanManageUsers(actorForCreate, ctx.featureMap);
+    await assertActorCanManageUsers(actorForCreate, featureMap);
     if (newUserCompanyId !== req.user?.companyId && !actorForCreate?.super) {
       throw new AppError("ERR_NO_SUPER", 403);
     }
@@ -240,10 +250,13 @@ export const remove = async (
     attributes: ["id", "profile", "super"]
   });
   const ctx = await loadCompanyPlanContext(req);
-  if (!ctx) {
+  const featureMap =
+    ctx?.featureMap ??
+    ((await isPlatformSuperUser(req)) ? ({} as Record<string, boolean>) : null);
+  if (featureMap === null) {
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
-  await assertActorCanManageUsers(actor, ctx.featureMap);
+  await assertActorCanManageUsers(actor, featureMap);
 
   await DeleteUserService(userId, companyId);
 

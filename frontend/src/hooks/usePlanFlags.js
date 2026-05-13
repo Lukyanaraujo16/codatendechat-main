@@ -1,7 +1,26 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { AuthContext } from "../context/Auth/AuthContext";
 import usePlans from "./usePlans";
 import { buildEffectiveModuleFlagsFromFeatureMap } from "../components/ModuleSettings/moduleSync";
+
+/** Alinha o override legado `cshow` ao mesmo instante em que o plano fica pronto (evita “saltar” campanhas). */
+function applyCampaignsShowOverride(base) {
+  if (typeof window === "undefined" || !localStorage.getItem("cshow")) {
+    return base;
+  }
+  return {
+    ...base,
+    useCampaigns: true,
+    useFlowbuilders: true,
+    effectiveFeatures: {
+      ...base.effectiveFeatures,
+      "campaigns.sends": true,
+      "campaigns.lists": true,
+      "automation.chatbot": true,
+      "automation.keywords": true,
+    },
+  };
+}
 
 /**
  * Flags de plano (legado) + mapa granular `effectiveFeatures` (chaves config/features),
@@ -10,6 +29,7 @@ import { buildEffectiveModuleFlagsFromFeatureMap } from "../components/ModuleSet
 export default function usePlanFlags() {
   const { user } = useContext(AuthContext);
   const { getPlanCompany } = usePlans();
+  const lastCompanyIdRef = useRef(undefined);
   const [flags, setFlags] = useState({
     useCampaigns: false,
     useFlowbuilders: false,
@@ -28,14 +48,26 @@ export default function usePlanFlags() {
 
   useEffect(() => {
     if (!user?.companyId) {
-      setFlags((f) => ({
-        ...f,
-        loaded: true,
-        effectiveFeatures: {},
-        planTierEffectiveFeatures: {},
-      }));
+      lastCompanyIdRef.current = undefined;
+      setFlags((f) =>
+        applyCampaignsShowOverride({
+          ...f,
+          loaded: true,
+          effectiveFeatures: {},
+          planTierEffectiveFeatures: {},
+        })
+      );
       return;
     }
+
+    const cid = user.companyId;
+    const companyChanged = lastCompanyIdRef.current !== cid;
+    lastCompanyIdRef.current = cid;
+
+    if (companyChanged) {
+      setFlags((f) => ({ ...f, loaded: false }));
+    }
+
     let cancelled = false;
     (async () => {
       try {
@@ -58,75 +90,85 @@ export default function usePlanFlags() {
             )
           : null;
         if (!p) {
-          setFlags({
-            useCampaigns: false,
-            useFlowbuilders: false,
-            useKanban: false,
-            useOpenAi: false,
-            useIntegrations: false,
-            useSchedules: false,
-            useExternalApi: false,
-            useGroups: true,
-            useInternalChat: false,
-            loaded: true,
-            planTierEffectiveFeatures: planEffectiveFeatures,
-            effectiveFeatures,
-          });
+          setFlags(
+            applyCampaignsShowOverride({
+              useCampaigns: false,
+              useFlowbuilders: false,
+              useKanban: false,
+              useOpenAi: false,
+              useIntegrations: false,
+              useSchedules: false,
+              useExternalApi: false,
+              useGroups: true,
+              useInternalChat: false,
+              loaded: true,
+              planTierEffectiveFeatures: planEffectiveFeatures,
+              effectiveFeatures,
+            })
+          );
           return;
         }
         if (effFromFeatures) {
-          setFlags({
-            useCampaigns: !!effFromFeatures.useCampaigns,
-            useFlowbuilders: !!effFromFeatures.useFlowbuilders,
-            useKanban: !!effFromFeatures.useKanban,
-            useOpenAi: !!effFromFeatures.useOpenAi,
-            useIntegrations: !!effFromFeatures.useIntegrations,
-            useSchedules: !!effFromFeatures.useSchedules,
-            useExternalApi: !!effFromFeatures.useExternalApi,
-            useGroups: effFromFeatures.useGroups !== false,
-            useInternalChat: !!effFromFeatures.useInternalChat,
-            loaded: true,
-            planTierEffectiveFeatures: planEffectiveFeatures,
-            effectiveFeatures,
-          });
+          setFlags(
+            applyCampaignsShowOverride({
+              useCampaigns: !!effFromFeatures.useCampaigns,
+              useFlowbuilders: !!effFromFeatures.useFlowbuilders,
+              useKanban: !!effFromFeatures.useKanban,
+              useOpenAi: !!effFromFeatures.useOpenAi,
+              useIntegrations: !!effFromFeatures.useIntegrations,
+              useSchedules: !!effFromFeatures.useSchedules,
+              useExternalApi: !!effFromFeatures.useExternalApi,
+              useGroups: effFromFeatures.useGroups !== false,
+              useInternalChat: !!effFromFeatures.useInternalChat,
+              loaded: true,
+              planTierEffectiveFeatures: planEffectiveFeatures,
+              effectiveFeatures,
+            })
+          );
           return;
         }
         if (eff) {
-          setFlags({
-            useCampaigns: !!eff.useCampaigns,
-            useFlowbuilders: !!eff.useFlowbuilders,
-            useKanban: !!eff.useKanban,
-            useOpenAi: !!eff.useOpenAi,
-            useIntegrations: !!eff.useIntegrations,
-            useSchedules: !!eff.useSchedules,
-            useExternalApi: !!eff.useExternalApi,
-            useGroups: eff.useGroups !== false,
-            useInternalChat:
-              eff.useInternalChat !== undefined
-                ? !!eff.useInternalChat
-                : p.useInternalChat !== false,
-            loaded: true,
-            planTierEffectiveFeatures: planEffectiveFeatures,
-            effectiveFeatures,
-          });
+          setFlags(
+            applyCampaignsShowOverride({
+              useCampaigns: !!eff.useCampaigns,
+              useFlowbuilders: !!eff.useFlowbuilders,
+              useKanban: !!eff.useKanban,
+              useOpenAi: !!eff.useOpenAi,
+              useIntegrations: !!eff.useIntegrations,
+              useSchedules: !!eff.useSchedules,
+              useExternalApi: !!eff.useExternalApi,
+              useGroups: eff.useGroups !== false,
+              useInternalChat:
+                eff.useInternalChat !== undefined
+                  ? !!eff.useInternalChat
+                  : p.useInternalChat !== false,
+              loaded: true,
+              planTierEffectiveFeatures: planEffectiveFeatures,
+              effectiveFeatures,
+            })
+          );
         } else {
-          setFlags({
-            useCampaigns: !!p.useCampaigns,
-            useFlowbuilders: !!p.useCampaigns,
-            useKanban: !!p.useKanban,
-            useOpenAi: !!p.useOpenAi,
-            useIntegrations: !!p.useIntegrations,
-            useSchedules: !!p.useSchedules,
-            useExternalApi: !!p.useExternalApi,
-            useGroups: true,
-            useInternalChat: p.useInternalChat !== false,
-            loaded: true,
-            planTierEffectiveFeatures: planEffectiveFeatures,
-            effectiveFeatures,
-          });
+          setFlags(
+            applyCampaignsShowOverride({
+              useCampaigns: !!p.useCampaigns,
+              useFlowbuilders: !!(p.useFlowbuilders ?? p.useCampaigns),
+              useKanban: !!p.useKanban,
+              useOpenAi: !!p.useOpenAi,
+              useIntegrations: !!p.useIntegrations,
+              useSchedules: !!p.useSchedules,
+              useExternalApi: !!p.useExternalApi,
+              useGroups: true,
+              useInternalChat: p.useInternalChat !== false,
+              loaded: true,
+              planTierEffectiveFeatures: planEffectiveFeatures,
+              effectiveFeatures,
+            })
+          );
         }
       } catch {
-        if (!cancelled) setFlags((f) => ({ ...f, loaded: true }));
+        if (!cancelled) {
+          setFlags((f) => applyCampaignsShowOverride({ ...f, loaded: true }));
+        }
       }
     })();
     return () => {
@@ -139,26 +181,11 @@ export default function usePlanFlags() {
     getPlanCompany,
   ]);
 
-  useEffect(() => {
-    if (localStorage.getItem("cshow")) {
-      setFlags((f) => ({
-        ...f,
-        useCampaigns: true,
-        useFlowbuilders: true,
-        effectiveFeatures: {
-          ...f.effectiveFeatures,
-          "campaigns.sends": true,
-          "campaigns.lists": true,
-          "automation.chatbot": true,
-          "automation.keywords": true,
-        },
-      }));
-    }
-  }, []);
-
   return {
     ...flags,
     /** Alias explícito: permissões/features do plano já foram carregadas da API. */
     ready: flags.loaded,
+    /** Igual a `ready` — para o menu aguardar antes de listar módulos. */
+    permissionsReady: flags.loaded,
   };
 }

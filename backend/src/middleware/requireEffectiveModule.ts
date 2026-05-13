@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import AppError from "../errors/AppError";
 import { EffectiveModuleFlags } from "../services/CompanyService/GetEffectiveModuleFlagsService";
 import { loadCompanyPlanContext } from "./loadCompanyEffectiveFeatures";
+import { isPlatformSuperUser } from "./platformSuperBypass";
 import { buildEffectiveModuleFlagsFromFeatureMap } from "../services/CompanyService/GetEffectiveModuleFlagsService";
 import {
   computeEffectiveUserFeatureMapForRequest,
@@ -23,6 +24,9 @@ const requireEffectiveModule = (key: keyof EffectiveModuleFlags) => {
     next: NextFunction
   ): Promise<void> => {
     try {
+      if (await isPlatformSuperUser(req)) {
+        return next();
+      }
       const ctx = await loadCompanyPlanContext(req);
       if (!ctx) {
         return next(new AppError("ERR_NO_PERMISSION", 403));
