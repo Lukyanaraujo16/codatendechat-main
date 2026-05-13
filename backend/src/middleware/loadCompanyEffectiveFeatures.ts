@@ -18,12 +18,9 @@ export type CompanyPlanContext = {
   effectiveModules: EffectiveModuleFlags;
 };
 
-export async function loadCompanyPlanContext(
-  req: Request
+export async function loadCompanyPlanContextByCompanyId(
+  companyId: number
 ): Promise<CompanyPlanContext | null> {
-  const companyId = req.user?.companyId;
-  if (!companyId) return null;
-
   const company = await Company.findByPk(companyId, {
     include: [{ model: Plan, as: "plan" }]
   });
@@ -41,4 +38,12 @@ export async function loadCompanyPlanContext(
   );
 
   return { company, featureMap, effectiveModules };
+}
+
+export async function loadCompanyPlanContext(
+  req: Request
+): Promise<CompanyPlanContext | null> {
+  const companyId = req.user?.companyId;
+  if (!companyId) return null;
+  return loadCompanyPlanContextByCompanyId(companyId);
 }

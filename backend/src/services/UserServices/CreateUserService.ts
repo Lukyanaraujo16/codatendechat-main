@@ -6,6 +6,11 @@ import { SerializeUser } from "../../helpers/SerializeUser";
 import User from "../../models/User";
 import Plan from "../../models/Plan";
 import Company from "../../models/Company";
+import {
+  loadPlanFeatureMapForCompanyId,
+  seedDefaultUserFeaturePermissions,
+  setUserFeaturePermissionsFromAdminInput
+} from "../UserFeaturePermission/UserFeaturePermissionService";
 
 const ALLOWED_PROFILES = ["admin", "user", "supervisor"];
 
@@ -18,6 +23,9 @@ interface Request {
   profile?: string;
   whatsappId?: number;
   allTicket?: string;
+  featurePermissions?: Record<string, unknown>;
+  /** Quem cria o utilizador (rotas autenticadas). Ausente em fluxos públicos → tratado como sistema. */
+  actor?: Pick<User, "id" | "profile" | "super"> | null;
 }
 
 interface Response {
@@ -35,7 +43,9 @@ const CreateUserService = async ({
   companyId,
   profile = "admin",
   whatsappId,
-  allTicket
+  allTicket,
+  featurePermissions,
+  actor
 }: Request): Promise<Response> => {
   if (!ALLOWED_PROFILES.includes(profile)) {
     throw new AppError("ERR_INVALID_PROFILE", 400);
@@ -115,7 +125,40 @@ const CreateUserService = async ({
 
   await user.reload();
 
-  const serializedUser = await SerializeUser(user);
+  if (
+    (profile === "user" || profile === "supervisor") &&
+    companyId !== undefined &&
+    companyId !== null
+  ) {
+    const planMap = await loadPlanFeatureMapForCompanyId(companyId);
+    const effectiveActor =
+      actor ??
+      ({ id: 0, profile: "admin", super: true } as Pick<
+        User,
+        "id" | "profile" | "super"
+      >);
+    if (featurePermissions && typeof featurePermissions === "object") {
+      await setUserFeaturePermissionsFromAdminInput({
+        targetUserId: user.id,
+        companyId,
+        planMap,
+        input: featurePermissions,
+        actor: effectiveActor
+      });
+    } else {
+      await seedDefaultUserFeaturePermissions(
+        user.id,
+        companyId,
+        profile,
+        planMap,
+        { actorUserId: actor?.id ?? null }
+      );
+    }
+  }
+
+  const serializedUser = await SerializeUser(user, {
+    effectiveCompanyIdForPlan: companyId ?? null
+  });
 
   return serializedUser;
 };

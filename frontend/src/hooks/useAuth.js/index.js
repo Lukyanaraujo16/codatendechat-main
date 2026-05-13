@@ -19,6 +19,7 @@ const BUSINESS_FORBIDDEN = [
   "ERR_NO_PERMISSION",
   /** Plano / feature: não é falha de sessão — não tentar refresh nem logout */
   "ERR_PLAN_FEATURE_DISABLED",
+  "ERR_USER_FEATURE_DISABLED",
 ];
 
 const useAuth = () => {
@@ -163,13 +164,27 @@ const useAuth = () => {
     const companyId = String(user.companyId);
     const socket = socketManager.getSocket(companyId);
 
-    socket.on(`company-${companyId}-user`, (data) => {
-      if (data.action === "update" && data.user.id === user.id) {
+    const onCompanyUser = (data) => {
+      if (data.action === "update" && data.user?.id === user.id) {
         setUser(data.user);
       }
-    });
+    };
+
+    const onPermissionsUpdated = (payload) => {
+      const pid =
+        payload?.companyId != null ? String(payload.companyId) : null;
+      if (pid && pid !== companyId) return;
+      toast.info(i18n.t("userPermissions.sessionUpdatedToast"), {
+        autoClose: 12000,
+      });
+    };
+
+    socket.on(`company-${companyId}-user`, onCompanyUser);
+    socket.on("user-permissions-updated", onPermissionsUpdated);
 
     return () => {
+      socket.off(`company-${companyId}-user`, onCompanyUser);
+      socket.off("user-permissions-updated", onPermissionsUpdated);
       socket.disconnect();
     };
   }, [socketManager, user?.id, user?.companyId]);

@@ -18,6 +18,8 @@ import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import Typography from "@material-ui/core/Typography";
+import Box from "@material-ui/core/Box";
+import Alert from "@material-ui/lab/Alert";
 
 import { i18n } from "../../translate/i18n";
 
@@ -28,6 +30,19 @@ import QueueSelect from "../QueueSelect";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import useWhatsApps from "../../hooks/useWhatsApps";
+import Checkbox from "@material-ui/core/Checkbox";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
+import usePlanFlags from "../../hooks/usePlanFlags";
+import { getAllFeatureKeys, getFeatureLabel } from "../../config/features";
+import {
+	PERMISSION_UI_GROUPS,
+	PERMISSION_PRESETS,
+	applyPermissionPreset,
+	applyActorCeiling,
+	selectAllAllowedForActor,
+	clearAllInPlan,
+	keysForGroupInPlan,
+} from "./permissionUiConfig";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -87,6 +102,28 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
+function buildDefaultFeaturePermissions(planMap, profile) {
+	const st = {};
+	if (!planMap || typeof planMap !== "object") return st;
+	Object.keys(planMap).forEach(k => {
+		if (planMap[k] === true) st[k] = false;
+	});
+	if (st["dashboard.main"] !== undefined) st["dashboard.main"] = true;
+	if (st["attendance.inbox"] !== undefined) st["attendance.inbox"] = true;
+	if (st["attendance.internal_chat"] !== undefined) st["attendance.internal_chat"] = true;
+	if (profile === "supervisor") {
+		if (st["dashboard.reports"] !== undefined) st["dashboard.reports"] = true;
+		if (st["attendance.kanban"] !== undefined) st["attendance.kanban"] = true;
+		if (st["contacts.tags"] !== undefined) st["contacts.tags"] = true;
+		if (st["contacts.files"] !== undefined) st["contacts.files"] = true;
+		if (st["team.groups"] !== undefined) st["team.groups"] = true;
+		if (st["team.queues"] !== undefined) st["team.queues"] = true;
+		if (st["agenda.calendar"] !== undefined) st["agenda.calendar"] = true;
+		if (st["crm.pipeline"] !== undefined) st["crm.pipeline"] = true;
+	}
+	return st;
+}
+
 const UserModal = ({ open, onClose, userId, reload }) => {
 	const classes = useStyles();
 
@@ -96,9 +133,28 @@ const UserModal = ({ open, onClose, userId, reload }) => {
 		password: "",
 		profile: "user",
 		allTicket: "desabled",
+		featurePermissions: {},
+		permissionPreset: "custom",
 	};
 
 	const { user: loggedInUser } = useContext(AuthContext);
+	const planFlags = usePlanFlags();
+
+	const actorPermCeiling = useMemo(() => {
+		if (loggedInUser?.profile === "admin" || loggedInUser?.super) return null;
+		if (loggedInUser?.profile === "supervisor") {
+			return loggedInUser.effectiveUserFeatures || {};
+		}
+		return null;
+	}, [loggedInUser]);
+
+	const orderedPlanKeys = useMemo(
+		() => {
+			const on = planFlags.planTierEffectiveFeatures || {};
+			return getAllFeatureKeys().filter(k => on[k] === true);
+		},
+		[planFlags.planTierEffectiveFeatures]
+	);
 
 	const [user, setUser] = useState(initialState);
 	const [selectedQueueIds, setSelectedQueueIds] = useState([]);
@@ -119,6 +175,10 @@ const UserModal = ({ open, onClose, userId, reload }) => {
 					.oneOf(["admin", "user", "supervisor"])
 					.required(),
 				allTicket: Yup.string().oneOf(["enabled", "desabled"]).required(),
+				featurePermissions: Yup.object().nullable(),
+				permissionPreset: Yup.string()
+					.oneOf(["basic", "attendant", "supervisor", "custom"])
+					.optional(),
 				password: userId
 					? yupPasswordOptional(i18n.t("passwordPolicy.requirements"))
 					: yupPasswordRequired(
@@ -130,12 +190,45 @@ const UserModal = ({ open, onClose, userId, reload }) => {
 	);
 
 	useEffect(() => {
+		if (!open || userId || !planFlags.loaded) return;
+		setUser(prev => {
+			const prof = prev.profile || initialState.profile;
+			let fp = buildDefaultFeaturePermissions(
+				planFlags.planTierEffectiveFeatures || {},
+				prof
+			);
+			if (loggedInUser?.profile === "supervisor" && loggedInUser.effectiveUserFeatures) {
+				fp = applyActorCeiling(fp, loggedInUser.effectiveUserFeatures);
+			}
+			return {
+				...initialState,
+				profile: prof,
+				permissionPreset: "custom",
+				featurePermissions: fp,
+			};
+		});
+	}, [
+		open,
+		userId,
+		planFlags.loaded,
+		planFlags.planTierEffectiveFeatures,
+		loggedInUser?.profile,
+		loggedInUser?.effectiveUserFeatures,
+	]);
+
+	useEffect(() => {
 		const fetchUser = async () => {
 			if (!userId) return;
 			try {
 				const { data } = await api.get(`/users/${userId}`);
 				setUser(prevState => {
-					return { ...prevState, ...data, password: "" };
+					return {
+						...prevState,
+						...data,
+						password: "",
+						featurePermissions: data.featurePermissions || {},
+						permissionPreset: "custom",
+					};
 				});
 				const userQueueIds = data.queues?.map(queue => queue.id);
 				setSelectedQueueIds(userQueueIds || []);
@@ -156,14 +249,18 @@ const UserModal = ({ open, onClose, userId, reload }) => {
 	};
 
 	const handleSaveUser = async values => {
+		const { permissionPreset: _preset, ...valuesRest } = values;
 		const userData = {
-			...values,
+			...valuesRest,
 			whatsappId,
 			queueIds: selectedQueueIds,
 			allTicket: values.allTicket,
 		};
 		if (userId && (!userData.password || userData.password === "")) {
 			delete userData.password;
+		}
+		if (values.profile !== "admin" && values.featurePermissions) {
+			userData.featurePermissions = values.featurePermissions;
 		}
 		try {
 			if (userId) {
@@ -186,7 +283,7 @@ const UserModal = ({ open, onClose, userId, reload }) => {
 			<Dialog
 				open={open}
 				onClose={handleClose}
-				maxWidth="sm"
+				maxWidth="md"
 				fullWidth
 				scroll="paper"
 			>
@@ -206,7 +303,7 @@ const UserModal = ({ open, onClose, userId, reload }) => {
 						}, 400);
 					}}
 				>
-					{({ touched, errors, isSubmitting }) => (
+					{({ touched, errors, isSubmitting, values, setFieldValue }) => (
 						<Form>
 							<DialogContent dividers>
 								<div className={classes.multFieldLine}>
@@ -273,7 +370,9 @@ const UserModal = ({ open, onClose, userId, reload }) => {
 														id="profile-selection"
 														required
 													>
-														<MenuItem value="admin">Admin</MenuItem>
+														{loggedInUser.profile !== "supervisor" && (
+															<MenuItem value="admin">Admin</MenuItem>
+														)}
 														<MenuItem value="user">User</MenuItem>
 														<MenuItem value="supervisor">
 															{i18n.t("userModal.form.profileSupervisor")}
@@ -323,6 +422,164 @@ const UserModal = ({ open, onClose, userId, reload }) => {
 										</FormControl>
 									)}
 								/>
+
+								{(values.profile === "user" || values.profile === "supervisor") &&
+									planFlags.loaded &&
+									orderedPlanKeys.length > 0 && (
+										<>
+											<div className={classes.divider}>
+												<span className={classes.dividerText}>
+													{i18n.t("userPermissions.organizedTitle")}
+												</span>
+											</div>
+											<Alert severity="info" style={{ marginBottom: 12 }}>
+												{i18n.t("userPermissions.planLimitNotice")}
+											</Alert>
+											<Typography
+												variant="caption"
+												color="textSecondary"
+												component="div"
+												style={{ marginBottom: 12 }}
+											>
+												{i18n.t("userPermissions.legacyHint")}
+											</Typography>
+											<FormControl
+												variant="outlined"
+												margin="dense"
+												fullWidth
+												className={classes.maxWidth}
+												style={{ marginBottom: 12 }}
+											>
+												<InputLabel id="permission-preset-label">
+													{i18n.t("userPermissions.presetProfileLabel")}
+												</InputLabel>
+												<Select
+													labelId="permission-preset-label"
+													label={i18n.t("userPermissions.presetProfileLabel")}
+													name="permissionPreset"
+													value={values.permissionPreset || "custom"}
+													onChange={e => {
+														const v = e.target.value;
+														setFieldValue("permissionPreset", v);
+														if (v === "custom") return;
+														const plan = planFlags.planTierEffectiveFeatures || {};
+														let next = applyPermissionPreset(plan, v);
+														if (actorPermCeiling) {
+															next = applyActorCeiling(next, actorPermCeiling);
+														}
+														setFieldValue("featurePermissions", next);
+													}}
+												>
+													{PERMISSION_PRESETS.map(p => (
+														<MenuItem key={p.id} value={p.id}>
+															{i18n.t(p.labelKey)}
+														</MenuItem>
+													))}
+												</Select>
+											</FormControl>
+											<Box
+												display="flex"
+												flexWrap="wrap"
+												style={{ gap: 8, marginBottom: 16 }}
+											>
+												<Button
+													size="small"
+													variant="outlined"
+													color="primary"
+													type="button"
+													onClick={() => {
+														const plan = planFlags.planTierEffectiveFeatures || {};
+														setFieldValue(
+															"featurePermissions",
+															selectAllAllowedForActor(plan, actorPermCeiling)
+														);
+														setFieldValue("permissionPreset", "custom");
+													}}
+												>
+													{i18n.t("userPermissions.selectAllPlanAllowed")}
+												</Button>
+												<Button
+													size="small"
+													variant="outlined"
+													type="button"
+													onClick={() => {
+														const plan = planFlags.planTierEffectiveFeatures || {};
+														setFieldValue("featurePermissions", clearAllInPlan(plan));
+														setFieldValue("permissionPreset", "custom");
+													}}
+												>
+													{i18n.t("userPermissions.clearPermissions")}
+												</Button>
+												<Button
+													size="small"
+													variant="outlined"
+													type="button"
+													onClick={() => {
+														const plan = planFlags.planTierEffectiveFeatures || {};
+														let built = buildDefaultFeaturePermissions(
+															plan,
+															values.profile
+														);
+														if (actorPermCeiling) {
+															built = applyActorCeiling(built, actorPermCeiling);
+														}
+														setFieldValue("featurePermissions", built);
+														setFieldValue("permissionPreset", "custom");
+													}}
+												>
+													{i18n.t("userPermissions.applyDefaultPermissions")}
+												</Button>
+											</Box>
+											{PERMISSION_UI_GROUPS.map(group => {
+												const plan = planFlags.planTierEffectiveFeatures || {};
+												const keys = keysForGroupInPlan(group, plan);
+												if (!keys.length) return null;
+												return (
+													<Box key={group.id} marginBottom={2}>
+														<Typography variant="subtitle2" gutterBottom>
+															{i18n.t(group.titleKey)}
+														</Typography>
+														{keys.map(key => {
+															const blockedByActor =
+																actorPermCeiling &&
+																actorPermCeiling[key] !== true;
+															return (
+																<FormControlLabel
+																	key={key}
+																	control={
+																		<Checkbox
+																			color="primary"
+																			disabled={!!blockedByActor}
+																			checked={
+																				!!values.featurePermissions?.[key]
+																			}
+																			onChange={e => {
+																				setFieldValue("permissionPreset", "custom");
+																				setFieldValue("featurePermissions", {
+																					...(values.featurePermissions || {}),
+																					[key]: e.target.checked,
+																				});
+																			}}
+																		/>
+																	}
+																	label={getFeatureLabel(key)}
+																/>
+															);
+														})}
+													</Box>
+												);
+											})}
+										</>
+									)}
+								{values.profile === "admin" && (
+									<Typography
+										variant="body2"
+										color="textSecondary"
+										style={{ marginTop: 8 }}
+									>
+										{i18n.t("userPermissions.adminFullPlanAccess")}
+									</Typography>
+								)}
 
 								<div className={classes.divider}>
 									<span className={classes.dividerText}>

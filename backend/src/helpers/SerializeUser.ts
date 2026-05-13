@@ -1,8 +1,9 @@
 import Queue from "../models/Queue";
 import Company from "../models/Company";
 import User from "../models/User";
-import Setting from "../models/Setting";
 import { getCompanyFinanceFlags, CompanyFinanceFlags } from "./companyFinanceStatus";
+import { loadCompanyPlanContextByCompanyId } from "../middleware/loadCompanyEffectiveFeatures";
+import { computeEffectiveUserFeatureMapForUserId } from "../services/UserFeaturePermission/UserFeaturePermissionService";
 
 interface SerializedUser {
   id: number;
@@ -15,6 +16,8 @@ interface SerializedUser {
   queues: Queue[];
   allTicket: string;
   finance: CompanyFinanceFlags;
+  /** Mapa final: plano da empresa ∧ permissões individuais (admin/super ignora granularidade). */
+  effectiveUserFeatures: Record<string, boolean>;
   /** Primeiro acesso: o frontend deve pedir alteração de palavra-passe. */
   mustChangePassword?: boolean;
   /** Modo suporte: sessão atua no tenant `companyId`; casa em `supportHomeCompanyId`. */
@@ -22,7 +25,32 @@ interface SerializedUser {
   supportHomeCompanyId?: number | null;
 }
 
-export const SerializeUser = async (user: User): Promise<SerializedUser> => {
+type SerializeUserOptions = {
+  /** Empresa cujo plano deve calibrar `effectiveUserFeatures` (modo suporte = tenant visitado). */
+  effectiveCompanyIdForPlan?: number | null;
+};
+
+async function resolveEffectiveUserFeatures(
+  user: User,
+  companyId: number | null
+): Promise<Record<string, boolean>> {
+  if (!companyId) return {};
+  const ctx = await loadCompanyPlanContextByCompanyId(companyId);
+  if (!ctx) return {};
+  return computeEffectiveUserFeatureMapForUserId(user.id, ctx.featureMap);
+}
+
+export const SerializeUser = async (
+  user: User,
+  opts?: SerializeUserOptions
+): Promise<SerializedUser> => {
+  const planCompanyId =
+    opts?.effectiveCompanyIdForPlan !== undefined
+      ? opts.effectiveCompanyIdForPlan
+      : user.companyId ?? null;
+
+  const effectiveUserFeatures = await resolveEffectiveUserFeatures(user, planCompanyId);
+
   return {
     id: user.id,
     name: user.name,
@@ -41,7 +69,8 @@ export const SerializeUser = async (user: User): Promise<SerializedUser> => {
           delinquent: false,
           dueDate: null,
           daysPastDue: null
-        }
+        },
+    effectiveUserFeatures
   };
 };
 
@@ -52,7 +81,9 @@ export const serializeUserForSession = async (
   user: User,
   effectiveCompanyId: number | null
 ): Promise<SerializedUser> => {
-  const base = await SerializeUser(user);
+  const planCid =
+    effectiveCompanyId != null ? effectiveCompanyId : user.companyId ?? null;
+  const base = await SerializeUser(user, { effectiveCompanyIdForPlan: planCid });
   if (
     effectiveCompanyId == null ||
     effectiveCompanyId === user.companyId

@@ -1,9 +1,11 @@
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/Auth/AuthContext";
 import usePlans from "./usePlans";
+import { buildEffectiveModuleFlagsFromFeatureMap } from "../components/ModuleSettings/moduleSync";
 
 /**
- * Flags de plano (legado) + mapa granular `effectiveFeatures` (chaves config/features).
+ * Flags de plano (legado) + mapa granular `effectiveFeatures` (chaves config/features),
+ * refinado com `user.effectiveUserFeatures` quando existir (backend já aplica plano ∧ utilizador).
  */
 export default function usePlanFlags() {
   const { user } = useContext(AuthContext);
@@ -19,12 +21,19 @@ export default function usePlanFlags() {
     useGroups: true,
     useInternalChat: true,
     loaded: false,
+    /** Só o teto do plano (sem camada de utilizador). */
+    planTierEffectiveFeatures: {},
     effectiveFeatures: {},
   });
 
   useEffect(() => {
     if (!user?.companyId) {
-      setFlags((f) => ({ ...f, loaded: true, effectiveFeatures: {} }));
+      setFlags((f) => ({
+        ...f,
+        loaded: true,
+        effectiveFeatures: {},
+        planTierEffectiveFeatures: {},
+      }));
       return;
     }
     let cancelled = false;
@@ -34,7 +43,20 @@ export default function usePlanFlags() {
         if (cancelled) return;
         const p = planConfigs?.plan;
         const eff = planConfigs?.effectiveModules;
-        const effectiveFeatures = planConfigs?.effectiveFeatures || {};
+        const planEffectiveFeatures = planConfigs?.effectiveFeatures || {};
+        const userFx = user?.effectiveUserFeatures;
+        const hasUserFx =
+          userFx &&
+          typeof userFx === "object" &&
+          Object.keys(userFx).length > 0;
+        const effectiveFeatures = hasUserFx ? userFx : planEffectiveFeatures;
+        const modulePerms = user?.company?.modulePermissions;
+        const effFromFeatures = hasUserFx
+          ? buildEffectiveModuleFlagsFromFeatureMap(
+              effectiveFeatures,
+              modulePerms ?? {}
+            )
+          : null;
         if (!p) {
           setFlags({
             useCampaigns: false,
@@ -47,6 +69,24 @@ export default function usePlanFlags() {
             useGroups: true,
             useInternalChat: false,
             loaded: true,
+            planTierEffectiveFeatures: planEffectiveFeatures,
+            effectiveFeatures,
+          });
+          return;
+        }
+        if (effFromFeatures) {
+          setFlags({
+            useCampaigns: !!effFromFeatures.useCampaigns,
+            useFlowbuilders: !!effFromFeatures.useFlowbuilders,
+            useKanban: !!effFromFeatures.useKanban,
+            useOpenAi: !!effFromFeatures.useOpenAi,
+            useIntegrations: !!effFromFeatures.useIntegrations,
+            useSchedules: !!effFromFeatures.useSchedules,
+            useExternalApi: !!effFromFeatures.useExternalApi,
+            useGroups: effFromFeatures.useGroups !== false,
+            useInternalChat: !!effFromFeatures.useInternalChat,
+            loaded: true,
+            planTierEffectiveFeatures: planEffectiveFeatures,
             effectiveFeatures,
           });
           return;
@@ -66,6 +106,7 @@ export default function usePlanFlags() {
                 ? !!eff.useInternalChat
                 : p.useInternalChat !== false,
             loaded: true,
+            planTierEffectiveFeatures: planEffectiveFeatures,
             effectiveFeatures,
           });
         } else {
@@ -80,6 +121,7 @@ export default function usePlanFlags() {
             useGroups: true,
             useInternalChat: p.useInternalChat !== false,
             loaded: true,
+            planTierEffectiveFeatures: planEffectiveFeatures,
             effectiveFeatures,
           });
         }
@@ -90,7 +132,12 @@ export default function usePlanFlags() {
     return () => {
       cancelled = true;
     };
-  }, [user?.companyId, getPlanCompany]);
+  }, [
+    user?.companyId,
+    user?.effectiveUserFeatures,
+    user?.company?.modulePermissions,
+    getPlanCompany,
+  ]);
 
   useEffect(() => {
     if (localStorage.getItem("cshow")) {

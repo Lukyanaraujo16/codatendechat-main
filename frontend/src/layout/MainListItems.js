@@ -154,8 +154,8 @@ const reducer = (state, action) => {
   }
 };
 
-function defaultAutomacaoPath(planFlags, isAdmin) {
-  if (!isAdmin) return "/quick-messages";
+function defaultAutomacaoPath(planFlags, isTenantManager) {
+  if (!isTenantManager) return "/quick-messages";
   const fx = planFlags.effectiveFeatures || {};
   if (fx["automation.chatbot"] === true) return "/flowbuilders";
   if (fx["automation.keywords"] === true) return "/phrase-lists";
@@ -184,6 +184,8 @@ const MainListItems = (props) => {
   const socketManager = useContext(SocketContext);
 
   const isAdmin = user?.profile === "admin";
+  const isSupervisor = user?.profile === "supervisor";
+  const isTenantManager = isAdmin || isSupervisor;
   const fx = planFlags.effectiveFeatures || {};
   const showCampaigns = planFlags.useCampaigns;
   const showKanban = planFlags.useKanban;
@@ -315,9 +317,9 @@ const MainListItems = (props) => {
   const selNotifications = path === "/notifications";
   const selSaaS = path.startsWith("/saas") || path.startsWith("/platform");
 
-  const toAutomacao = defaultAutomacaoPath(planFlags, isAdmin);
+  const toAutomacao = defaultAutomacaoPath(planFlags, isTenantManager);
   const automacaoVisible =
-    isAdmin &&
+    isTenantManager &&
     (fx["automation.chatbot"] === true ||
       fx["automation.keywords"] === true ||
       fx["automation.integrations"] === true ||
@@ -508,7 +510,7 @@ const MainListItems = (props) => {
         />
       ) : null}
 
-      {isAdmin && (
+      {isTenantManager && (
         <>
           {showCampaigns && (
             <ListItemLink

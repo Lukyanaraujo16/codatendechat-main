@@ -1,49 +1,45 @@
 import express from "express";
 import isAuth from "../middleware/isAuth";
 import requireEffectiveModule from "../middleware/requireEffectiveModule";
+import requireAnyPlanFeature from "../middleware/requirePlanFeature";
 
 import * as TicketController from "../controllers/TicketController";
 import * as FlowExecutionLogController from "../controllers/FlowExecutionLogController";
 
 const ticketRoutes = express.Router();
 
-ticketRoutes.get("/tickets", isAuth, TicketController.index);
-ticketRoutes.get("/tickets/without-connection", isAuth, TicketController.listWithoutConnection);
-ticketRoutes.post("/tickets/bulk-assign-connection", isAuth, TicketController.bulkAssignConnection);
-
-ticketRoutes.post(
-  "/tickets/:ticketId/active-view",
-  isAuth,
-  TicketController.registerActiveView
-);
-
-ticketRoutes.get("/tickets/:ticketId", isAuth, TicketController.show);
-
-ticketRoutes.get(
-  "/tickets/:ticketId/flow-execution-logs",
-  isAuth,
-  FlowExecutionLogController.indexByTicket
-);
-
 ticketRoutes.get(
   "/ticket/kanban",
   isAuth,
+  requireAnyPlanFeature("attendance.kanban"),
   requireEffectiveModule("useKanban"),
   TicketController.kanban
 );
 
-ticketRoutes.get("/tickets/u/:uuid", isAuth, TicketController.showFromUUID);
+ticketRoutes.use(isAuth);
+ticketRoutes.use(requireAnyPlanFeature("attendance.inbox"));
 
-ticketRoutes.post("/tickets", isAuth, TicketController.store);
+ticketRoutes.get("/tickets", TicketController.index);
+ticketRoutes.get("/tickets/without-connection", TicketController.listWithoutConnection);
+ticketRoutes.post("/tickets/bulk-assign-connection", TicketController.bulkAssignConnection);
 
-ticketRoutes.put(
-  "/tickets/:ticketId/reassign-whatsapp",
-  isAuth,
-  TicketController.reassignWhatsapp
+ticketRoutes.post("/tickets/:ticketId/active-view", TicketController.registerActiveView);
+
+ticketRoutes.get("/tickets/:ticketId", TicketController.show);
+
+ticketRoutes.get(
+  "/tickets/:ticketId/flow-execution-logs",
+  FlowExecutionLogController.indexByTicket
 );
 
-ticketRoutes.put("/tickets/:ticketId", isAuth, TicketController.update);
+ticketRoutes.get("/tickets/u/:uuid", TicketController.showFromUUID);
 
-ticketRoutes.delete("/tickets/:ticketId", isAuth, TicketController.remove);
+ticketRoutes.post("/tickets", TicketController.store);
+
+ticketRoutes.put("/tickets/:ticketId/reassign-whatsapp", TicketController.reassignWhatsapp);
+
+ticketRoutes.put("/tickets/:ticketId", TicketController.update);
+
+ticketRoutes.delete("/tickets/:ticketId", TicketController.remove);
 
 export default ticketRoutes;

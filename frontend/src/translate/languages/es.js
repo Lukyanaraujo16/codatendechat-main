@@ -11,6 +11,41 @@ const messages = {
         blockedBody:
           "Este recurso no está incluido en su plan. Contacte al administrador de la plataforma para más opciones.",
       },
+      userPermissions: {
+        blockedTitle: "Acceso restringido",
+        blockedBody: "No tiene permiso para acceder a este recurso.",
+        planBlockedHint: "Recurso bloqueado por el plan.",
+        sectionTitle: "Permisos de acceso",
+        sectionSubtitle:
+          "Este usuario solo podrá acceder a lo que marque (dentro del plan de la empresa).",
+        adminHint:
+          "Los administradores de la empresa siguen siempre el límite del plan; no es necesario definir permisos aquí.",
+        organizedTitle: "Permisos organizados",
+        presetProfileLabel: "Perfil de permisos",
+        planLimitNotice:
+          "Los permisos siguientes están limitados al plan contratado por la empresa.",
+        adminFullPlanAccess:
+          "Los administradores tienen acceso a todos los recursos habilitados en el plan.",
+        legacyHint:
+          "Las cuentas antiguas sin permisos guardados siguen heredando todo el plan hasta que se editen y guarden aquí. Use \"Aplicar permisos predeterminados\" o ajuste manualmente y guarde para pasar a permisos explícitos.",
+        applyDefaultPermissions: "Aplicar permisos predeterminados",
+        selectAllPlanAllowed: "Seleccionar todo lo permitido por el plan",
+        clearPermissions: "Limpiar permisos",
+        sessionUpdatedToast:
+          "Sus permisos se actualizaron. Vuelva a cargar la página.",
+        categories: {
+          attendance: "Atención",
+          management: "Gestión",
+          marketing: "Marketing / Automatización",
+          administration: "Administración",
+        },
+        presets: {
+          basic: "Usuario básico",
+          attendant: "Agente",
+          supervisor: "Supervisor",
+          custom: "Personalizado",
+        },
+      },
       planFlags: {
         loadingPermissions: "Cargando permisos…",
       },
@@ -3883,6 +3918,10 @@ const messages = {
           attendanceGroupsCardTitle: "Grupos",
           attendanceAutoMsgCardTitle: "Mensajes automáticos",
           chatbotSectionStateTitle: "Estado y horario",
+          chatbotSectionBehaviorTitle: "Comportamiento",
+          chatbotSectionFlowsTitle: "Flujos",
+          chatbotBehaviorHint:
+            "Los mensajes automáticos al aceptar ticket, transferencias y cola única están en la tarjeta «Mensajes automáticos».",
           chatbotSectionMessagesTitle: "Tipo y flujos",
           attendanceTitle: "Atención",
           attendanceDescription:
@@ -3910,7 +3949,47 @@ const messages = {
           asaasTitle: "Asaas",
           asaasTokenLabel: "Token Asaas",
         },
+        status: {
+          ratingsOn: "Evaluaciones activas",
+          ratingsOff: "Evaluaciones desactivadas",
+          expedientOff: "Horario: desactivado",
+          expedientQueue: "Horario: por cola",
+          expedientCompany: "Horario: empresa",
+          callsAccepting: "Aceptando",
+          callsBlocked: "Bloqueado",
+          groupsInbox: "Recibiendo grupos",
+          groupsIgnored: "Ignorar grupos",
+          autoMessagesOn: "Mensajes activos",
+          autoMessagesMinimal: "Mensajes mínimos",
+          chatbotCompanyOn: "Activo",
+          chatbotCompanyOff: "Desactivado",
+          chatbotScheduleOn: "Horario activo",
+          chatbotScheduleOff: "Horario inactivo",
+          crmShared: "Compartido",
+          crmRestricted: "Restringido",
+          asaasConfigured: "Token configurado",
+          asaasPending: "Sin token",
+        },
+        summary: {
+          title: "Resumen rápido",
+          intro: "Estado principal de esta empresa.",
+          chatbot: "Chatbot",
+          attendance: "Atención",
+          crm: "CRM",
+          attendanceManual: "Manual",
+          attendanceAssisted: "Asistido",
+        },
         ux: {
+          cardIconGeneral: "🌍",
+          cardIconIntegrations: "🔗",
+          cardIconRating: "⭐",
+          cardIconCalls: "📞",
+          cardIconGroups: "👥",
+          cardIconAutoMsg: "💬",
+          cardIconChatbot: "🤖",
+          cardIconCrm: "📊",
+          cardIconStorage: "💾",
+          autoSaved: "Guardado automáticamente",
           autoSaveHint: "Los cambios en esta tarjeta se guardan al elegir una opción.",
           pageContextShort:
             "Ajustes de la empresa actual. Super Admins: la gestión global está en Plataforma.",

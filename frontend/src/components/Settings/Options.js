@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 
 import Grid from "@material-ui/core/Grid";
 import Box from "@material-ui/core/Box";
@@ -13,10 +13,11 @@ import Paper from "@material-ui/core/Paper";
 import Typography from "@material-ui/core/Typography";
 import Tooltip from "@material-ui/core/Tooltip";
 import IconButton from "@material-ui/core/IconButton";
+import Chip from "@material-ui/core/Chip";
 import InfoOutlined from "@material-ui/icons/InfoOutlined";
+import CheckCircleOutline from "@material-ui/icons/CheckCircleOutline";
 import Divider from "@material-ui/core/Divider";
 import useSettings from "../../hooks/useSettings";
-import { ToastContainer, toast } from 'react-toastify';
 import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
 import Switch from "@material-ui/core/Switch";
@@ -117,6 +118,41 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(2),
     display: "block",
   },
+  autoSaveFooterRow: {
+    marginTop: theme.spacing(2),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+  },
+  cardTitleRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: theme.spacing(1.5),
+    marginBottom: theme.spacing(2),
+  },
+  cardTitleIcon: {
+    fontSize: "1.35rem",
+    lineHeight: 1.2,
+    flexShrink: 0,
+  },
+  cardTitleTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardTitleTopLine: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+  },
+  autoSavedBadge: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(0.5),
+    color: theme.palette.success.main,
+  },
   saveHintFooter: {
     marginTop: theme.spacing(2),
     display: "block",
@@ -128,6 +164,8 @@ export default function Options(props) {
     variant = "main",
     settings,
     scheduleTypeChanged,
+    onSettingCommitted,
+    chatbotSaveTick = 0,
     showPlatformIntegrations = false,
     showGroupManagerButton = false,
     showChatbotControl = false,
@@ -187,6 +225,40 @@ export default function Options(props) {
   const [loadingSendGreetingMessageOneQueues, setLoadingSendGreetingMessageOneQueues] = useState(false);
 
   const { update } = useSettings();
+  const autoSaveTimers = useRef({});
+  const [autoSaveFlash, setAutoSaveFlash] = useState({});
+  const [chatbotManualSaved, setChatbotManualSaved] = useState(false);
+
+  const markAutoSaved = useCallback((cardId) => {
+    if (autoSaveTimers.current[cardId]) {
+      clearTimeout(autoSaveTimers.current[cardId]);
+    }
+    setAutoSaveFlash((s) => ({ ...s, [cardId]: Date.now() }));
+    autoSaveTimers.current[cardId] = setTimeout(() => {
+      setAutoSaveFlash((s) => {
+        const next = { ...s };
+        delete next[cardId];
+        return next;
+      });
+      delete autoSaveTimers.current[cardId];
+    }, 2400);
+  }, []);
+
+  const notifyCommitted = useCallback(
+    (key, value) => {
+      if (typeof onSettingCommitted === "function") {
+        onSettingCommitted(key, value);
+      }
+    },
+    [onSettingCommitted]
+  );
+
+  useEffect(() => {
+    if (!chatbotSaveTick) return;
+    setChatbotManualSaved(true);
+    const t = setTimeout(() => setChatbotManualSaved(false), 2800);
+    return () => clearTimeout(t);
+  }, [chatbotSaveTick]);
 
   useEffect(() => {
     if (Array.isArray(settings) && settings.length) {
@@ -275,7 +347,8 @@ export default function Options(props) {
       key: "userRating",
       value,
     });
-    toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("ratings");
+    notifyCommitted("userRating", value);
     setLoadingUserRating(false);
   }
   
@@ -286,7 +359,8 @@ export default function Options(props) {
       key: "sendGreetingMessageOneQueues",
       value,
     });
-	toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("autoMsg");
+    notifyCommitted("sendGreetingMessageOneQueues", value);
     setLoadingSendGreetingMessageOneQueues(false);
   }
 
@@ -297,16 +371,8 @@ export default function Options(props) {
       key: "scheduleType",
       value,
     });
-    //toast.success("Oraçãpeo atualizada com sucesso.");
-    toast.success(i18n.t("settings.options.toasts.success"), {
-      position: "top-right",
-      autoClose: 2000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: false,
-      draggable: true,
-      theme: "light",
-      });
+    markAutoSaved("ratings");
+    notifyCommitted("scheduleType", value);
     setLoadingScheduleType(false);
     if (typeof scheduleTypeChanged === "function") {
       scheduleTypeChanged(value);
@@ -320,7 +386,8 @@ export default function Options(props) {
       key: "call",
       value,
     });
-    toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("calls");
+    notifyCommitted("call", value);
     setLoadingCallType(false);
   }
 
@@ -331,7 +398,8 @@ export default function Options(props) {
       key: "callRejectSendMessage",
       value,
     });
-    toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("calls");
+    notifyCommitted("callRejectSendMessage", value);
     setLoadingCallRejectSendMessage(false);
   }
 
@@ -341,7 +409,8 @@ export default function Options(props) {
       key: "callRejectMessage",
       value: callRejectMessage,
     });
-    toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("calls");
+    notifyCommitted("callRejectMessage", callRejectMessage);
     setLoadingCallRejectMessage(false);
   }
 
@@ -352,7 +421,8 @@ export default function Options(props) {
       key: "chatBotType",
       value,
     });
-    toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("chatbot");
+    notifyCommitted("chatBotType", value);
     setLoadingChatbotType(false);
   }
 
@@ -363,7 +433,8 @@ export default function Options(props) {
       key: "CheckMsgIsGroup",
       value,
     });
-    toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("groups");
+    notifyCommitted("CheckMsgIsGroup", value);
     setCheckMsgIsGroup(false);
     /*     if (typeof scheduleTypeChanged === "function") {
           scheduleTypeChanged(value);
@@ -378,7 +449,8 @@ export default function Options(props) {
       key: "sendGreetingAccepted",
       value,
     });
-	toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("autoMsg");
+    notifyCommitted("sendGreetingAccepted", value);
     setLoadingSendGreetingAccepted(false);
   }  
   
@@ -393,7 +465,8 @@ export default function Options(props) {
       value,
     });
 
-    toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("autoMsg");
+    notifyCommitted("sendMsgTransfTicket", value);
     setLoadingSettingsTransfTicket(false);
   } 
  
@@ -459,9 +532,126 @@ export default function Options(props) {
       key: "asaas",
       value,
     });
-    toast.success(i18n.t("settings.options.toasts.success"));
+    markAutoSaved("asaas");
+    notifyCommitted("asaas", value);
     setLoadingAsaasType(false);
   }
+
+  const ratingsStatusChip =
+    userRating === "enabled"
+      ? { label: i18n.t("settings.status.ratingsOn"), color: "primary" }
+      : { label: i18n.t("settings.status.ratingsOff"), color: "default" };
+
+  const expedientStatusChip =
+    scheduleType === "disabled"
+      ? { label: i18n.t("settings.status.expedientOff"), color: "default" }
+      : scheduleType === "queue"
+      ? { label: i18n.t("settings.status.expedientQueue"), color: "primary" }
+      : { label: i18n.t("settings.status.expedientCompany"), color: "primary" };
+
+  const callsStatusChip =
+    callType === "enabled"
+      ? { label: i18n.t("settings.status.callsAccepting"), color: "primary" }
+      : { label: i18n.t("settings.status.callsBlocked"), color: "default" };
+
+  const groupsStatusChip =
+    CheckMsgIsGroup === "disabled"
+      ? { label: i18n.t("settings.status.groupsInbox"), color: "primary" }
+      : { label: i18n.t("settings.status.groupsIgnored"), color: "default" };
+
+  const anyAutoMsgEnabled =
+    SendGreetingAccepted === "enabled" ||
+    SettingsTransfTicket === "enabled" ||
+    sendGreetingMessageOneQueues === "enabled";
+  const autoMsgStatusChip = anyAutoMsgEnabled
+    ? { label: i18n.t("settings.status.autoMessagesOn"), color: "primary" }
+    : { label: i18n.t("settings.status.autoMessagesMinimal"), color: "default" };
+
+  const chatbotMainStatusChip = !showChatbotControl
+    ? null
+    : Boolean(chatbotControl?.chatbotDisabled)
+    ? { label: i18n.t("settings.status.chatbotCompanyOff"), color: "default" }
+    : { label: i18n.t("settings.status.chatbotCompanyOn"), color: "primary" };
+
+  const chatbotScheduleStatusChip = !showChatbotControl
+    ? null
+    : Boolean(chatbotControl?.chatbotScheduleEnabled)
+    ? { label: i18n.t("settings.status.chatbotScheduleOn"), color: "primary" }
+    : { label: i18n.t("settings.status.chatbotScheduleOff"), color: "default" };
+
+  const chatbotTypeStatusChip = {
+    label:
+      chatbotType === "text"
+        ? i18n.t("settings.options.fields.chatbotType.text")
+        : chatbotType || "—",
+    color: "default",
+  };
+
+  const chatbotHeaderChips = (() => {
+    const list = [];
+    if (showChatbotControl) {
+      if (chatbotMainStatusChip) list.push(chatbotMainStatusChip);
+      if (chatbotScheduleStatusChip) list.push(chatbotScheduleStatusChip);
+    } else {
+      list.push(chatbotTypeStatusChip);
+    }
+    return list;
+  })();
+
+  const asaasStatusChip =
+    asaasType && String(asaasType).trim().length > 0
+      ? { label: i18n.t("settings.status.asaasConfigured"), color: "primary" }
+      : { label: i18n.t("settings.status.asaasPending"), color: "default" };
+
+  const renderCardHeader = ({ iconEmojiKey, titleKey, taglineKey, tooltipKey, chips }) => (
+    <Box className={classes.cardTitleRow}>
+      <Typography className={classes.cardTitleIcon} component="span" aria-hidden>
+        {i18n.t(iconEmojiKey)}
+      </Typography>
+      <Box className={classes.cardTitleTextBlock}>
+        <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1}>
+          <Box flex={1} minWidth={0}>
+            <Box className={classes.cardTitleTopLine}>
+              <Typography variant="h6" className={classes.sectionTitle} component="span">
+                {i18n.t(titleKey)}
+              </Typography>
+              {(chips || []).map((c, i) => (
+                <Chip
+                  key={`${c.label}-${i}`}
+                  size="small"
+                  label={c.label}
+                  color={c.color === "primary" ? "primary" : "default"}
+                  variant="outlined"
+                />
+              ))}
+            </Box>
+            <Typography variant="body2" color="textSecondary">
+              {i18n.t(taglineKey)}
+            </Typography>
+          </Box>
+          <Tooltip title={i18n.t(tooltipKey)}>
+            <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
+              <InfoOutlined fontSize="small" color="action" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+    </Box>
+  );
+
+  const renderAutoSaveRow = (cardId) => (
+    <Box className={classes.autoSaveFooterRow}>
+      <Typography variant="caption" color="textSecondary">
+        {i18n.t("settings.ux.autoSaveHint")}
+      </Typography>
+      {autoSaveFlash[cardId] ? (
+        <Box className={classes.autoSavedBadge}>
+          <CheckCircleOutline style={{ fontSize: 18 }} />
+          <Typography variant="caption">{i18n.t("settings.ux.autoSaved")}</Typography>
+        </Box>
+      ) : null}
+    </Box>
+  );
 
   if (variant === "integrations") {
     if (!showPlatformIntegrations) {
@@ -470,21 +660,13 @@ export default function Options(props) {
     return (
       <Box className={classes.sectionStack}>
         <Paper elevation={1} className={classes.sectionPaper}>
-          <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1} mb={2}>
-            <Box flex={1} minWidth={0}>
-              <Typography variant="h6" className={classes.sectionTitle}>
-                {i18n.t("settings.sections.integrationsTitle")}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {i18n.t("settings.sections.integrationsDescription")}
-              </Typography>
-            </Box>
-            <Tooltip title={i18n.t("settings.sections.tooltips.integrations")}>
-              <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
-                <InfoOutlined fontSize="small" color="action" />
-              </IconButton>
-            </Tooltip>
-          </Box>
+          {renderCardHeader({
+            iconEmojiKey: "settings.ux.cardIconIntegrations",
+            titleKey: "settings.sections.integrationsTitle",
+            taglineKey: "settings.sections.integrationsDescription",
+            tooltipKey: "settings.sections.tooltips.integrations",
+            chips: [asaasStatusChip],
+          })}
           <Box display="flex" alignItems="center" gap={0.5} mb={2}>
             <Typography variant="subtitle2" className={classes.subSectionLabelFirst}>
               {i18n.t("settings.sections.asaasTitle")}
@@ -508,40 +690,22 @@ export default function Options(props) {
             }}
             helperText={loadingAsaasType ? i18n.t("settings.options.updating") : undefined}
           />
-          <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
-            {i18n.t("settings.ux.autoSaveHint")}
-          </Typography>
+          {renderAutoSaveRow("asaas")}
         </Paper>
       </Box>
     );
   }
 
-  const sectionHeader = (titleId, taglineId, tooltipKey) => (
-    <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1} mb={2}>
-      <Box flex={1} minWidth={0}>
-        <Typography variant="h6" className={classes.sectionTitle}>
-          {i18n.t(titleId)}
-        </Typography>
-        <Typography variant="body2" color="textSecondary">
-          {i18n.t(taglineId)}
-        </Typography>
-      </Box>
-      <Tooltip title={i18n.t(tooltipKey)}>
-        <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
-          <InfoOutlined fontSize="small" color="action" />
-        </IconButton>
-      </Tooltip>
-    </Box>
-  );
-
   return (
     <Box className={classes.sectionStack}>
       <Paper elevation={1} className={classes.sectionPaper}>
-        {sectionHeader(
-          "settings.sections.ratingsScheduleTitle",
-          "settings.sections.ratingsScheduleDescription",
-          "settings.sections.tooltips.ratingsSchedule"
-        )}
+        {renderCardHeader({
+          iconEmojiKey: "settings.ux.cardIconRating",
+          titleKey: "settings.sections.ratingsScheduleTitle",
+          taglineKey: "settings.sections.ratingsScheduleDescription",
+          tooltipKey: "settings.sections.tooltips.ratingsSchedule",
+          chips: [ratingsStatusChip, expedientStatusChip],
+        })}
         <Grid spacing={3} container>
           <Grid xs={12} sm={6} md={4} item>
             <FormControl className={classes.selectContainer}>
@@ -585,17 +749,17 @@ export default function Options(props) {
             </FormControl>
           </Grid>
         </Grid>
-        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
-          {i18n.t("settings.ux.autoSaveHint")}
-        </Typography>
+        {renderAutoSaveRow("ratings")}
       </Paper>
 
       <Paper elevation={1} className={classes.sectionPaper}>
-        {sectionHeader(
-          "settings.sections.attendanceCallsCardTitle",
-          "settings.sections.callsDescription",
-          "settings.sections.tooltips.callsCard"
-        )}
+        {renderCardHeader({
+          iconEmojiKey: "settings.ux.cardIconCalls",
+          titleKey: "settings.sections.attendanceCallsCardTitle",
+          taglineKey: "settings.sections.callsDescription",
+          tooltipKey: "settings.sections.tooltips.callsCard",
+          chips: [callsStatusChip],
+        })}
         <Grid spacing={2} container>
           <Grid xs={12} sm={6} md={4} item>
             <FormControl className={classes.selectContainer} fullWidth>
@@ -661,17 +825,17 @@ export default function Options(props) {
             </>
           )}
         </Grid>
-        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
-          {i18n.t("settings.ux.autoSaveHint")}
-        </Typography>
+        {renderAutoSaveRow("calls")}
       </Paper>
 
       <Paper elevation={1} className={classes.sectionPaper}>
-        {sectionHeader(
-          "settings.sections.attendanceGroupsCardTitle",
-          "settings.sections.groupsConfigDescription",
-          "settings.sections.tooltips.groupsCard"
-        )}
+        {renderCardHeader({
+          iconEmojiKey: "settings.ux.cardIconGroups",
+          titleKey: "settings.sections.attendanceGroupsCardTitle",
+          taglineKey: "settings.sections.groupsConfigDescription",
+          tooltipKey: "settings.sections.tooltips.groupsCard",
+          chips: [groupsStatusChip],
+        })}
         {showGroupManagerButton ? (
           <Box mb={2}>
             <Button
@@ -709,17 +873,17 @@ export default function Options(props) {
             </FormControl>
           </Grid>
         </Grid>
-        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
-          {i18n.t("settings.ux.autoSaveHint")}
-        </Typography>
+        {renderAutoSaveRow("groups")}
       </Paper>
 
       <Paper elevation={1} className={classes.sectionPaper}>
-        {sectionHeader(
-          "settings.sections.attendanceAutoMsgCardTitle",
-          "settings.sections.autoMessagesDescription",
-          "settings.sections.tooltips.autoMessagesCard"
-        )}
+        {renderCardHeader({
+          iconEmojiKey: "settings.ux.cardIconAutoMsg",
+          titleKey: "settings.sections.attendanceAutoMsgCardTitle",
+          taglineKey: "settings.sections.autoMessagesDescription",
+          tooltipKey: "settings.sections.tooltips.autoMessagesCard",
+          chips: [autoMsgStatusChip],
+        })}
         <Grid spacing={2} container>
           <Grid xs={12} sm={6} md={4} item>
             <FormControl className={classes.selectContainer}>
@@ -782,27 +946,17 @@ export default function Options(props) {
             </FormControl>
           </Grid>
         </Grid>
-        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
-          {i18n.t("settings.ux.autoSaveHint")}
-        </Typography>
+        {renderAutoSaveRow("autoMsg")}
       </Paper>
 
       <Paper elevation={1} className={classes.sectionPaper}>
-        <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1} mb={2}>
-          <Box flex={1} minWidth={0}>
-            <Typography variant="h6" className={classes.sectionTitle}>
-              {i18n.t("settings.sections.chatbotAutomationTitle")}
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              {i18n.t("settings.sections.chatbotAutomationDescription")}
-            </Typography>
-          </Box>
-          <Tooltip title={i18n.t("settings.sections.tooltips.chatbotAutomation")}>
-            <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
-              <InfoOutlined fontSize="small" color="action" />
-            </IconButton>
-          </Tooltip>
-        </Box>
+        {renderCardHeader({
+          iconEmojiKey: "settings.ux.cardIconChatbot",
+          titleKey: "settings.sections.chatbotAutomationTitle",
+          taglineKey: "settings.sections.chatbotAutomationDescription",
+          tooltipKey: "settings.sections.tooltips.chatbotAutomation",
+          chips: chatbotHeaderChips,
+        })}
 
         {showChatbotControl ? (
           <>
@@ -882,7 +1036,7 @@ export default function Options(props) {
                 </Box>
               )}
             </Box>
-            <Box mt={2}>
+            <Box mt={2} display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 12 }}>
               <Button
                 variant="contained"
                 color="primary"
@@ -894,30 +1048,27 @@ export default function Options(props) {
                   ? i18n.t("settings.chatbotControl.buttons.saving")
                   : i18n.t("settings.chatbotControl.buttons.save")}
               </Button>
-              <Typography variant="caption" color="textSecondary" display="block" className={classes.saveHintFooter}>
-                {i18n.t("settings.ux.saveCardHint")}
-              </Typography>
+              {chatbotManualSaved ? (
+                <Box className={classes.autoSavedBadge}>
+                  <CheckCircleOutline style={{ fontSize: 18 }} />
+                  <Typography variant="caption">{i18n.t("settings.ux.autoSaved")}</Typography>
+                </Box>
+              ) : null}
             </Box>
+            <Typography variant="caption" color="textSecondary" display="block" className={classes.saveHintFooter}>
+              {i18n.t("settings.ux.saveCardHint")}
+            </Typography>
           </>
         ) : null}
 
-        {showChatbotControl ? (
-          <Divider style={{ marginTop: 24, marginBottom: 16 }} />
-        ) : null}
+        <Divider style={{ marginTop: showChatbotControl ? 24 : 0, marginBottom: 16 }} />
 
-        <Typography variant="subtitle2" className={showChatbotControl ? classes.subSectionLabel : classes.subSectionLabelFirst}>
-          {i18n.t("settings.sections.chatbotSectionMessagesTitle")}
+        <Typography variant="subtitle2" className={classes.subSectionLabelFirst}>
+          {i18n.t("settings.sections.chatbotSectionBehaviorTitle")}
         </Typography>
-        <Box display="flex" alignItems="flex-start" gap={1} mb={1}>
-          <Typography variant="body2" color="textSecondary" style={{ flex: 1 }}>
-            {i18n.t("settings.sections.chatbotFlowDescription")}
-          </Typography>
-          <Tooltip title={i18n.t("settings.sections.tooltips.chatbotFlow")}>
-            <IconButton size="small" aria-label={i18n.t("settings.ux.moreInfoAria")}>
-              <InfoOutlined fontSize="small" color="action" />
-            </IconButton>
-          </Tooltip>
-        </Box>
+        <Typography variant="body2" color="textSecondary" paragraph style={{ marginBottom: 12 }}>
+          {i18n.t("settings.sections.chatbotBehaviorHint")}
+        </Typography>
         <Grid spacing={2} container alignItems="flex-end">
           <Grid xs={12} sm={6} md={4} item>
             <FormControl className={classes.selectContainer} fullWidth>
@@ -938,15 +1089,19 @@ export default function Options(props) {
               </FormHelperText>
             </FormControl>
           </Grid>
-          <Grid xs={12} sm={6} item>
-            <Button variant="outlined" color="primary" onClick={() => history.push("/flowbuilders")}>
-              {i18n.t("settings.sections.openFlowsButton")}
-            </Button>
-          </Grid>
         </Grid>
-        <Typography variant="caption" color="textSecondary" className={classes.autoSaveFooter}>
-          {i18n.t("settings.ux.autoSaveHint")}
+        {renderAutoSaveRow("chatbot")}
+
+        <Divider style={{ marginTop: 24, marginBottom: 16 }} />
+
+        <Typography variant="subtitle2" className={classes.subSectionLabelFirst}>
+          {i18n.t("settings.sections.chatbotSectionFlowsTitle")}
         </Typography>
+        <Box mt={1}>
+          <Button variant="outlined" color="primary" onClick={() => history.push("/flowbuilders")}>
+            {i18n.t("settings.sections.openFlowsButton")}
+          </Button>
+        </Box>
       </Paper>
       {/*-----------------IXC DESATIVADO 4.6.5-----------------*/}
       {/*<Grid spacing={3} container

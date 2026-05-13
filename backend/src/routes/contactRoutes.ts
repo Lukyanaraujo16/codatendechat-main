@@ -1,57 +1,47 @@
 import express from "express";
 import isAuth from "../middleware/isAuth";
+import requireAnyPlanFeature from "../middleware/requirePlanFeature";
 
 import * as ContactController from "../controllers/ContactController";
 import * as ImportPhoneContactsController from "../controllers/ImportPhoneContactsController";
 
 const contactRoutes = express.Router();
 
-contactRoutes.post(
-  "/contacts/import",
-  isAuth,
-  ImportPhoneContactsController.store
-);
+contactRoutes.use(isAuth);
+contactRoutes.use(requireAnyPlanFeature("attendance.inbox"));
 
-contactRoutes.get("/contacts", isAuth, ContactController.index);
+contactRoutes.post("/contacts/import", ImportPhoneContactsController.store);
 
-contactRoutes.get("/contacts/list", isAuth, ContactController.list);
+contactRoutes.get("/contacts", ContactController.index);
 
-contactRoutes.get(
-  "/contacts/:contactId/summary",
-  isAuth,
-  ContactController.summary
-);
+contactRoutes.get("/contacts/list", ContactController.list);
 
-contactRoutes.post(
-  "/contacts/:contactId/tags",
-  isAuth,
-  ContactController.addTag
-);
+contactRoutes.get("/contacts/:contactId/summary", ContactController.summary);
+
+contactRoutes.post("/contacts/:contactId/tags", ContactController.addTag);
 
 contactRoutes.delete(
   "/contacts/:contactId/tags/:tagId",
-  isAuth,
   ContactController.removeTag
 );
 
-contactRoutes.get("/contacts/:contactId", isAuth, ContactController.show);
+contactRoutes.get("/contacts/:contactId", ContactController.show);
 
-contactRoutes.post("/contacts", isAuth, ContactController.store);
+contactRoutes.post("/contacts", ContactController.store);
 
-contactRoutes.post("/contacts/upload", isAuth, ContactController.storeUpload);
+contactRoutes.post("/contacts/upload", ContactController.storeUpload);
 
-contactRoutes.put("/contacts/:contactId", isAuth, ContactController.update);
+contactRoutes.put("/contacts/:contactId", ContactController.update);
 
-contactRoutes.delete("/contacts/:contactId", isAuth, ContactController.remove);
+contactRoutes.delete("/contacts/:contactId", ContactController.remove);
 
-contactRoutes.put("/contacts/:contactId/chatbot", isAuth, ContactController.updateChatbotForContact);
+contactRoutes.put("/contacts/:contactId/chatbot", ContactController.updateChatbotForContact);
 
 contactRoutes.put(
   "/contacts/:contactId/group-visibility",
-  isAuth,
   ContactController.updateGroupVisibilityForContact
 );
 
-contactRoutes.put("/contacts/toggleDisableBot/:contactId", isAuth, ContactController.toggleDisableBot);
+contactRoutes.put("/contacts/toggleDisableBot/:contactId", ContactController.toggleDisableBot);
 
 export default contactRoutes;

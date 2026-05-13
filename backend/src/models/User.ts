@@ -21,6 +21,7 @@ import Queue from "./Queue";
 import UserQueue from "./UserQueue";
 import Company from "./Company";
 import QuickMessage from "./QuickMessage";
+import UserFeaturePermission from "./UserFeaturePermission";
 import Whatsapp from "./Whatsapp";
 
 @Table
@@ -97,6 +98,13 @@ class User extends Model<User> {
     hooks: true
   })
   quickMessages: QuickMessage[];
+
+  @HasMany(() => UserFeaturePermission, {
+    onUpdate: "CASCADE",
+    onDelete: "CASCADE",
+    hooks: true
+  })
+  featurePermissions: UserFeaturePermission[];
 
   @ForeignKey(() => Whatsapp)
   @Column

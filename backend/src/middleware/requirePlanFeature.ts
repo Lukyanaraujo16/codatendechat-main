@@ -2,12 +2,17 @@ import { Request, Response, NextFunction } from "express";
 
 import AppError from "../errors/AppError";
 import { loadCompanyPlanContext } from "./loadCompanyEffectiveFeatures";
+import {
+  computeEffectiveUserFeatureMapForRequest,
+  USER_FEATURE_DISABLED_MSG
+} from "../services/UserFeaturePermission/UserFeaturePermissionService";
 
 const PLAN_FEATURE_DISABLED_MSG =
   "Este recurso não está disponível no seu plano.";
 
 /**
- * Exige pelo menos uma das chaves de feature ativa (plano + PlanFeatures + overrides).
+ * Exige pelo menos uma das chaves de feature ativa (plano + PlanFeatures + overrides)
+ * e permissão individual (super / admin empresa / modo suporte ignoram a camada individual).
  */
 const requireAnyPlanFeature =
   (...featureKeys: string[]) =>
@@ -17,13 +22,27 @@ const requireAnyPlanFeature =
       if (!ctx) {
         return next(new AppError("ERR_NO_PERMISSION", 403));
       }
-      const ok = featureKeys.some((k) => ctx.featureMap[k] === true);
-      if (!ok) {
+      const planOk = featureKeys.some((k) => ctx.featureMap[k] === true);
+      if (!planOk) {
         return next(
           new AppError(
             "ERR_PLAN_FEATURE_DISABLED",
             403,
             PLAN_FEATURE_DISABLED_MSG
+          )
+        );
+      }
+      const merged = await computeEffectiveUserFeatureMapForRequest(
+        req,
+        ctx.featureMap
+      );
+      const userOk = featureKeys.some((k) => merged[k] === true);
+      if (!userOk) {
+        return next(
+          new AppError(
+            "ERR_USER_FEATURE_DISABLED",
+            403,
+            USER_FEATURE_DISABLED_MSG
           )
         );
       }

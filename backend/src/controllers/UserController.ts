@@ -12,17 +12,28 @@ import DeleteUserService from "../services/UserServices/DeleteUserService";
 import SimpleListService from "../services/UserServices/SimpleListService";
 import User from "../models/User";
 import SetLanguageCompanyService from "../services/UserServices/SetLanguageCompanyService";
+import { loadCompanyPlanContext } from "../middleware/loadCompanyEffectiveFeatures";
+import {
+  assertActorCanManageUsers,
+  assertSupervisorTargetRules,
+  loadExplicitUserFeatureMap
+} from "../services/UserFeaturePermission/UserFeaturePermissionService";
 
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
 };
 
-type ListQueryParams = {
-  companyId: string;
-};
-
 export const index = async (req: Request, res: Response): Promise<Response> => {
+  const actor = await User.findByPk(req.user.id, {
+    attributes: ["id", "profile", "super"]
+  });
+  const ctx = await loadCompanyPlanContext(req);
+  if (!ctx) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+  await assertActorCanManageUsers(actor, ctx.featureMap);
+
   const { searchParam, pageNumber } = req.query as IndexQuery;
   const { companyId } = req.user;
 
@@ -44,28 +55,43 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     companyId: bodyCompanyId,
     queueIds,
     whatsappId,
-	allTicket
+    allTicket,
+    featurePermissions
   } = req.body;
   let userCompanyId: number | null = null;
 
-  let requestUser: User = null;
+  let actorForCreate: Pick<User, "id" | "profile" | "super"> | null = null;
 
   if (req.user !== undefined) {
     const { companyId: cId } = req.user;
     userCompanyId = cId;
-    requestUser = await User.findByPk(req.user.id);
+    actorForCreate = await User.findByPk(req.user.id, {
+      attributes: ["id", "profile", "super"]
+    });
   }
 
   const newUserCompanyId = bodyCompanyId || userCompanyId;
 
   if (req.url === "/signup") {
-    if (await CheckSettingsHelper("userCreation") === "disabled") {
+    if ((await CheckSettingsHelper("userCreation")) === "disabled") {
       throw new AppError("ERR_USER_CREATION_DISABLED", 403);
     }
-  } else if (req.user?.profile !== "admin") {
-    throw new AppError("ERR_NO_PERMISSION", 403);
-  } else if (newUserCompanyId !== req.user?.companyId && !requestUser?.super) {
-    throw new AppError("ERR_NO_SUPER", 403);
+  } else {
+    if (!actorForCreate) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+    const ctx = await loadCompanyPlanContext(req);
+    if (!ctx) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+    await assertActorCanManageUsers(actorForCreate, ctx.featureMap);
+    if (newUserCompanyId !== req.user?.companyId && !actorForCreate?.super) {
+      throw new AppError("ERR_NO_SUPER", 403);
+    }
+    await assertSupervisorTargetRules({
+      actor: { profile: actorForCreate.profile },
+      targetProfile: profile ?? "admin"
+    });
   }
 
   const user = await CreateUserService({
@@ -76,7 +102,9 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     companyId: newUserCompanyId,
     queueIds,
     whatsappId,
-	allTicket
+    allTicket,
+    featurePermissions,
+    actor: actorForCreate
   });
 
   const io = getIO();
@@ -101,7 +129,39 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
     isSupportSelf ? undefined : companyId
   );
 
-  return res.status(200).json(user);
+  const plain = { ...user.get({ plain: true }) };
+
+  if (
+    Number(userId) !== Number(id) &&
+    user.profile !== "admin" &&
+    !isSupportSelf
+  ) {
+    const actor = await User.findByPk(req.user.id, {
+      attributes: ["id", "profile", "super"]
+    });
+    const ctx = await loadCompanyPlanContext(req);
+    if (ctx) {
+      try {
+        await assertActorCanManageUsers(actor, ctx.featureMap);
+        const explicit = await loadExplicitUserFeatureMap(user.id);
+        const keys = Object.entries(ctx.featureMap)
+          .filter(([, v]) => v === true)
+          .map(([k]) => k);
+        const state: Record<string, boolean> = {};
+        for (const k of keys) {
+          state[k] = explicit === null ? true : explicit[k] === true;
+        }
+        Object.assign(plain, {
+          featurePermissionPlanKeys: keys,
+          featurePermissions: state
+        });
+      } catch {
+        /* omitir metadados de permissões */
+      }
+    }
+  }
+
+  return res.status(200).json(plain);
 };
 
 export const update = async (
@@ -115,8 +175,41 @@ export const update = async (
   const isSupportSelf =
     supportMode === true && Number(userId) === Number(requestUserId);
 
-  if (req.user.profile !== "admin" && !isSupportSelf) {
+  const actor = await User.findByPk(requestUserId, {
+    attributes: ["id", "profile", "super"]
+  });
+
+  const allow =
+    actor?.profile === "admin" ||
+    isSupportSelf ||
+    (actor?.profile === "supervisor" &&
+      Number(userId) !== Number(requestUserId));
+
+  if (!allow || !actor) {
     throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  if (
+    actor.profile === "supervisor" &&
+    Number(userId) === Number(requestUserId) &&
+    userData.profile &&
+    userData.profile !== "supervisor"
+  ) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  if (!isSupportSelf && actor.profile === "supervisor") {
+    const ctx = await loadCompanyPlanContext(req);
+    if (!ctx) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+    await assertActorCanManageUsers(actor, ctx.featureMap);
+    const targetBefore = await ShowUserService(userId, companyId);
+    await assertSupervisorTargetRules({
+      actor: { profile: actor.profile },
+      targetProfile: targetBefore.profile,
+      nextProfile: userData.profile
+    });
   }
 
   const user = await UpdateUserService({
@@ -143,9 +236,14 @@ export const remove = async (
   const { userId } = req.params;
   const { companyId } = req.user;
 
-  if (req.user.profile !== "admin") {
+  const actor = await User.findByPk(req.user.id, {
+    attributes: ["id", "profile", "super"]
+  });
+  const ctx = await loadCompanyPlanContext(req);
+  if (!ctx) {
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
+  await assertActorCanManageUsers(actor, ctx.featureMap);
 
   await DeleteUserService(userId, companyId);
 
@@ -171,12 +269,12 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
 
 export const setLanguage = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
-  const {newLanguage} = req.params;
+  const { newLanguage } = req.params;
 
-  if( newLanguage !== "pt" && newLanguage !== "en" && newLanguage !== "es" )
+  if (newLanguage !== "pt" && newLanguage !== "en" && newLanguage !== "es")
     throw new AppError("ERR_INTERNAL_SERVER_ERROR", 500);
 
-  await SetLanguageCompanyService( companyId, newLanguage );
+  await SetLanguageCompanyService(companyId, newLanguage);
 
-  return res.status(200).json({message: "Language updated successfully"});
-}
+  return res.status(200).json({ message: "Language updated successfully" });
+};

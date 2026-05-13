@@ -6,6 +6,12 @@ import { getFirstYupErrorMessage, optionalPasswordSchema } from "../../utils/pas
 import ShowUserService from "./ShowUserService";
 import Company from "../../models/Company";
 import User from "../../models/User";
+import {
+  clearUserFeaturePermissions,
+  loadPlanFeatureMapForCompanyId,
+  seedDefaultUserFeaturePermissions,
+  setUserFeaturePermissionsFromAdminInput
+} from "../UserFeaturePermission/UserFeaturePermissionService";
 
 const ALLOWED_PROFILES = ["admin", "user", "supervisor"];
 
@@ -18,6 +24,7 @@ interface UserData {
   queueIds?: number[];
   whatsappId?: number;
   allTicket?: string;
+  featurePermissions?: Record<string, unknown>;
 }
 
 interface Request {
@@ -48,7 +55,11 @@ const UpdateUserService = async ({
     skipCompanyScopeForShow ? undefined : companyId
   );
 
-  const requestUser = await User.findByPk(requestUserId);
+  const oldProfile = user.profile;
+
+  const requestUser = await User.findByPk(requestUserId, {
+    attributes: ["id", "profile", "super", "companyId"]
+  });
 
   if (!requestUser) {
     throw new AppError("ERR_NO_USER_FOUND", 403);
@@ -65,7 +76,8 @@ const UpdateUserService = async ({
     name,
     queueIds = [],
     whatsappId,
-    allTicket
+    allTicket,
+    featurePermissions
   } = userData;
 
   const schema = Yup.object().shape({
@@ -148,6 +160,50 @@ const UpdateUserService = async ({
   await user.$set("queues", queueIds);
 
   await user.reload();
+
+  const newProfile = user.profile;
+  if (oldProfile !== newProfile) {
+    if (newProfile === "admin") {
+      await clearUserFeaturePermissions(user.id);
+    } else if (
+      (newProfile === "user" || newProfile === "supervisor") &&
+      oldProfile === "admin" &&
+      user.companyId
+    ) {
+      const planMap = await loadPlanFeatureMapForCompanyId(user.companyId);
+      await seedDefaultUserFeaturePermissions(
+        user.id,
+        user.companyId,
+        newProfile,
+        planMap,
+        { actorUserId: requestUser.id }
+      );
+    }
+  }
+
+  if (
+    featurePermissions &&
+    typeof featurePermissions === "object" &&
+    !skipCompanyScopeForShow
+  ) {
+    if (Number(userId) === Number(requestUserId)) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+    if (user.profile === "admin") {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+    if (!user.companyId) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+    const planMap = await loadPlanFeatureMapForCompanyId(user.companyId);
+    await setUserFeaturePermissionsFromAdminInput({
+      targetUserId: user.id,
+      companyId: user.companyId,
+      planMap,
+      input: featurePermissions,
+      actor: requestUser
+    });
+  }
 
   const company = await Company.findByPk(user.companyId);
 

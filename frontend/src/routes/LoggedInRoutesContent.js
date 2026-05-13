@@ -68,6 +68,24 @@ function PlanFlagsLoadingState() {
   );
 }
 
+function routePlanAllows(planFlags, keys) {
+  const pf = planFlags.planTierEffectiveFeatures || {};
+  return (keys || []).some((k) => pf[k] === true);
+}
+
+function routeUserAllows(planFlags, keys) {
+  const ef = planFlags.effectiveFeatures || {};
+  return (keys || []).some((k) => ef[k] === true);
+}
+
+function FeatureBlocked({ planFlags, anyOf }) {
+  const keys = anyOf && anyOf.length ? anyOf : [];
+  const planOk = routePlanAllows(planFlags, keys);
+  const userOk = routeUserAllows(planFlags, keys);
+  if (planOk && !userOk) return <PlanFeatureBlocked variant="user" />;
+  return <PlanFeatureBlocked />;
+}
+
 function DashboardRouteGuard() {
   const { user } = useContext(AuthContext);
   const planFlags = usePlanFlags();
@@ -82,7 +100,13 @@ function DashboardRouteGuard() {
         if (!planFlags.loaded) {
           return <PlanFlagsLoadingState />;
         }
-        if (!allowed) return <PlanFeatureBlocked />;
+        if (!allowed)
+          return (
+            <FeatureBlocked
+              planFlags={planFlags}
+              anyOf={["dashboard.main", "dashboard.reports"]}
+            />
+          );
         return <DashboardModule planFlags={planFlags} />;
       }}
       no={() => <Redirect to="/tickets" />}
@@ -103,7 +127,12 @@ function DashboardModule({ planFlags }) {
     return t;
   }, [fx, i18n.language]);
   if (!tabs.length) {
-    return <PlanFeatureBlocked />;
+    return (
+      <FeatureBlocked
+        planFlags={planFlags}
+        anyOf={["dashboard.main", "dashboard.reports"]}
+      />
+    );
   }
   const defaultPath = tabs[0]?.path || "/";
   return (
@@ -148,7 +177,11 @@ function AtendimentoModule({ planFlags, isAdmin }) {
             if (!planFlags.loaded) {
               return <PlanFlagsLoadingState />;
             }
-            return planFlags.useKanban ? <Kanban /> : <PlanFeatureBlocked />;
+            return planFlags.useKanban ? (
+              <Kanban />
+            ) : (
+              <FeatureBlocked planFlags={planFlags} anyOf={["attendance.kanban"]} />
+            );
           }}
         />
         <Route exact path="/contacts" component={Contacts} />
@@ -162,7 +195,7 @@ function AtendimentoModule({ planFlags, isAdmin }) {
             return isAdmin && planFlags.useGroups ? (
               <GroupManager />
             ) : (
-              <PlanFeatureBlocked />
+              <FeatureBlocked planFlags={planFlags} anyOf={["team.groups"]} />
             );
           }}
         />
@@ -216,7 +249,18 @@ function AutomacaoModule({ planFlags, isAdmin }) {
   }
 
   if (!tabs.length) {
-    return <PlanFeatureBlocked />;
+    return (
+      <FeatureBlocked
+        planFlags={planFlags}
+        anyOf={[
+          "automation.chatbot",
+          "automation.keywords",
+          "automation.integrations",
+          "automation.openai",
+          "automation.quick_replies",
+        ]}
+      />
+    );
   }
 
   const fallback = tabs[0]?.path || "/tickets";
@@ -251,7 +295,7 @@ function AutomacaoModule({ planFlags, isAdmin }) {
             isAdmin && showIntegrations ? (
               <QueueIntegration />
             ) : (
-              <PlanFeatureBlocked />
+              <FeatureBlocked planFlags={planFlags} anyOf={["automation.integrations"]} />
             )
           }
         />
@@ -259,13 +303,17 @@ function AutomacaoModule({ planFlags, isAdmin }) {
           exact
           path="/prompts"
           render={() =>
-            isAdmin && showOpenAi ? <Prompts /> : <PlanFeatureBlocked />
+            isAdmin && showOpenAi ? <Prompts /> : (
+              <FeatureBlocked planFlags={planFlags} anyOf={["automation.openai"]} />
+            )
           }
         />
         {showQuickReplies ? (
           <Route exact path="/quick-messages" component={QuickMessages} />
         ) : (
-          <Route exact path="/quick-messages" render={() => <PlanFeatureBlocked />} />
+          <Route exact path="/quick-messages" render={() => (
+            <FeatureBlocked planFlags={planFlags} anyOf={["automation.quick_replies"]} />
+          )} />
         )}
       </Switch>
     </ModuleTabsLayout>
@@ -318,7 +366,12 @@ function EquipeModule({ isAdmin, planFlags }) {
   }
 
   if (isAdmin && !usersOk && !queuesOk) {
-    return <PlanFeatureBlocked />;
+    return (
+      <FeatureBlocked
+        planFlags={planFlags}
+        anyOf={["team.users", "team.queues"]}
+      />
+    );
   }
 
   return (
@@ -327,24 +380,42 @@ function EquipeModule({ isAdmin, planFlags }) {
         <Route
           exact
           path="/users"
-          render={() => (usersOk ? <Users /> : <PlanFeatureBlocked />)}
+          render={() =>
+            usersOk ? <Users /> : (
+              <FeatureBlocked planFlags={planFlags} anyOf={["team.users"]} />
+            )
+          }
         />
         <Route
           exact
           path="/setores"
-          render={() => (queuesOk ? <Setores /> : <PlanFeatureBlocked />)}
+          render={() =>
+            queuesOk ? <Setores /> : (
+              <FeatureBlocked planFlags={planFlags} anyOf={["team.queues"]} />
+            )
+          }
         />
         <Route
           exact
           path="/queues"
-          render={() => (queuesOk ? <Queues /> : <PlanFeatureBlocked />)}
+          render={() =>
+            queuesOk ? <Queues /> : (
+              <FeatureBlocked planFlags={planFlags} anyOf={["team.queues"]} />
+            )
+          }
         />
       </Switch>
     </ModuleTabsLayout>
   );
 }
 
-function ConfiguracoesModule({ planFlagsLoaded, showExternalApi, showMediaManager, showGroupsManager }) {
+function ConfiguracoesModule({
+  planFlagsLoaded,
+  showExternalApi,
+  showMediaManager,
+  showGroupsManager,
+  planFlags,
+}) {
   const tabs = useMemo(() => {
     const t = [{ path: "/connections", label: i18n.t("mainDrawer.listItems.connections") }];
     if (showExternalApi) {
@@ -371,18 +442,30 @@ function ConfiguracoesModule({ planFlagsLoaded, showExternalApi, showMediaManage
         <Route
           exact
           path="/messages-api"
-          render={() => (showExternalApi ? <MessagesAPI /> : <PlanFeatureBlocked />)}
+          render={() =>
+            showExternalApi ? <MessagesAPI /> : (
+              <FeatureBlocked planFlags={planFlags} anyOf={["settings.api"]} />
+            )
+          }
         />
         <Route exact path="/settings" component={SettingsCustom} />
         <Route
           exact
           path="/settings/media-manager"
-          render={() => (showMediaManager ? <MediaManager /> : <PlanFeatureBlocked />)}
+          render={() =>
+            showMediaManager ? <MediaManager /> : <PlanFeatureBlocked />
+          }
         />
         <Route
           exact
           path="/settings/groups"
-          render={() => (showGroupsManager ? <GroupManager /> : <PlanFeatureBlocked />)}
+          render={() =>
+            showGroupsManager ? (
+              <GroupManager />
+            ) : (
+              <FeatureBlocked planFlags={planFlags} anyOf={["team.groups"]} />
+            )
+          }
         />
       </Switch>
     </ModuleTabsLayout>
@@ -393,6 +476,7 @@ export default function LoggedInRoutesContent() {
   const { user } = useContext(AuthContext);
   const planFlags = usePlanFlags();
   const isAdmin = user?.profile === "admin";
+  const isTenantManager = isAdmin || user?.profile === "supervisor";
   const isPrivileged =
     user?.profile === "admin" || user?.profile === "supervisor" || user?.supportMode === true;
   const showMediaManager = isAdmin || user?.supportMode === true;
@@ -433,7 +517,7 @@ export default function LoggedInRoutesContent() {
 
       <Route
         path={atendimentoPaths}
-        render={() => <AtendimentoModule planFlags={planFlags} isAdmin={isAdmin} />}
+        render={() => <AtendimentoModule planFlags={planFlags} isAdmin={isTenantManager} />}
       />
 
       <Route
@@ -443,7 +527,11 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return planFlags.useInternalChat ? <Chat /> : <PlanFeatureBlocked />;
+          return planFlags.useInternalChat ? (
+            <Chat />
+          ) : (
+            <FeatureBlocked planFlags={planFlags} anyOf={["attendance.internal_chat"]} />
+          );
         }}
       />
       <Route
@@ -456,7 +544,7 @@ export default function LoggedInRoutesContent() {
           return planFlags.useInternalChat ? (
             <Chat {...routeProps} />
           ) : (
-            <PlanFeatureBlocked />
+            <FeatureBlocked planFlags={planFlags} anyOf={["attendance.internal_chat"]} />
           );
         }}
       />
@@ -471,7 +559,11 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return fx["agenda.calendar"] === true ? <Agenda /> : <PlanFeatureBlocked />;
+          return fx["agenda.calendar"] === true ? (
+            <Agenda />
+          ) : (
+            <FeatureBlocked planFlags={planFlags} anyOf={["agenda.calendar"]} />
+          );
         }}
       />
       <Route
@@ -481,7 +573,14 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return planFlags.useSchedules ? <Schedules /> : <PlanFeatureBlocked />;
+          return planFlags.useSchedules ? (
+            <Schedules />
+          ) : (
+            <FeatureBlocked
+              planFlags={planFlags}
+              anyOf={["agenda.appointments", "attendance.schedules"]}
+            />
+          );
         }}
       />
 
@@ -494,7 +593,12 @@ export default function LoggedInRoutesContent() {
             return <PlanFlagsLoadingState />;
           }
           if (!planFlags.useCampaigns) {
-            return <PlanFeatureBlocked />;
+            return (
+              <FeatureBlocked
+                planFlags={planFlags}
+                anyOf={["campaigns.sends", "campaigns.lists"]}
+              />
+            );
           }
           return <CampanhasModule />;
         }}
@@ -502,7 +606,7 @@ export default function LoggedInRoutesContent() {
 
       <Route
         path={equipePaths}
-        render={() => <EquipeModule isAdmin={isAdmin} planFlags={planFlags} />}
+        render={() => <EquipeModule isAdmin={isTenantManager} planFlags={planFlags} />}
       />
 
       <Route
@@ -513,6 +617,7 @@ export default function LoggedInRoutesContent() {
             showExternalApi={planFlags.useExternalApi}
             showMediaManager={showMediaManager}
             showGroupsManager={planFlags.useGroups && isPrivileged}
+            planFlags={planFlags}
           />
         )}
       />
@@ -526,7 +631,14 @@ export default function LoggedInRoutesContent() {
           }
           const finOk =
             fx["finance.subscription"] === true || fx["finance.invoices"] === true;
-          return finOk ? <Financeiro /> : <PlanFeatureBlocked />;
+          return finOk ? (
+            <Financeiro />
+          ) : (
+            <FeatureBlocked
+              planFlags={planFlags}
+              anyOf={["finance.subscription", "finance.invoices"]}
+            />
+          );
         }}
       />
 
@@ -537,7 +649,11 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return fx["team.ratings"] === true ? <Evaluation /> : <PlanFeatureBlocked />;
+          return fx["team.ratings"] === true ? (
+            <Evaluation />
+          ) : (
+            <FeatureBlocked planFlags={planFlags} anyOf={["team.ratings"]} />
+          );
         }}
       />
       <Route
@@ -547,7 +663,11 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return fx["contacts.tags"] === true ? <Tags /> : <PlanFeatureBlocked />;
+          return fx["contacts.tags"] === true ? (
+            <Tags />
+          ) : (
+            <FeatureBlocked planFlags={planFlags} anyOf={["contacts.tags"]} />
+          );
         }}
       />
       <Route
@@ -557,7 +677,11 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return fx["contacts.files"] === true ? <Files /> : <PlanFeatureBlocked />;
+          return fx["contacts.files"] === true ? (
+            <Files />
+          ) : (
+            <FeatureBlocked planFlags={planFlags} anyOf={["contacts.files"]} />
+          );
         }}
       />
       <Route exact path="/helps" component={Helps} />
@@ -576,7 +700,7 @@ export default function LoggedInRoutesContent() {
           return fx["finance.subscription"] === true ? (
             <Subscription />
           ) : (
-            <PlanFeatureBlocked />
+            <FeatureBlocked planFlags={planFlags} anyOf={["finance.subscription"]} />
           );
         }}
       />
@@ -588,7 +712,11 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return fx["crm.pipeline"] === true ? <CRMReports /> : <PlanFeatureBlocked />;
+          return fx["crm.pipeline"] === true ? (
+            <CRMReports />
+          ) : (
+            <FeatureBlocked planFlags={planFlags} anyOf={["crm.pipeline"]} />
+          );
         }}
       />
 
@@ -599,7 +727,11 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return fx["crm.pipeline"] === true ? <CrmAutomations /> : <PlanFeatureBlocked />;
+          return fx["crm.pipeline"] === true ? (
+            <CrmAutomations />
+          ) : (
+            <FeatureBlocked planFlags={planFlags} anyOf={["crm.pipeline"]} />
+          );
         }}
       />
 
@@ -610,7 +742,11 @@ export default function LoggedInRoutesContent() {
           if (!planFlags.loaded) {
             return <PlanFlagsLoadingState />;
           }
-          return fx["crm.pipeline"] === true ? <CrmBoard /> : <PlanFeatureBlocked />;
+          return fx["crm.pipeline"] === true ? (
+            <CrmBoard />
+          ) : (
+            <FeatureBlocked planFlags={planFlags} anyOf={["crm.pipeline"]} />
+          );
         }}
       />
 

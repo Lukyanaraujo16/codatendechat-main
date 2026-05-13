@@ -28,16 +28,24 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function PlanFeatureBlocked() {
+/**
+ * @param {{ variant?: "plan" | "user" }} props
+ */
+export default function PlanFeatureBlocked({ variant = "plan" }) {
   const classes = useStyles();
+  const isUser = variant === "user";
   return (
     <Box className={classes.root}>
       <LockOutlinedIcon className={classes.icon} aria-hidden />
       <Typography variant="h6" component="h1" className={classes.title}>
-        {i18n.t("planFeature.blockedTitle")}
+        {isUser
+          ? i18n.t("userPermissions.blockedTitle")
+          : i18n.t("planFeature.blockedTitle")}
       </Typography>
       <Typography variant="body2" color="textSecondary">
-        {i18n.t("planFeature.blockedBody")}
+        {isUser
+          ? i18n.t("userPermissions.blockedBody")
+          : i18n.t("planFeature.blockedBody")}
       </Typography>
     </Box>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo } from "react";
+import React, { useState, useEffect, useContext, useMemo, useCallback } from "react";
 import { useLocation, useHistory, Link as RouterLink } from "react-router-dom";
 import MainContainer from "../../components/MainContainer";
 import {
@@ -11,6 +11,7 @@ import {
   Typography,
   Tooltip,
   IconButton,
+  Chip,
 } from "@material-ui/core";
 import PermMediaIcon from "@material-ui/icons/PermMedia";
 import InfoOutlined from "@material-ui/icons/InfoOutlined";
@@ -133,6 +134,43 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(1),
     marginBottom: theme.spacing(2),
   },
+  summaryPaper: {
+    padding: theme.spacing(2.5),
+    width: "100%",
+    boxSizing: "border-box",
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(255,255,255,0.03)"
+        : theme.palette.grey[50],
+  },
+  summaryTitle: {
+    fontWeight: 600,
+    marginBottom: theme.spacing(1.5),
+  },
+  summaryRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(0.75),
+    "&:last-child": {
+      marginBottom: 0,
+    },
+  },
+  cardTitleIcon: {
+    fontSize: "1.35rem",
+    lineHeight: 1.2,
+    marginRight: theme.spacing(1),
+    flexShrink: 0,
+  },
+  cardTitleWithIconRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(0.5),
+  },
 }));
 
 const SettingsCustom = () => {
@@ -151,6 +189,8 @@ const SettingsCustom = () => {
   const [chatbotControlSaving, setChatbotControlSaving] = useState(false);
   const [chatbotWeekdayStart, setChatbotWeekdayStart] = useState("08:00");
   const [chatbotWeekdayEnd, setChatbotWeekdayEnd] = useState("18:00");
+  const [settingsPreview, setSettingsPreview] = useState({});
+  const [chatbotSaveTick, setChatbotSaveTick] = useState(0);
 
   const { getCurrentUserInfo } = useContext(AuthContext);
   const { find, updateSchedules } = useCompanies();
@@ -186,6 +226,12 @@ const SettingsCustom = () => {
     findData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (Array.isArray(settings)) {
+      setSettingsPreview(Object.fromEntries(settings.map((s) => [s.key, s.value])));
+    }
+  }, [settings]);
 
   /** URLs antigas ?tab=companies|plans|helps: limpar query sem quebrar navegação */
   useEffect(() => {
@@ -238,6 +284,10 @@ const SettingsCustom = () => {
     };
   }, [company?.id, currentUser?.profile, currentUser?.supportMode]);
 
+  const handleSettingCommitted = useCallback((key, value) => {
+    setSettingsPreview((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
   const handleSaveChatbotControl = async () => {
     if (!company?.id) return;
     setChatbotControlSaving(true);
@@ -265,6 +315,7 @@ const SettingsCustom = () => {
         chatbotSchedule: schedule,
       });
       setChatbotControl(data || null);
+      setChatbotSaveTick((n) => n + 1);
       toast.success(i18n.t("settings.chatbotControl.toasts.saved"));
     } catch (err) {
       toastError(err);
@@ -338,6 +389,61 @@ const SettingsCustom = () => {
     return "schedules";
   }, [tab, schedulesEnabled, showNotificationsTab]);
 
+  const summaryLines = useMemo(() => {
+    if (!company?.id) return [];
+    const pv = settingsPreview || {};
+    const call = pv.call != null ? pv.call : "enabled";
+    const lines = [];
+    if (showChatbotControl) {
+      const botOff = Boolean(chatbotControl?.chatbotDisabled);
+      lines.push({
+        k: "chatbot",
+        text: `${i18n.t("settings.summary.chatbot")}: ${
+          botOff
+            ? i18n.t("settings.status.chatbotCompanyOff")
+            : i18n.t("settings.status.chatbotCompanyOn")
+        }`,
+      });
+      lines.push({
+        k: "attendance",
+        text: `${i18n.t("settings.summary.attendance")}: ${
+          botOff
+            ? i18n.t("settings.summary.attendanceManual")
+            : i18n.t("settings.summary.attendanceAssisted")
+        }`,
+      });
+    } else {
+      lines.push({
+        k: "attendance",
+        text: `${i18n.t("settings.summary.attendance")}: ${
+          call === "disabled"
+            ? i18n.t("settings.status.callsBlocked")
+            : i18n.t("settings.status.callsAccepting")
+        }`,
+      });
+    }
+    if (currentUser?.profile === "admin" || currentUser?.supportMode === true) {
+      const restricted = company?.crmVisibilityMode === "assigned";
+      lines.push({
+        k: "crm",
+        text: `${i18n.t("settings.summary.crm")}: ${
+          restricted
+            ? i18n.t("settings.status.crmRestricted")
+            : i18n.t("settings.status.crmShared")
+        }`,
+      });
+    }
+    return lines;
+  }, [
+    company?.id,
+    company?.crmVisibilityMode,
+    settingsPreview,
+    chatbotControl?.chatbotDisabled,
+    showChatbotControl,
+    currentUser?.profile,
+    currentUser?.supportMode,
+  ]);
+
   return (
     <MainContainer className={classes.root}>
       <AppPageHeader
@@ -356,9 +462,14 @@ const SettingsCustom = () => {
         <Box className={classes.pageSectionsStack}>
           {company?.id ? (
             <Paper elevation={1} className={classes.sectionPaper}>
-              <Typography variant="h6" className={classes.sectionTitle}>
-                {i18n.t("settings.sections.generalTitle")}
-              </Typography>
+              <Box className={classes.cardTitleWithIconRow} alignItems="center">
+                <Typography className={classes.cardTitleIcon} component="span" aria-hidden>
+                  {i18n.t("settings.ux.cardIconGeneral")}
+                </Typography>
+                <Typography variant="h6" className={classes.sectionTitle} component="span">
+                  {i18n.t("settings.sections.generalTitle")}
+                </Typography>
+              </Box>
               <Typography variant="body2" color="textSecondary" component="p" style={{ marginBottom: 16 }}>
                 {i18n.t("settings.sections.generalDescription")}
               </Typography>
@@ -369,6 +480,22 @@ const SettingsCustom = () => {
                   embedded
                 />
               </Box>
+            </Paper>
+          ) : null}
+
+          {company?.id && summaryLines.length > 0 ? (
+            <Paper className={classes.summaryPaper} elevation={0} component="section" aria-label={i18n.t("settings.summary.title")}>
+              <Typography variant="subtitle1" className={classes.summaryTitle} component="h2">
+                {i18n.t("settings.summary.title")}
+              </Typography>
+              <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 12 }}>
+                {i18n.t("settings.summary.intro")}
+              </Typography>
+              {summaryLines.map((row) => (
+                <Box key={row.k} className={classes.summaryRow}>
+                  <Typography variant="body2">{row.text}</Typography>
+                </Box>
+              ))}
             </Paper>
           ) : null}
 
@@ -433,6 +560,8 @@ const SettingsCustom = () => {
           chatbotWeekdayEnd={chatbotWeekdayEnd}
           setChatbotWeekdayEnd={setChatbotWeekdayEnd}
           onSaveChatbotControl={handleSaveChatbotControl}
+          onSettingCommitted={handleSettingCommitted}
+          chatbotSaveTick={chatbotSaveTick}
         />
 
           {(currentUser?.profile === "admin" || currentUser?.supportMode === true) &&
@@ -440,9 +569,24 @@ const SettingsCustom = () => {
             <Paper elevation={1} className={classes.sectionPaper}>
               <Box className={classes.sectionCardHeaderRow}>
                 <Box flex={1} minWidth={0}>
-                  <Typography variant="h6" className={classes.sectionTitle}>
-                    {i18n.t("settings.sections.crmTitle")}
-                  </Typography>
+                  <Box className={classes.cardTitleWithIconRow} alignItems="center">
+                    <Typography className={classes.cardTitleIcon} component="span" aria-hidden>
+                      {i18n.t("settings.ux.cardIconCrm")}
+                    </Typography>
+                    <Typography variant="h6" className={classes.sectionTitle} component="span">
+                      {i18n.t("settings.sections.crmTitle")}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={
+                        company?.crmVisibilityMode === "assigned"
+                          ? i18n.t("settings.status.crmRestricted")
+                          : i18n.t("settings.status.crmShared")
+                      }
+                      color={company?.crmVisibilityMode === "assigned" ? "default" : "primary"}
+                      variant="outlined"
+                    />
+                  </Box>
                   <Typography variant="body2" color="textSecondary">
                     {i18n.t("settings.sections.crmDescription")}
                   </Typography>
@@ -472,9 +616,14 @@ const SettingsCustom = () => {
             <Paper elevation={1} className={classes.sectionPaper}>
               <Box className={classes.sectionCardHeaderRow}>
                 <Box flex={1} minWidth={0}>
-                  <Typography variant="h6" className={classes.sectionTitle}>
-                    {i18n.t("settings.sections.storageTitle")}
-                  </Typography>
+                  <Box className={classes.cardTitleWithIconRow} alignItems="center">
+                    <Typography className={classes.cardTitleIcon} component="span" aria-hidden>
+                      {i18n.t("settings.ux.cardIconStorage")}
+                    </Typography>
+                    <Typography variant="h6" className={classes.sectionTitle} component="span">
+                      {i18n.t("settings.sections.storageTitle")}
+                    </Typography>
+                  </Box>
                   <Typography variant="body2" color="textSecondary">
                     {i18n.t("settings.sections.storageDescription")}
                   </Typography>
@@ -508,6 +657,7 @@ const SettingsCustom = () => {
             settings={settings}
             showPlatformIntegrations={showPlatformIntegrations}
             scheduleTypeChanged={() => {}}
+            onSettingCommitted={handleSettingCommitted}
           />
         ) : null}
 

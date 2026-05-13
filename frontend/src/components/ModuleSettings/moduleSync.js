@@ -185,6 +185,26 @@ export function mergeModulePermissions(raw) {
   };
 }
 
+/** Espelha `buildEffectiveModuleFlagsFromFeatureMap` no backend. */
+export function buildEffectiveModuleFlagsFromFeatureMap(featureMap, modulePermissions) {
+  const m = mergeModulePermissions(modulePermissions);
+  const fx = featureMap && typeof featureMap === "object" ? featureMap : {};
+  return {
+    useKanban: fx["attendance.kanban"] === true,
+    useCampaigns:
+      fx["campaigns.sends"] === true || fx["campaigns.lists"] === true,
+    useFlowbuilders:
+      fx["automation.chatbot"] === true && m.useFlowbuilders !== false,
+    useOpenAi: fx["automation.openai"] === true,
+    useSchedules:
+      fx["agenda.appointments"] === true || fx["attendance.schedules"] === true,
+    useExternalApi: fx["settings.api"] === true,
+    useIntegrations: fx["automation.integrations"] === true,
+    useGroups: fx["team.groups"] === true && m.useGroups !== false,
+    useInternalChat: fx["attendance.internal_chat"] === true,
+  };
+}
+
 /**
  * Ao escolher "Aplicar módulos do plano": alinha toggles espelhados ao que o plano permite
  * (via features granulares ou colunas legadas). Não altera useFlowbuilders nem useGroups

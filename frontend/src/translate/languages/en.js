@@ -11,6 +11,41 @@ const messages = {
 				blockedBody:
 					"This feature is not included in your plan. Contact your platform administrator for upgrade options.",
 			},
+			userPermissions: {
+				blockedTitle: "Access restricted",
+				blockedBody: "You do not have permission to access this resource.",
+				planBlockedHint: "This resource is blocked by the plan.",
+				sectionTitle: "Access permissions",
+				sectionSubtitle:
+					"This user will only be able to access what you enable (within the company plan).",
+				adminHint:
+					"Company admins always follow the plan limits; you do not need to set permissions here.",
+				organizedTitle: "Organized permissions",
+				presetProfileLabel: "Permission profile",
+				planLimitNotice:
+					"The permissions below are limited to the plan subscribed by the company.",
+				adminFullPlanAccess:
+					"Administrators have access to all resources enabled in the plan.",
+				legacyHint:
+					"Older accounts without saved permissions keep inheriting the full plan until they are edited and saved here. Use “Apply default permissions” or adjust manually and save to switch to explicit permissions.",
+				applyDefaultPermissions: "Apply default permissions",
+				selectAllPlanAllowed: "Select everything allowed by the plan",
+				clearPermissions: "Clear permissions",
+				sessionUpdatedToast:
+					"Your permissions were updated. Please reload the page.",
+				categories: {
+					attendance: "Support",
+					management: "Management",
+					marketing: "Marketing / Automation",
+					administration: "Administration",
+				},
+				presets: {
+					basic: "Basic user",
+					attendant: "Agent",
+					supervisor: "Supervisor",
+					custom: "Custom",
+				},
+			},
 			planFlags: {
 				loadingPermissions: "Loading permissions…",
 			},
@@ -3975,6 +4010,10 @@ const messages = {
 					attendanceGroupsCardTitle: "Groups",
 					attendanceAutoMsgCardTitle: "Automatic messages",
 					chatbotSectionStateTitle: "Status & schedule",
+					chatbotSectionBehaviorTitle: "Behavior",
+					chatbotSectionFlowsTitle: "Flows",
+					chatbotBehaviorHint:
+						"Automatic messages on accept, transfers, and single-queue greetings are in the “Automatic messages” card.",
 					chatbotSectionMessagesTitle: "Type & flows",
 					attendanceTitle: "Service",
 					attendanceDescription:
@@ -4001,7 +4040,47 @@ const messages = {
 					asaasTitle: "Asaas",
 					asaasTokenLabel: "Asaas token",
 				},
+				status: {
+					ratingsOn: "Ratings on",
+					ratingsOff: "Ratings off",
+					expedientOff: "Hours: off",
+					expedientQueue: "Hours: per queue",
+					expedientCompany: "Hours: company",
+					callsAccepting: "Accepting",
+					callsBlocked: "Blocked",
+					groupsInbox: "Receiving groups",
+					groupsIgnored: "Ignoring groups",
+					autoMessagesOn: "Messages on",
+					autoMessagesMinimal: "Minimal messages",
+					chatbotCompanyOn: "Active",
+					chatbotCompanyOff: "Disabled",
+					chatbotScheduleOn: "Schedule on",
+					chatbotScheduleOff: "Schedule off",
+					crmShared: "Shared",
+					crmRestricted: "Restricted",
+					asaasConfigured: "Token set",
+					asaasPending: "No token",
+				},
+				summary: {
+					title: "Quick summary",
+					intro: "Main state for this company.",
+					chatbot: "Chatbot",
+					attendance: "Service",
+					crm: "CRM",
+					attendanceManual: "Manual",
+					attendanceAssisted: "Assisted",
+				},
 				ux: {
+					cardIconGeneral: "🌍",
+					cardIconIntegrations: "🔗",
+					cardIconRating: "⭐",
+					cardIconCalls: "📞",
+					cardIconGroups: "👥",
+					cardIconAutoMsg: "💬",
+					cardIconChatbot: "🤖",
+					cardIconCrm: "📊",
+					cardIconStorage: "💾",
+					autoSaved: "Saved automatically",
 					autoSaveHint: "Changes in this card save when you pick an option.",
 					pageContextShort:
 						"Settings for the current company. Super Admins: global management is under Platform.",

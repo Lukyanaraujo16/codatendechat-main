@@ -18,7 +18,12 @@ userRoutes.put(
   NotificationPreferencesController.updateMine
 );
 
-userRoutes.get("/users", isAuth, UserController.index);
+userRoutes.get(
+  "/users",
+  isAuth,
+  requireAnyPlanFeature("team.users"),
+  UserController.index
+);
 
 userRoutes.get("/users/list", isAuth, UserController.list);
 
