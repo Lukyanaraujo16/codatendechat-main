@@ -158,7 +158,9 @@ export default function HelpVideoCard({
   const category = record.category || "Geral";
 
   const handleWatch = (e) => {
-    e?.stopPropagation?.();
+    if (e && typeof e.stopPropagation === "function") {
+      e.stopPropagation();
+    }
     if (onWatch) {
       onWatch(record);
     }
