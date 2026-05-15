@@ -13,6 +13,7 @@ import { intersection } from "lodash";
 import Whatsapp from "../../models/Whatsapp";
 import { parseTruthyQuery } from "../../utils/parseQueryBoolean";
 import { attachTicketIsOrphanFlag } from "../../helpers/ticketOrphan";
+import { logger } from "../../utils/logger";
 import {
   buildNonAdminTicketListWhere,
   queueInAllowedOrUnassigned
@@ -278,6 +279,18 @@ const ListTicketsService = async ({
   const hasMore = count > offset + tickets.length;
 
   attachTicketIsOrphanFlag(tickets);
+
+  if (status === "pending") {
+    logger.info(
+      {
+        companyId,
+        pageNumber,
+        count,
+        ticketIds: tickets.map((t) => t.id)
+      },
+      "[ListTicketsService] pending result ids"
+    );
+  }
 
   return {
     tickets,

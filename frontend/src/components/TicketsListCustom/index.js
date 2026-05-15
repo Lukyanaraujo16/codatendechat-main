@@ -25,6 +25,7 @@ import TicketsListSkeleton from "../TicketsListSkeleton";
 import useTickets from "../../hooks/useTickets";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { TicketsInboxContext } from "../../context/TicketsInboxContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
 
 const useStyles = makeStyles((theme) => ({
@@ -199,6 +200,7 @@ const TicketsListCustom = (props) => {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [ticketsList, dispatch] = useReducer(reducer, []);
   const { user } = useContext(AuthContext);
+  const inbox = useContext(TicketsInboxContext);
   const { profile, queues } = user || {};
   const safeQueues = Array.isArray(queues) ? queues : [];
 
@@ -519,6 +521,13 @@ const TicketsListCustom = (props) => {
       });
       const deleted = data?.deletedCount ?? 0;
       const failed = data?.failedCount ?? 0;
+      const removedIds =
+        Array.isArray(data?.deletedIds) && data.deletedIds.length > 0
+          ? data.deletedIds
+          : ids;
+      if (typeof inbox?.removeTickets === "function") {
+        inbox.removeTickets(removedIds);
+      }
       if (failed > 0) {
         toast.info(
           i18n.t("ticket.delete.bulkPartial", { deleted, failed })

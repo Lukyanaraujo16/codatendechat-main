@@ -58,6 +58,19 @@ const DeleteTicketService = async (
     });
   });
 
+  const stillExists = await Ticket.findByPk(ticketIdNum);
+  if (stillExists) {
+    logger.error(
+      { ticketId: ticketIdNum, companyId },
+      "[TicketDelete] after_delete_find ticket still exists"
+    );
+  } else {
+    logger.info(
+      { ticketId: ticketIdNum, companyId },
+      "[TicketDelete] after_delete_find confirmed removed"
+    );
+  }
+
   logger.info(
     {
       ticketId: ticketIdNum,

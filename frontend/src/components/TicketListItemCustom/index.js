@@ -41,6 +41,7 @@ import TicketMessagesDialog from "../TicketMessagesDialog";
 import ConfirmationModal from "../ConfirmationModal";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TicketsSetContext } from "../../context/Tickets/TicketsContext";
+import { TicketsInboxContext } from "../../context/TicketsInboxContext";
 import toastError from "../../errors/toastError";
 import { v4 as uuidv4 } from "uuid";
 import { useAcceptTicket } from "../../hooks/useAcceptTicket";
@@ -331,6 +332,7 @@ const TicketListItemCustom = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const isMounted = useRef(true);
   const setCurrentTicket = useContext(TicketsSetContext);
+  const inbox = useContext(TicketsInboxContext);
   const { user } = useContext(AuthContext);
   const { profile } = user;
   const mayDelete = canDeleteTickets(user);
@@ -415,6 +417,9 @@ const TicketListItemCustom = ({
     setDeleteLoading(true);
     try {
       await api.delete(`/tickets/${ticket.id}`);
+      if (typeof inbox?.removeTicket === "function") {
+        inbox.removeTicket(ticket.id);
+      }
       toast.success(i18n.t("ticketOptionsMenu.confirmationModal.deleteSuccess"));
       if (selected) {
         history.push("/tickets");

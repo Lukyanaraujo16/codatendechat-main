@@ -53,6 +53,30 @@ function mergeLoadBatch(prev, batch) {
   return state;
 }
 
+/**
+ * Página 1: substitui todos os tickets daquele status (permite lista vazia após exclusão).
+ * Páginas seguintes: apenas mescla.
+ */
+function applyStatusPageBatch(prev, batch, status, pageNumber, recentlyDeletedRef) {
+  const page = Number(pageNumber) || 1;
+  const raw = Array.isArray(batch) ? batch : [];
+  const list =
+    recentlyDeletedRef?.current?.size > 0
+      ? raw.filter((t) => !recentlyDeletedRef.current.has(Number(t.id)))
+      : raw;
+  if (page <= 1) {
+    const other = prev.filter((t) => t.status !== status);
+    if (list.length === 0) {
+      return other;
+    }
+    return mergeLoadBatch(other, list);
+  }
+  if (list.length === 0) {
+    return prev;
+  }
+  return mergeLoadBatch(prev, list);
+}
+
 function upsertTicketInList(prev, ticket, { bumpToTop } = {}) {
   if (!ticket || ticket.id == null) {
     return prev;
@@ -84,6 +108,7 @@ export function TicketsInboxProvider({
   const [tickets, setTickets] = useState([]);
   const [openPage, setOpenPage] = useState(1);
   const [pendingPage, setPendingPage] = useState(1);
+  const recentlyDeletedIdsRef = useRef(new Set());
 
   const queueIdsJson = useMemo(
     () => JSON.stringify(Array.isArray(selectedQueueIds) ? selectedQueueIds : []),
@@ -94,6 +119,7 @@ export function TicketsInboxProvider({
     setTickets([]);
     setOpenPage(1);
     setPendingPage(1);
+    recentlyDeletedIdsRef.current = new Set();
   }, [queueIdsJson, showAll]);
 
   const fetchEnabled = inboxUiActive !== false;
@@ -123,14 +149,30 @@ export function TicketsInboxProvider({
   });
 
   useEffect(() => {
-    if (!fetchEnabled) return;
-    setTickets((prev) => mergeLoadBatch(prev, openFetch.tickets));
-  }, [fetchEnabled, openFetch.tickets]);
+    if (!fetchEnabled || openFetch.loading) return;
+    setTickets((prev) =>
+      applyStatusPageBatch(
+        prev,
+        openFetch.tickets,
+        "open",
+        openPage,
+        recentlyDeletedIdsRef
+      )
+    );
+  }, [fetchEnabled, openFetch.loading, openFetch.tickets, openPage]);
 
   useEffect(() => {
-    if (!fetchEnabled) return;
-    setTickets((prev) => mergeLoadBatch(prev, pendingFetch.tickets));
-  }, [fetchEnabled, pendingFetch.tickets]);
+    if (!fetchEnabled || pendingFetch.loading) return;
+    setTickets((prev) =>
+      applyStatusPageBatch(
+        prev,
+        pendingFetch.tickets,
+        "pending",
+        pendingPage,
+        recentlyDeletedIdsRef
+      )
+    );
+  }, [fetchEnabled, pendingFetch.loading, pendingFetch.tickets, pendingPage]);
 
   const userId = user?.id;
   const shouldShowTicket = useCallback(
@@ -161,18 +203,54 @@ export function TicketsInboxProvider({
     [userId, showAll, selectedQueueIds, user?.allTicket]
   );
 
-  const upsertTicket = useCallback((ticket) => {
-    setTickets((prev) => upsertTicketInList(prev, ticket, { bumpToTop: false }));
-  }, []);
-
-  const upsertTicketMessageActivity = useCallback((ticket) => {
-    setTickets((prev) => upsertTicketInList(prev, ticket, { bumpToTop: true }));
+  const isRecentlyDeleted = useCallback((ticketId) => {
+    if (ticketId == null) return false;
+    return recentlyDeletedIdsRef.current.has(Number(ticketId));
   }, []);
 
   const removeTicket = useCallback((ticketId) => {
     if (ticketId == null) return;
+    const id = Number(ticketId);
+    recentlyDeletedIdsRef.current.add(id);
+    setTimeout(() => {
+      recentlyDeletedIdsRef.current.delete(id);
+    }, 120000);
     setTickets((prev) => prev.filter((t) => t.id !== ticketId));
   }, []);
+
+  const removeTickets = useCallback((ticketIds) => {
+    if (!Array.isArray(ticketIds) || ticketIds.length === 0) return;
+    ticketIds.forEach((ticketId) => {
+      if (ticketId != null) {
+        recentlyDeletedIdsRef.current.add(Number(ticketId));
+      }
+    });
+    setTimeout(() => {
+      ticketIds.forEach((ticketId) => {
+        if (ticketId != null) {
+          recentlyDeletedIdsRef.current.delete(Number(ticketId));
+        }
+      });
+    }, 120000);
+    const idSet = new Set(ticketIds.map((id) => Number(id)));
+    setTickets((prev) => prev.filter((t) => !idSet.has(Number(t.id))));
+  }, []);
+
+  const upsertTicket = useCallback(
+    (ticket) => {
+      if (!ticket?.id || isRecentlyDeleted(ticket.id)) return;
+      setTickets((prev) => upsertTicketInList(prev, ticket, { bumpToTop: false }));
+    },
+    [isRecentlyDeleted]
+  );
+
+  const upsertTicketMessageActivity = useCallback(
+    (ticket) => {
+      if (!ticket?.id || isRecentlyDeleted(ticket.id)) return;
+      setTickets((prev) => upsertTicketInList(prev, ticket, { bumpToTop: true }));
+    },
+    [isRecentlyDeleted]
+  );
 
   const updateUnread = useCallback((ticketId) => {
     if (ticketId == null) return;
@@ -211,6 +289,9 @@ export function TicketsInboxProvider({
       }
       if (data.action === "update" && data.ticket) {
         const t = data.ticket;
+        if (isRecentlyDeleted(t.id)) {
+          return;
+        }
         if (t.isGroup) {
           removeTicket(t.id);
           return;
@@ -229,6 +310,7 @@ export function TicketsInboxProvider({
 
     const handleAppMessage = (data) => {
       if (data.action !== "create" || !data.ticket) return;
+      if (isRecentlyDeleted(data.ticket.id)) return;
       const myId = Number(user?.id);
       const t = data.ticket;
       if (profile === "user") {
@@ -291,6 +373,7 @@ export function TicketsInboxProvider({
     removeTicket,
     updateUnread,
     updateContact,
+    isRecentlyDeleted,
     user?.id,
     user?.allTicket,
   ]);
@@ -436,6 +519,7 @@ export function TicketsInboxProvider({
       loadMorePending,
       upsertTicket,
       removeTicket,
+      removeTickets,
       updateUnread,
     }),
     [
@@ -454,6 +538,7 @@ export function TicketsInboxProvider({
       loadMorePending,
       upsertTicket,
       removeTicket,
+      removeTickets,
       updateUnread,
     ]
   );

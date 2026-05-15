@@ -17,6 +17,7 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TicketsSetContext } from "../../context/Tickets/TicketsContext";
+import { TicketsInboxContext } from "../../context/TicketsInboxContext";
 import TicketConversationActionBar from "../TicketConversationActionBar";
 import usePlanFlags from "../../hooks/usePlanFlags";
 import TicketCrmDealButton from "../Crm/TicketCrmDealButton";
@@ -55,6 +56,7 @@ const TicketActionButtonsCustom = ({
   const [chatbotToggleLoading, setChatbotToggleLoading] = useState(false);
   const { user } = useContext(AuthContext);
   const setCurrentTicket = useContext(TicketsSetContext);
+  const inbox = useContext(TicketsInboxContext);
   const planFlags = usePlanFlags();
   const fx = planFlags.effectiveFeatures || {};
   const mayDelete = canDeleteTickets(user);
@@ -203,6 +205,9 @@ const TicketActionButtonsCustom = ({
           deleteTitle={i18n.t("ticket.delete.confirmTitle")}
           deleteMessage={i18n.t("ticket.delete.confirmMessage")}
           onDeleted={() => {
+            if (typeof inbox?.removeTicket === "function") {
+              inbox.removeTicket(ticket.id);
+            }
             setCurrentTicket({ id: null, code: null });
             history.push("/tickets");
           }}

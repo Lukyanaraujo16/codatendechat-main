@@ -307,10 +307,20 @@ export const remove = async (
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
+  logger.info(
+    { ticketId, companyId, userId, profile },
+    "[TicketDelete] request"
+  );
+
   const ticket = await DeleteTicketService(
     ticketId,
     companyId,
     userId != null ? Number(userId) : null
+  );
+
+  logger.info(
+    { ticketId: +ticketId, companyId, status: ticket.status },
+    "[TicketDelete] success"
   );
 
   const io = getIO();
@@ -346,10 +356,25 @@ export const removeBatch = async (
     return res.status(400).json({ error: "ticketIds must contain valid numeric ids" });
   }
 
+  logger.info(
+    { ticketIds: ids, companyId, userId, count: ids.length },
+    "[TicketDelete] batch request"
+  );
+
   const { deleted, result } = await BatchDeleteTicketsService(
     ids,
     companyId,
     userId != null ? Number(userId) : null
+  );
+
+  logger.info(
+    {
+      companyId,
+      deletedCount: result.deletedCount,
+      failedCount: result.failedCount,
+      deletedIds: deleted.map((d) => d.id)
+    },
+    "[TicketDelete] batch success"
   );
 
   const io = getIO();
@@ -364,7 +389,10 @@ export const removeBatch = async (
     });
   }
 
-  return res.status(200).json(result);
+  return res.status(200).json({
+    ...result,
+    deletedIds: deleted.map((d) => d.id)
+  });
 };
 
 export const listWithoutConnection = async (req: Request, res: Response): Promise<Response> => {
