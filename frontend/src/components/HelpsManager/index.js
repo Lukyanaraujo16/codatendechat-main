@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   makeStyles,
   Paper,
@@ -10,16 +10,13 @@ import {
   TableCell,
   TableRow,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   FormControlLabel,
   Checkbox,
   Typography,
   Box,
   Chip
 } from "@material-ui/core";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 import { Formik, Form, Field } from "formik";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConfirmationModal from "../ConfirmationModal";
@@ -30,6 +27,7 @@ import { i18n } from "../../translate/i18n";
 import HelpVideoCard from "../HelpVideoCard";
 import {
   HELP_CATEGORIES,
+  normalizeCategory,
   resolveHelpThumbnailUrl
 } from "../../utils/helpThumbnail";
 
@@ -116,8 +114,15 @@ const emptyRecord = {
 };
 
 export function HelpManagerForm(props) {
-  const { onSubmit, onDelete, onCancel, initialValue, loading, onUploadThumbnail } =
-    props;
+  const {
+    onSubmit,
+    onDelete,
+    onCancel,
+    initialValue,
+    loading,
+    onUploadThumbnail,
+    categoryOptions = HELP_CATEGORIES
+  } = props;
   const classes = useStyles();
   const fileInputRef = useRef(null);
   const [record, setRecord] = useState(initialValue);
@@ -259,29 +264,32 @@ export function HelpManagerForm(props) {
                   />
                 </Grid>
                 <Grid xs={12} sm={6} item>
-                  <FormControl
-                    variant="outlined"
-                    margin="dense"
-                    className={classes.fullWidth}
-                  >
-                    <InputLabel id="help-category-label">
-                      {i18n.t("settings.helps.form.category")}
-                    </InputLabel>
-                    <Select
-                      labelId="help-category-label"
-                      label={i18n.t("settings.helps.form.category")}
-                      value={values.category || "Atendimento"}
-                      onChange={(e) =>
-                        setFieldValue("category", e.target.value)
+                  <Autocomplete
+                    freeSolo
+                    options={categoryOptions}
+                    value={values.category || "Atendimento"}
+                    onChange={(_e, newValue) =>
+                      setFieldValue(
+                        "category",
+                        normalizeCategory({ category: newValue || "Atendimento" })
+                      )
+                    }
+                    onInputChange={(_e, inputValue, reason) => {
+                      if (reason === "input") {
+                        setFieldValue("category", inputValue);
                       }
-                    >
-                      {HELP_CATEGORIES.map((cat) => (
-                        <MenuItem key={cat} value={cat}>
-                          {cat}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={i18n.t("settings.helps.form.category")}
+                        variant="outlined"
+                        margin="dense"
+                        className={classes.fullWidth}
+                        helperText={i18n.t("settings.helps.form.categoryHint")}
+                      />
+                    )}
+                  />
                 </Grid>
                 <Grid xs={12} sm={3} item>
                   <Field
@@ -433,6 +441,13 @@ export default function HelpsManager() {
   const [records, setRecords] = useState([]);
   const [record, setRecord] = useState(emptyRecord);
 
+  const categoryOptions = useMemo(() => {
+    const fromRecords = records
+      .map((r) => normalizeCategory(r))
+      .filter((c) => c && c !== "Geral");
+    return [...new Set([...HELP_CATEGORIES, ...fromRecords])];
+  }, [records]);
+
   useEffect(() => {
     loadHelps();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -520,6 +535,7 @@ export default function HelpsManager() {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             onUploadThumbnail={uploadThumbnail}
+            categoryOptions={categoryOptions}
             loading={loading}
           />
         </Grid>

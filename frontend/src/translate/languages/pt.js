@@ -3939,6 +3939,7 @@ const messages = {
         featured: "Em destaque",
         empty: "Nenhum tutorial disponível no momento.",
         notFound: "Nenhum tutorial encontrado.",
+        loadError: "Não foi possível carregar os tutoriais. Tente novamente.",
         close: "Fechar",
         nextVideo: "Próximo vídeo",
         previewUntitled: "Título do tutorial",
@@ -4516,6 +4517,8 @@ const messages = {
           },
           form: {
             category: "Categoria",
+            categoryHint:
+              "Escolha uma categoria sugerida ou digite uma nova (ex.: Primeiros passos).",
             order: "Ordem",
             orderHint: "Menores números aparecem primeiro.",
             featured: "Vídeo em destaque",

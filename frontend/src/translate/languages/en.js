@@ -3846,6 +3846,7 @@ const messages = {
 				featured: "Featured",
 				empty: "No tutorials available at the moment.",
 				notFound: "No tutorials found.",
+				loadError: "Could not load tutorials. Please try again.",
 				close: "Close",
 				nextVideo: "Next video",
 				previewUntitled: "Tutorial title",
@@ -4375,6 +4376,8 @@ const messages = {
 					},
 					form: {
 						category: "Category",
+						categoryHint:
+							"Pick a suggested category or type a new one (e.g. Getting started).",
 						order: "Order",
 						orderHint: "Lower numbers appear first.",
 						featured: "Featured video",

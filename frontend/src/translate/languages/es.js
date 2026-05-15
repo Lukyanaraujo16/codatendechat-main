@@ -3760,6 +3760,7 @@ const messages = {
         featured: "Destacado",
         empty: "No hay tutoriales disponibles por el momento.",
         notFound: "No se encontraron tutoriales.",
+        loadError: "No se pudieron cargar los tutoriales. Inténtelo de nuevo.",
         close: "Cerrar",
         nextVideo: "Siguiente vídeo",
         previewUntitled: "Título del tutorial",
@@ -4286,6 +4287,8 @@ const messages = {
           },
           form: {
             category: "Categoría",
+            categoryHint:
+              "Elija una categoría sugerida o escriba una nueva (ej.: Primeros pasos).",
             order: "Orden",
             orderHint: "Los números más bajos aparecen primero.",
             featured: "Vídeo destacado",

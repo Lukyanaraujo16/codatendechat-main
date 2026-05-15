@@ -3,15 +3,72 @@ import { getBackendBaseURL } from "../config/backendUrl";
 const YOUTUBE_ID_REGEX =
   /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/i;
 
+/** Categorias sugeridas no Super Admin (freeSolo permite outras). */
 export const HELP_CATEGORIES = [
   "Atendimento",
   "Campanhas",
   "CRM",
   "Configurações",
-  "Automação"
+  "Automação",
+  "Financeiro",
+  "Equipe",
+  "Primeiros passos"
 ];
 
-export const HELP_CATEGORY_ORDER = [...HELP_CATEGORIES, "Geral"];
+export const FILTER_ALL = "all";
+
+export const resolveHelpVideoSource = (help) => {
+  if (!help || typeof help !== "object") {
+    return "";
+  }
+  return String(help.video || help.link || help.videoUrl || "").trim();
+};
+
+export const normalizeCategory = (record) => {
+  const cat = String(record?.category || "").trim();
+  return cat || "Geral";
+};
+
+export const normalizeHelpRecord = (raw) => {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const video = resolveHelpVideoSource(raw);
+  const category = normalizeCategory(raw);
+
+  return {
+    ...raw,
+    video,
+    link: raw.link || video || "",
+    category,
+    thumbnailUrl: raw.thumbnailUrl || "",
+    order: Number(raw.order ?? raw.helpOrder) || 0,
+    isFeatured:
+      raw.isFeatured === true ||
+      raw.isFeatured === 1 ||
+      raw.isFeatured === "1" ||
+      raw.isFeatured === "true"
+  };
+};
+
+export const parseHelpsList = (payload) => {
+  let list = [];
+
+  if (Array.isArray(payload)) {
+    list = payload;
+  } else if (payload && typeof payload === "object") {
+    if (Array.isArray(payload.records)) {
+      list = payload.records;
+    } else if (Array.isArray(payload.helps)) {
+      list = payload.helps;
+    } else if (Array.isArray(payload.data)) {
+      list = payload.data;
+    }
+  }
+
+  return list.map(normalizeHelpRecord).filter(Boolean);
+};
 
 export const extractYoutubeVideoId = (value) => {
   if (!value || typeof value !== "string") {
@@ -50,6 +107,10 @@ const resolveUploadedThumbnailUrl = (thumbnailUrl) => {
   }
 
   const base = getBackendBaseURL();
+  if (!base) {
+    return null;
+  }
+
   const path = thumbnailUrl.replace(/^\//, "");
   return `${base}/public/${path}`;
 };
@@ -60,11 +121,15 @@ export const resolveHelpThumbnailUrl = (help) => {
     return resolveUploadedThumbnailUrl(custom);
   }
 
-  return resolveYoutubeThumbnailUrl(help?.video);
+  return resolveYoutubeThumbnailUrl(resolveHelpVideoSource(help));
 };
 
-export const resolveHelpEmbedUrl = (video) => {
-  const videoId = extractYoutubeVideoId(video);
+export const resolveHelpEmbedUrl = (helpOrVideo) => {
+  const source =
+    typeof helpOrVideo === "string"
+      ? helpOrVideo
+      : resolveHelpVideoSource(helpOrVideo);
+  const videoId = extractYoutubeVideoId(source);
   if (!videoId) {
     return null;
   }
@@ -72,50 +137,73 @@ export const resolveHelpEmbedUrl = (video) => {
   return `https://www.youtube.com/embed/${videoId}`;
 };
 
+export const getUniqueCategories = (records) => {
+  const set = new Set();
+  (records || []).forEach((record) => {
+    set.add(normalizeCategory(record));
+  });
+
+  const ordered = [];
+  HELP_CATEGORIES.forEach((name) => {
+    if (set.has(name)) {
+      ordered.push(name);
+    }
+  });
+
+  const rest = [...set]
+    .filter((name) => !HELP_CATEGORIES.includes(name))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+
+  rest.forEach((name) => {
+    if (!ordered.includes(name)) {
+      ordered.push(name);
+    }
+  });
+
+  return ordered;
+};
+
 export const groupHelpsByCategory = (records) => {
   const featured = [];
   const byCategory = {};
 
-  records.forEach((record) => {
+  (records || []).forEach((record) => {
+    const category = normalizeCategory(record);
+
     if (record.isFeatured) {
       featured.push(record);
-      return;
+    } else {
+      if (!byCategory[category]) {
+        byCategory[category] = [];
+      }
+      byCategory[category].push(record);
     }
-
-    const category =
-      record.category && HELP_CATEGORIES.includes(record.category)
-        ? record.category
-        : "Geral";
-
-    if (!byCategory[category]) {
-      byCategory[category] = [];
-    }
-    byCategory[category].push(record);
   });
 
-  const categories = HELP_CATEGORY_ORDER.filter(
-    (name) => byCategory[name]?.length
-  ).map((name) => ({
-    name,
-    items: byCategory[name]
-  }));
+  const categoryNames = getUniqueCategories(
+    records.filter((r) => !r.isFeatured)
+  );
+
+  const categories = categoryNames
+    .filter((name) => byCategory[name]?.length)
+    .map((name) => ({
+      name,
+      items: byCategory[name]
+    }));
 
   return { featured, categories };
 };
 
-export const FILTER_ALL = "all";
-
-export const filterHelps = (records, { search = "", category = FILTER_ALL } = {}) => {
+export const filterHelps = (
+  records,
+  { search = "", category = FILTER_ALL } = {}
+) => {
   let list = Array.isArray(records) ? [...records] : [];
 
   if (category && category !== FILTER_ALL) {
-    list = list.filter((record) => {
-      const cat =
-        record.category && HELP_CATEGORIES.includes(record.category)
-          ? record.category
-          : "Geral";
-      return cat === category;
-    });
+    list = list.filter(
+      (record) => normalizeCategory(record) === category
+    );
   }
 
   const query = search?.trim().toLowerCase();
@@ -123,7 +211,7 @@ export const filterHelps = (records, { search = "", category = FILTER_ALL } = {}
     list = list.filter((record) => {
       const title = (record.title || "").toLowerCase();
       const description = (record.description || "").toLowerCase();
-      const cat = (record.category || "Geral").toLowerCase();
+      const cat = normalizeCategory(record).toLowerCase();
       return (
         title.includes(query) ||
         description.includes(query) ||
@@ -149,7 +237,9 @@ export const sortHelpsForPlayback = (records) =>
 
 export const findBasicsHelp = (records) => {
   const sorted = sortHelpsForPlayback(records);
-  const atendimento = sorted.find((r) => r.category === "Atendimento");
+  const atendimento = sorted.find(
+    (r) => normalizeCategory(r) === "Atendimento"
+  );
   return atendimento || sorted[0] || null;
 };
 

@@ -3,7 +3,8 @@ import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import {
   findHelpTutorialForStep,
-  getOnboardingStorageKey
+  getOnboardingStorageKey,
+  parseHelpsList
 } from "../../utils/helpThumbnail";
 
 const parseList = (payload) => {
@@ -76,7 +77,9 @@ const useOnboardingProgress = () => {
         dashboardRes.status === "fulfilled" ? dashboardRes.value.data : {};
       const counters = dashboard?.counters || {};
       const helpList =
-        helpsRes.status === "fulfilled" ? helpsRes.value.data : [];
+        helpsRes.status === "fulfilled"
+          ? parseHelpsList(helpsRes.value.data)
+          : [];
 
       const totalTickets =
         (Number(counters.supportHappening) || 0) +

@@ -8,11 +8,15 @@ import {
   Chip,
   Tooltip
 } from "@material-ui/core";
-import Skeleton from "@material-ui/lab/Skeleton";
 import PlayArrowIcon from "@material-ui/icons/PlayArrow";
 import StarIcon from "@material-ui/icons/Star";
+import OndemandVideoIcon from "@material-ui/icons/OndemandVideo";
 import { i18n } from "../../translate/i18n";
-import { resolveHelpThumbnailUrl } from "../../utils/helpThumbnail";
+import {
+  normalizeCategory,
+  normalizeHelpRecord,
+  resolveHelpThumbnailUrl
+} from "../../utils/helpThumbnail";
 
 const DESCRIPTION_CLAMP = 100;
 
@@ -140,6 +144,16 @@ const useStyles = makeStyles((theme) => ({
     alignSelf: "flex-start",
     marginTop: "auto",
     fontWeight: 600
+  },
+  thumbnailPlaceholder: {
+    width: "100%",
+    height: "100%",
+    minHeight: 120,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: theme.palette.text.secondary,
+    backgroundColor: theme.palette.action.hover
   }
 }));
 
@@ -151,18 +165,19 @@ export default function HelpVideoCard({
   preview = false
 }) {
   const classes = useStyles();
-  const thumb = resolveHelpThumbnailUrl(record);
-  const shortDesc = truncateDescription(record.description);
+  const item = normalizeHelpRecord(record) || record;
+  const thumb = resolveHelpThumbnailUrl(item);
+  const shortDesc = truncateDescription(item.description);
   const hasLongDesc =
-    record.description && record.description.length > DESCRIPTION_CLAMP;
-  const category = record.category || "Geral";
+    item.description && item.description.length > DESCRIPTION_CLAMP;
+  const category = normalizeCategory(item);
 
   const handleWatch = (e) => {
     if (e && typeof e.stopPropagation === "function") {
       e.stopPropagation();
     }
     if (onWatch) {
-      onWatch(record);
+      onWatch(item);
     }
   };
 
@@ -193,7 +208,7 @@ export default function HelpVideoCard({
             className={classes.categoryBadge}
           />
         ) : null}
-        {(showFeaturedBadge || record.isFeatured) && featured ? (
+        {(showFeaturedBadge || item.isFeatured) && featured ? (
           <Box className={classes.featuredRibbon}>
             <StarIcon style={{ fontSize: 14 }} />
             {i18n.t("helps.featured")}
@@ -202,7 +217,9 @@ export default function HelpVideoCard({
         {thumb ? (
           <img src={thumb} alt="" className={classes.thumbnail} loading="lazy" />
         ) : (
-          <Skeleton variant="rect" width="100%" height="100%" />
+          <Box className={classes.thumbnailPlaceholder}>
+            <OndemandVideoIcon style={{ fontSize: 48, opacity: 0.5 }} />
+          </Box>
         )}
         <Box className={classes.playOverlay}>
           <Box className={classes.playButton}>
@@ -215,11 +232,11 @@ export default function HelpVideoCard({
           variant={featured ? "h6" : "subtitle1"}
           className={classes.cardTitle}
         >
-          {record.title || i18n.t("helps.previewUntitled")}
+          {item.title || i18n.t("helps.previewUntitled")}
         </Typography>
         {shortDesc ? (
           hasLongDesc ? (
-            <Tooltip title={record.description} arrow>
+            <Tooltip title={item.description} arrow>
               <Typography variant="body2" className={classes.cardDescription}>
                 {shortDesc}
               </Typography>
@@ -241,7 +258,7 @@ export default function HelpVideoCard({
           className={classes.watchButton}
           startIcon={<PlayArrowIcon />}
           onClick={handleWatch}
-          disabled={preview && !record.video}
+          disabled={preview && !item.video}
         >
           {i18n.t("helps.watch")}
         </Button>

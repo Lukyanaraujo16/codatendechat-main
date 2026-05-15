@@ -1,51 +1,53 @@
+import { useCallback } from "react";
 import api from "../../services/api";
+import { parseHelpsList } from "../../utils/helpThumbnail";
 
 const useHelps = () => {
-  const findAll = async (params) => {
+  const findAll = useCallback(async (params) => {
     const { data } = await api.request({
       url: `/helps`,
       method: "GET",
       params
     });
     return data;
-  };
+  }, []);
 
-  const list = async (params) => {
+  const list = useCallback(async (params) => {
     const { data } = await api.request({
       url: "/helps/list",
       method: "GET",
       params
     });
-    return data;
-  };
+    return parseHelpsList(data);
+  }, []);
 
-  const save = async (data) => {
+  const save = useCallback(async (payload) => {
     const { data: responseData } = await api.request({
       url: "/helps",
       method: "POST",
-      data
+      data: payload
     });
     return responseData;
-  };
+  }, []);
 
-  const update = async (data) => {
+  const update = useCallback(async (payload) => {
     const { data: responseData } = await api.request({
-      url: `/helps/${data.id}`,
+      url: `/helps/${payload.id}`,
       method: "PUT",
-      data
+      data: payload
     });
     return responseData;
-  };
+  }, []);
 
-  const remove = async (id) => {
+  const remove = useCallback(async (id) => {
     const { data } = await api.request({
       url: `/helps/${id}`,
       method: "DELETE"
     });
     return data;
-  };
+  }, []);
 
-  const uploadThumbnail = async (file) => {
+  const uploadThumbnail = useCallback(async (file) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("typeArch", "helps");
@@ -59,7 +61,7 @@ const useHelps = () => {
       }
     });
     return data;
-  };
+  }, []);
 
   return {
     findAll,

@@ -25,11 +25,12 @@ import HelpVideoCard from "../../components/HelpVideoCard";
 import { i18n } from "../../translate/i18n";
 import useHelps from "../../hooks/useHelps";
 import { useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   FILTER_ALL,
-  HELP_CATEGORIES,
   filterHelps,
   findBasicsHelp,
+  getUniqueCategories,
   groupHelpsByCategory,
   resolveHelpEmbedUrl,
   sortHelpsForPlayback
@@ -229,19 +230,38 @@ const Helps = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(FILTER_ALL);
   const [selectedHelp, setSelectedHelp] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const { list } = useHelps();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchData() {
       setLoading(true);
+      setLoadError(false);
       try {
         const helps = await list();
-        setRecords(helps);
+        if (!cancelled) {
+          setRecords(Array.isArray(helps) ? helps : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setRecords([]);
+          setLoadError(true);
+          toast.error(i18n.t("helps.loadError"));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
+
     fetchData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [list]);
 
   const filteredRecords = useMemo(
@@ -311,14 +331,15 @@ const Helps = () => {
       ? playbackList[currentIndex + 1]
       : null;
 
-  const embedUrl = selectedHelp
-    ? resolveHelpEmbedUrl(selectedHelp.video)
-    : null;
+  const embedUrl = selectedHelp ? resolveHelpEmbedUrl(selectedHelp) : null;
 
-  const categoryChips = [
-    { value: FILTER_ALL, label: i18n.t("helps.filterAll") },
-    ...HELP_CATEGORIES.map((cat) => ({ value: cat, label: cat }))
-  ];
+  const categoryChips = useMemo(() => {
+    const dynamic = getUniqueCategories(records);
+    return [
+      { value: FILTER_ALL, label: i18n.t("helps.filterAll") },
+      ...dynamic.map((cat) => ({ value: cat, label: cat }))
+    ];
+  }, [records]);
 
   const renderVideoModal = () => (
     <Modal
@@ -387,6 +408,14 @@ const Helps = () => {
   const renderList = () => {
     if (loading) {
       return <HelpsSkeleton classes={classes} />;
+    }
+
+    if (loadError) {
+      return (
+        <Paper className={classes.emptyState} elevation={0}>
+          <Typography variant="body1">{i18n.t("helps.loadError")}</Typography>
+        </Paper>
+      );
     }
 
     if (!records.length) {
