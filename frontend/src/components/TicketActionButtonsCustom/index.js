@@ -137,8 +137,14 @@ const TicketActionButtonsCustom = ({
                     <Tooltip
                       title={
                         contact.chatbotDisabled
-                          ? i18n.t("ticket.chatbot.enableForContact")
-                          : i18n.t("ticket.chatbot.disableForContact")
+                          ? i18n.t(
+                              "ticket.chatbot.enableForContact",
+                              "Ativar chatbot para este contato"
+                            )
+                          : i18n.t(
+                              "ticket.chatbot.disableForContact",
+                              "Desativar chatbot para este contato"
+                            )
                       }
                     >
                       <span>

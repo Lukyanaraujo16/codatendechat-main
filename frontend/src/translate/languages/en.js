@@ -1502,7 +1502,10 @@ const messages = {
 					actions: "Actions",
 				},
 				filters: {
-					sectionLabel: "Filters",
+					sectionLabel: "Contact filters",
+					searchHint: "Search by name, number, or email",
+					tagHint: "Show contacts that have the selected tag",
+					dateHint: "Filter by last update period",
 					tag: "Tag",
 					allTags: "All",
 					dateFrom: "Updated from",
@@ -2005,6 +2008,12 @@ const messages = {
 				buttons: {
 					ok: "Transfer",
 					cancel: "Cancel",
+				},
+			},
+			ticket: {
+				chatbot: {
+					disableForContact: "Disable chatbot for this contact",
+					enableForContact: "Enable chatbot for this contact",
 				},
 			},
 			ticketsList: {
@@ -4627,6 +4636,7 @@ const messages = {
 					title: "Delete ticket",
 					titleFrom: "from contact ",
 					message: "Warning! All messages related to this ticket will be lost.",
+					deleteSuccess: "Conversation deleted successfully.",
 				},
 				buttons: {
 					delete: "Delete",

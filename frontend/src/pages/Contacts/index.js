@@ -20,6 +20,7 @@ import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
 import Chip from "@material-ui/core/Chip";
 import Box from "@material-ui/core/Box";
+import Grid from "@material-ui/core/Grid";
 import Typography from "@material-ui/core/Typography";
 import Alert from "@material-ui/lab/Alert";
 import IconButton from "@material-ui/core/IconButton";
@@ -42,7 +43,6 @@ import {
 	AppSectionCard,
 	AppPrimaryButton,
 	AppSecondaryButton,
-	AppActionBar,
 	AppTableContainer,
 	AppDangerAction,
 	AppEmptyState,
@@ -128,27 +128,6 @@ const useStyles = makeStyles((theme) => ({
 		flexDirection: "column",
 		gap: theme.spacing(1),
 	},
-	filtersBar: {
-		flexWrap: "wrap",
-		alignItems: "flex-end",
-	},
-	searchField: {
-		flex: "1 1 220px",
-		minWidth: 180,
-		maxWidth: 400,
-	},
-	tagField: {
-		minWidth: 200,
-		flex: "0 1 220px",
-	},
-	dateField: {
-		flex: "0 1 160px",
-	},
-	filterHint: {
-		fontSize: "0.75rem",
-		color: theme.palette.text.secondary,
-		marginTop: theme.spacing(0.25),
-	},
 	filterStack: {
 		display: "flex",
 		flexDirection: "column",
@@ -156,11 +135,17 @@ const useStyles = makeStyles((theme) => ({
 	},
 	filtersSectionTitle: {
 		fontWeight: 600,
-		fontSize: "0.8125rem",
-		textTransform: "uppercase",
-		letterSpacing: "0.06em",
+		fontSize: "1rem",
+		color: theme.palette.text.primary,
+		marginBottom: theme.spacing(0.5),
+	},
+	filterHintsRow: {
+		marginTop: theme.spacing(-0.5),
+	},
+	filterHint: {
+		display: "block",
+		lineHeight: 1.4,
 		color: theme.palette.text.secondary,
-		marginBottom: theme.spacing(0.25),
 	},
 	tableCard: {
 		flex: 1,
@@ -690,30 +675,33 @@ const Contacts = () => {
 				<Box className={classes.filterStack}>
 					<Typography
 						component="h2"
+						variant="subtitle1"
 						className={classes.filtersSectionTitle}
 					>
 						{i18n.t("contacts.filters.sectionLabel")}
 					</Typography>
-					<AppActionBar className={classes.filtersBar}>
-						<TextField
-							className={classes.searchField}
-							placeholder={i18n.t("contacts.searchPlaceholder")}
-							type="search"
-							value={searchParam}
-							onChange={handleSearch}
-							helperText={i18n.t("contacts.searchHelper")}
-							variant="outlined"
-							size="small"
-							InputProps={{
-								startAdornment: (
-									<InputAdornment position="start">
-										<SearchIcon color="action" fontSize="small" />
-									</InputAdornment>
-								),
-							}}
-						/>
-						<Box display="flex" flexDirection="column" className={classes.tagField}>
-							<FormControl variant="outlined" margin="dense" fullWidth>
+
+					<Grid container spacing={2} alignItems="center">
+						<Grid item xs={12} md={5}>
+							<TextField
+								fullWidth
+								placeholder={i18n.t("contacts.searchPlaceholder")}
+								type="search"
+								value={searchParam}
+								onChange={handleSearch}
+								variant="outlined"
+								size="small"
+								InputProps={{
+									startAdornment: (
+										<InputAdornment position="start">
+											<SearchIcon color="action" fontSize="small" />
+										</InputAdornment>
+									),
+								}}
+							/>
+						</Grid>
+						<Grid item xs={12} sm={6} md={3}>
+							<FormControl variant="outlined" size="small" fullWidth>
 								<InputLabel id="contacts-tag-filter">
 									{i18n.t("contacts.filters.tag")}
 								</InputLabel>
@@ -733,33 +721,50 @@ const Contacts = () => {
 									))}
 								</Select>
 							</FormControl>
-							<Typography className={classes.filterHint} component="span">
-								{i18n.t("contacts.tagFilterHelp")}
+						</Grid>
+						<Grid item xs={12} sm={6} md={2}>
+							<TextField
+								fullWidth
+								label={i18n.t("contacts.filters.dateFrom")}
+								type="date"
+								variant="outlined"
+								size="small"
+								InputLabelProps={{ shrink: true }}
+								value={dateFrom}
+								onChange={(e) => setDateFrom(e.target.value)}
+							/>
+						</Grid>
+						<Grid item xs={12} sm={6} md={2}>
+							<TextField
+								fullWidth
+								label={i18n.t("contacts.filters.dateTo")}
+								type="date"
+								variant="outlined"
+								size="small"
+								InputLabelProps={{ shrink: true }}
+								value={dateTo}
+								onChange={(e) => setDateTo(e.target.value)}
+							/>
+						</Grid>
+					</Grid>
+
+					<Grid container spacing={2} className={classes.filterHintsRow}>
+						<Grid item xs={12} md={5}>
+							<Typography variant="caption" className={classes.filterHint}>
+								{i18n.t("contacts.filters.searchHint")}
 							</Typography>
-						</Box>
-						<TextField
-							className={classes.dateField}
-							label={i18n.t("contacts.filters.dateFrom")}
-							type="date"
-							variant="outlined"
-							margin="dense"
-							size="small"
-							InputLabelProps={{ shrink: true }}
-							value={dateFrom}
-							onChange={(e) => setDateFrom(e.target.value)}
-						/>
-						<TextField
-							className={classes.dateField}
-							label={i18n.t("contacts.filters.dateTo")}
-							type="date"
-							variant="outlined"
-							margin="dense"
-							size="small"
-							InputLabelProps={{ shrink: true }}
-							value={dateTo}
-							onChange={(e) => setDateTo(e.target.value)}
-						/>
-					</AppActionBar>
+						</Grid>
+						<Grid item xs={12} sm={6} md={3}>
+							<Typography variant="caption" className={classes.filterHint}>
+								{i18n.t("contacts.filters.tagHint")}
+							</Typography>
+						</Grid>
+						<Grid item xs={12} sm={6} md={4}>
+							<Typography variant="caption" className={classes.filterHint}>
+								{i18n.t("contacts.filters.dateHint")}
+							</Typography>
+						</Grid>
+					</Grid>
 				</Box>
 			</AppSectionCard>
 

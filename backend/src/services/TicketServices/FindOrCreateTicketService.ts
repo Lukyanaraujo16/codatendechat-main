@@ -9,6 +9,7 @@ import Whatsapp from "../../models/Whatsapp";
 import { isFlowBuilderDebugEnabled } from "../../utils/flowBuilderDebug";
 import { logger } from "../../utils/logger";
 import { parseTicketDataWebhook } from "../../helpers/GetTicketRemoteJid";
+import { assertTicketRecreationAllowed } from "./TicketDeletionGuardService";
 
 export interface FindOrCreateTicketOptions {
   /** Somente conversas 1:1; não usar em grupos. */
@@ -18,6 +19,10 @@ export interface FindOrCreateTicketOptions {
     remoteJid?: string;
     messageId?: string;
   };
+  /** Timestamp da mensagem que disparou o fluxo (bloqueio pós-exclusão manual). */
+  messageReceivedAt?: Date | null;
+  /** Ação explícita do sistema/usuário — ignora guard de exclusão. */
+  forceCreate?: boolean;
 }
 
 function mergeStartedOutsideIntoDataWebhook(
@@ -197,6 +202,16 @@ const FindOrCreateTicketService = async (
   });
 
   if (!ticket) {
+    const effectiveContactId = groupContact ? groupContact.id : contact.id;
+
+    await assertTicketRecreationAllowed({
+      companyId,
+      contactId: effectiveContactId,
+      whatsappId,
+      messageReceivedAt: options?.messageReceivedAt,
+      forceCreate: options?.forceCreate
+    });
+
     if (isFlowBuilderDebugEnabled()) {
       logger.info(
         {

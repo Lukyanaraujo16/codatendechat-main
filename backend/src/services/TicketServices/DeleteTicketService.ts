@@ -9,9 +9,14 @@ import FlowExecutionLog from "../../models/FlowExecutionLog";
 import OpenAiUsage from "../../models/OpenAiUsage";
 import UserRating from "../../models/UserRating";
 import TicketNote from "../../models/TicketNote";
+import CrmDeal from "../../models/CrmDeal";
 import { logger } from "../../utils/logger";
+import { registerTicketDeletionGuard } from "./TicketDeletionGuardService";
 
-async function destroyTicketDependents(ticketId: number, transaction: Transaction): Promise<void> {
+async function destroyTicketDependents(
+  ticketId: number,
+  transaction: Transaction
+): Promise<void> {
   await Message.destroy({ where: { ticketId }, transaction });
   await TicketTag.destroy({ where: { ticketId }, transaction });
   await TicketTraking.destroy({ where: { ticketId }, transaction });
@@ -22,11 +27,16 @@ async function destroyTicketDependents(ticketId: number, transaction: Transactio
   await OpenAiUsage.destroy({ where: { ticketId }, transaction });
   await UserRating.destroy({ where: { ticketId }, transaction });
   await TicketNote.destroy({ where: { ticketId }, transaction });
+  await CrmDeal.update(
+    { ticketId: null },
+    { where: { ticketId }, transaction }
+  );
 }
 
 const DeleteTicketService = async (
   id: string,
-  companyId: number
+  companyId: number,
+  deletedBy?: number | null
 ): Promise<Ticket> => {
   const ticket = await Ticket.findOne({
     where: { id, companyId }
@@ -37,47 +47,30 @@ const DeleteTicketService = async (
   }
 
   const ticketIdNum = ticket.id;
+  const snapshot = { ...ticket.get({ plain: true }) } as Ticket;
 
-  try {
-    await ticket.destroy();
-    logger.info(
-      { ticketId: ticketIdNum, companyId },
-      "[TicketDelete] ticket destroyed"
-    );
-    return ticket;
-  } catch (err: unknown) {
-    const name = err instanceof Error ? err.name : "";
-    logger.error(
-      {
-        err,
-        ticketId: ticketIdNum,
-        companyId,
-        message: err instanceof Error ? err.message : String(err)
-      },
-      "[TicketDeleteError] ticket.destroy failed"
-    );
+  await sequelize.transaction(async (transaction: Transaction) => {
+    await destroyTicketDependents(ticketIdNum, transaction);
+    await registerTicketDeletionGuard(ticket, deletedBy, transaction);
+    await Ticket.destroy({
+      where: { id: ticketIdNum, companyId },
+      transaction
+    });
+  });
 
-    if (name === "SequelizeForeignKeyConstraintError") {
-      logger.warn(
-        { ticketId: ticketIdNum, companyId },
-        "[OrphanTicketDetected] forcing delete of dependents then ticket"
-      );
-      await sequelize.transaction(async (t: Transaction) => {
-        await destroyTicketDependents(ticketIdNum, t);
-        await Ticket.destroy({
-          where: { id: ticketIdNum, companyId },
-          transaction: t
-        });
-      });
-      logger.info(
-        { ticketId: ticketIdNum, companyId },
-        "[TicketDelete] ticket destroyed after cascade"
-      );
-      return ticket;
-    }
+  logger.info(
+    {
+      ticketId: ticketIdNum,
+      companyId,
+      contactId: ticket.contactId,
+      whatsappId: ticket.whatsappId,
+      status: ticket.status,
+      deletedBy: deletedBy ?? null
+    },
+    "[TicketDelete] ticket destroyed with dependents and deletion guard"
+  );
 
-    throw err;
-  }
+  return snapshot;
 };
 
 export default DeleteTicketService;

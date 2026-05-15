@@ -83,7 +83,8 @@ const GroupOpenConversationService = async ({
     whatsappId,
     0,
     companyId,
-    groupContact
+    groupContact,
+    { forceCreate: true, messageReceivedAt: new Date() }
   );
 
   return { uuid: ticket.uuid };

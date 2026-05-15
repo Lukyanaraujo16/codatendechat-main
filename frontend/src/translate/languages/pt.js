@@ -1586,7 +1586,10 @@ const messages = {
           actions: "Ações",
         },
         filters: {
-          sectionLabel: "Filtros",
+          sectionLabel: "Filtros de contatos",
+          searchHint: "Pesquise por nome, número ou email",
+          tagHint: "Filtrar contatos que possuem a tag selecionada",
+          dateHint: "Filtrar por período de atualização",
           tag: "Tag",
           allTags: "Todas",
           dateFrom: "Atualizado de",
@@ -2090,6 +2093,12 @@ const messages = {
         buttons: {
           ok: "Transferir",
           cancel: "Cancelar",
+        },
+      },
+      ticket: {
+        chatbot: {
+          disableForContact: "Desativar chatbot para este contato",
+          enableForContact: "Ativar chatbot para este contato",
         },
       },
       ticketsList: {
@@ -4774,6 +4783,7 @@ const messages = {
           titleFrom: "do contato ",
           message:
               "Atenção! Todas as mensagens relacionadas ao ticket serão perdidas.",
+          deleteSuccess: "Conversa excluída com sucesso.",
         },
         buttons: {
           delete: "Excluir",

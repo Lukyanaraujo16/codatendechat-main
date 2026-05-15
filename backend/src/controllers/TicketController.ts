@@ -277,9 +277,9 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { ticketId } = req.params;
-  const { companyId } = req.user;
+  const { companyId, id: userId } = req.user;
 
-  const ticket = await DeleteTicketService(ticketId, companyId);
+  const ticket = await DeleteTicketService(ticketId, companyId, userId);
 
   const io = getIO();
   toCompanyTicketDeleteAudience(io, companyId, {

@@ -169,7 +169,14 @@ export const send = async (req: Request, res: Response): Promise<Response> => {
 
     const contact = await CreateOrUpdateContactService(contactData);
 
-    const ticket = await FindOrCreateTicketService(contact, whatsapp.id!, 0, companyId);
+    const ticket = await FindOrCreateTicketService(
+      contact,
+      whatsapp.id!,
+      0,
+      companyId,
+      undefined,
+      { forceCreate: true, messageReceivedAt: new Date() }
+    );
 
     if (medias) {
       await Promise.all(

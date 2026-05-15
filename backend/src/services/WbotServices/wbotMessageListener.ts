@@ -85,6 +85,8 @@ import { shouldBypassChatbot } from "../../helpers/shouldBypassChatbot";
 import CreateTicketSystemMessageService from "../TicketServices/CreateTicketSystemMessageService";
 import Company from "../../models/Company";
 import { formatChatbotBypassSystemMessage } from "../../helpers/chatbotBypassMessages";
+import { extractMessageReceivedAt } from "../../helpers/extractMessageReceivedAt";
+import { TicketRecreationBlockedError } from "../TicketServices/TicketDeletionGuardService";
 
 const request = require("request");
 
@@ -2956,23 +2958,47 @@ const handleMessage = async (
         !groupContact &&
         !ticketFromEcho;
 
-      ticket = await FindOrCreateTicketService(
-        contact,
-        wbot.id!,
-        unreadMessages,
-        companyId,
-        groupContact,
-        outboundPhoneFirst
-          ? {
-              newTicketStatus: "open",
-              startedOutsideSystem: true,
-              externalStartLog: {
-                remoteJid: msg.key.remoteJid || undefined,
-                messageId: msg.key.id != null ? String(msg.key.id) : undefined
-              }
-            }
-          : undefined
-      );
+      const messageReceivedAt = extractMessageReceivedAt(msg);
+
+      try {
+        ticket = await FindOrCreateTicketService(
+          contact,
+          wbot.id!,
+          unreadMessages,
+          companyId,
+          groupContact,
+          {
+            messageReceivedAt,
+            ...(outboundPhoneFirst
+              ? {
+                  newTicketStatus: "open" as const,
+                  startedOutsideSystem: true,
+                  externalStartLog: {
+                    remoteJid: msg.key.remoteJid || undefined,
+                    messageId:
+                      msg.key.id != null ? String(msg.key.id) : undefined
+                  }
+                }
+              : {})
+          }
+        );
+      } catch (err) {
+        if (err instanceof TicketRecreationBlockedError) {
+          logger.info(
+            {
+              companyId: err.companyId,
+              contactId: err.contactId,
+              whatsappId: err.whatsappId,
+              deletedAt: err.deletedAt.toISOString(),
+              messageTimestamp: err.messageTimestamp?.toISOString() ?? null,
+              messageId: msg.key?.id ?? null
+            },
+            "[TicketDeletionGuard] inbound message ignored — ticket was manually deleted"
+          );
+          return;
+        }
+        throw err;
+      }
     }
 
     // Persistir remoteJid para envio correto (essencial em conversas LID)

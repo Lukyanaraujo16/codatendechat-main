@@ -5,6 +5,7 @@ import api from "../../services/api";
 import ConfirmationModal from "../ConfirmationModal";
 import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import toastError from "../../errors/toastError";
+import { toast } from "react-toastify";
 import ScheduleModal from "../ScheduleModal";
 
 /**
@@ -28,6 +29,12 @@ const TicketActionModals = ({ ticket, children }) => {
   const handleDeleteTicket = async () => {
     try {
       await api.delete(`/tickets/${ticket.id}`);
+      if (isMounted.current) {
+        setConfirmationOpen(false);
+      }
+      toast.success(
+        i18n.t("ticketOptionsMenu.confirmationModal.deleteSuccess")
+      );
     } catch (err) {
       toastError(err);
     }
