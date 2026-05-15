@@ -54,11 +54,14 @@ module.exports = {
         allowNull: false
       }
     }).then(() =>
-      queryInterface.addConstraint("TicketDeletionGuards", {
-        fields: ["companyId", "contactId", "whatsappId"],
-        type: "unique",
-        name: "ticket_deletion_guards_company_contact_whatsapp_unique"
-      })
+      queryInterface.addConstraint(
+        "TicketDeletionGuards",
+        ["companyId", "contactId", "whatsappId"],
+        {
+          type: "unique",
+          name: "ticket_deletion_guards_company_contact_whatsapp_unique"
+        }
+      )
     );
   },
 

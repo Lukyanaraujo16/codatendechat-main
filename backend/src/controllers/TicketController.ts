@@ -279,7 +279,11 @@ export const remove = async (
   const { ticketId } = req.params;
   const { companyId, id: userId } = req.user;
 
-  const ticket = await DeleteTicketService(ticketId, companyId, userId);
+  const ticket = await DeleteTicketService(
+    ticketId,
+    companyId,
+    userId != null ? Number(userId) : null
+  );
 
   const io = getIO();
   toCompanyTicketDeleteAudience(io, companyId, {
