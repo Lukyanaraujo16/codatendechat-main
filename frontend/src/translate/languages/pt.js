@@ -37,7 +37,7 @@ const messages = {
         categories: {
           attendance: "Atendimento",
           management: "Gestão",
-          marketing: "Marketing / Automação",
+          marketing: "Marketing / Automação de atendimento",
           administration: "Administração",
         },
         presets: {
@@ -88,7 +88,7 @@ const messages = {
           save: "Guardar",
         },
         summary: {
-          pipeline: "Pipeline",
+          pipeline: "Funil de vendas",
           openDeals: "Itens (filtrados)",
           totalValue: "Valor total",
         },
@@ -97,7 +97,7 @@ const messages = {
           edit: "Editar",
           delete: "Eliminar",
           initCrm: "Inicializar CRM",
-          initCrmHint: "Cria o pipeline predefinido para o segmento da empresa. Pode voltar a usar esta ação se ainda não existir pipeline.",
+          initCrmHint: "Cria o funil de vendas predefinido para o segmento da empresa. Pode voltar a usar esta ação se ainda não existir funil.",
         },
         filters: {
           search: "Pesquisar título, contato ou número",
@@ -262,7 +262,7 @@ const messages = {
             itemPlural: "matrículas",
             statusWon: "Matriculado",
             statusLost: "Perdido",
-            metricOpen: "Leads em aberto",
+            metricOpen: "Oportunidades em aberto",
             metricWon: "Matrículas",
             metricLost: "Perdidas",
             metricValueOpen: "Valor em aberto",
@@ -1031,7 +1031,7 @@ const messages = {
           kanban: "Kanban",
           integrations: "Integrações",
           campaigns: "Campanhas",
-          schedules: "Agendamentos",
+          schedules: "Envio programado",
           enabled: "Habilitadas",
           disabled: "Desabilitadas",
           clear: "Cancelar",
@@ -1065,7 +1065,7 @@ const messages = {
         featureGroups: {
           dashboard: "Dashboard",
           attendance: "Atendimento",
-          automation: "Automação",
+          automation: "Automação de atendimento",
           agenda: "Agenda",
           team: "Equipe",
           finance: "Financeiro",
@@ -1073,6 +1073,134 @@ const messages = {
           contacts: "Contatos",
           crm: "CRM",
           settings: "Configurações",
+        },
+        features: {
+          dashboard: {
+            main: {
+              label: "Painel principal",
+              description: "Visão geral de indicadores e atividades da operação.",
+            },
+            reports: {
+              label: "Relatórios",
+              description: "Relatórios e métricas de atendimento.",
+            },
+          },
+          attendance: {
+            inbox: {
+              label: "Conversas / caixa de entrada",
+              description: "Atendimento de conversas e tickets do WhatsApp.",
+            },
+            kanban: {
+              label: "Kanban",
+              description: "Quadro visual para organizar atendimentos por etapa.",
+            },
+            schedules: {
+              label: "Envio programado",
+              description: "Agenda envios de mensagens em data e hora definidas.",
+            },
+            internal_chat: {
+              label: "Comunicação interna",
+              description: "Chat entre membros da equipe, fora do WhatsApp.",
+            },
+          },
+          automation: {
+            chatbot: {
+              label: "Fluxos e chatbot",
+              description: "Automação de atendimento com fluxos e chatbot.",
+            },
+            openai: {
+              label: "Inteligência artificial (OpenAI)",
+              description: "Prompts e respostas assistidas por IA.",
+            },
+            keywords: {
+              label: "Gatilhos por palavra-chave",
+              description: "Dispara fluxos quando o contato envia palavras específicas.",
+            },
+            integrations: {
+              label: "Integrações de setor",
+              description: "Integrações externas ligadas aos setores de atendimento.",
+            },
+            quick_replies: {
+              label: "Respostas rápidas",
+              description: "Mensagens prontas para usar durante o atendimento.",
+            },
+          },
+          agenda: {
+            calendar: {
+              label: "Calendário e compromissos",
+              description: "Agenda de compromissos e visualização em calendário.",
+            },
+            appointments: {
+              label: "Horários de envio (agenda)",
+              description: "Configura horários permitidos para envios agendados.",
+            },
+          },
+          team: {
+            users: {
+              label: "Membros da equipe",
+              description: "Cadastro e gestão de usuários da empresa.",
+            },
+            queues: {
+              label: "Setores e filas",
+              description: "Setores de atendimento e distribuição de conversas.",
+            },
+            groups: {
+              label: "Grupos WhatsApp",
+              description: "Gestão de grupos da conexão WhatsApp.",
+            },
+            ratings: {
+              label: "Avaliações",
+              description: "Pesquisas de satisfação após o atendimento.",
+            },
+          },
+          finance: {
+            subscription: {
+              label: "Assinatura",
+              description: "Gestão da assinatura do plano.",
+            },
+            invoices: {
+              label: "Faturas",
+              description: "Consulta de faturas e cobranças.",
+            },
+          },
+          campaigns: {
+            sends: {
+              label: "Disparos em massa",
+              description: "Envie mensagens para vários contatos ao mesmo tempo.",
+            },
+            lists: {
+              label: "Listas de destinatários",
+              description:
+                "Permite criar listas de contatos para envio de campanhas.",
+            },
+          },
+          contacts: {
+            tags: {
+              label: "Tags de contatos",
+              description:
+                "Cria e gerencia tags para organizar contatos e atendimentos.",
+            },
+            files: {
+              label: "Biblioteca de arquivos",
+              description: "Permite gerenciar arquivos do sistema.",
+            },
+          },
+          crm: {
+            pipeline: {
+              label: "Funil de vendas",
+              description: "CRM com funil de oportunidades e etapas de venda.",
+            },
+          },
+          settings: {
+            connections: {
+              label: "Conexões WhatsApp",
+              description: "Conexões e sessões do WhatsApp da empresa.",
+            },
+            api: {
+              label: "API de mensagens",
+              description: "Envio de mensagens por API externa.",
+            },
+          },
         },
       },
       kanban: {
@@ -2036,9 +2164,9 @@ const messages = {
         sections: {
           dashboard: "Dashboard",
           atendimento: "Atendimento",
-          chatInterno: "Chat interno",
+          chatInterno: "Comunicação interna",
           equipe: "Equipe",
-          automacao: "Automação",
+          automacao: "Automação de atendimento",
           campanhas: "Campanhas",
           financeiro: "Financeiro",
           configuracoes: "Configurações",
@@ -2049,7 +2177,7 @@ const messages = {
           connections: "Conexões",
           tickets: "Atendimentos",
           quickMessages: "Respostas rápidas",
-          tasks: "Tarefas",
+          tasks: "Gestão de tarefas",
           agenda: "Agenda",
           crm: "CRM",
           contacts: "Contatos",
@@ -2061,9 +2189,9 @@ const messages = {
           settings: "Configurações",
           helps: "Ajuda",
           messagesAPI: "API WhatsApp",
-          schedules: "Agendamentos",
+          schedules: "Envio programado",
           campaigns: "Campanhas",
-          contactLists: "Listas de contatos",
+          contactLists: "Listas de destinatários",
           campaignSettings: "Configurações",
           flows: "Fluxos",
           flowsChatbot: "Fluxos (Chatbot)",
@@ -2074,9 +2202,9 @@ const messages = {
           groups: "Grupos",
           evaluation: "Avaliação",
           annoucements: "Informativos",
-          chats: "Chat Interno",
+          chats: "Comunicação interna",
           finance: "Financeiro",
-          files: "Lista de arquivos",
+          files: "Biblioteca de arquivos",
           prompts: "OpenAI",
           queueIntegration: "Automações por setor",
           notificationCenter: "Central de notificações",
@@ -3007,7 +3135,7 @@ const messages = {
         },
       },
       files: {
-        title: "Lista de arquivos",
+        title: "Biblioteca de arquivos",
         table: {
           name: "Nome",
           contacts: "Contatos",
@@ -3866,7 +3994,7 @@ const messages = {
         },
       },
       schedules: {
-        title: "Agendamentos",
+        title: "Envio programado",
         pageSubtitle: "{{count}} agendamento(s) carregado(s).",
         searchPlaceholder: "Buscar agendamentos…",
         typeSingle: "Único",
@@ -4450,7 +4578,8 @@ const messages = {
               useKanban: "Kanban",
               useKanbanHelp: "Quadro kanban (feature attendance.kanban).",
               useCampaigns: "Campanhas",
-              useCampaignsHelp: "Disparos e listas (campaigns.sends / campaigns.lists). Independentes do chatbot.",
+              useCampaignsHelp:
+                "Disparos em massa e listas de destinatários (campaigns.sends / campaigns.lists). Independentes do chatbot.",
               useFlowbuilders: "Fluxos (chatbot)",
               useFlowbuildersHelp: "Flowbuilder (automation.chatbot). Não exige campanhas no plano.",
               useOpenAi: "OpenAI / Prompts",

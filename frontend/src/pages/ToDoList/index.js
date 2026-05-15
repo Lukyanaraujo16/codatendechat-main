@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, alpha } from "@material-ui/core/styles";
 import TextField from "@material-ui/core/TextField";
 import Button from "@material-ui/core/Button";
 import List from "@material-ui/core/List";
@@ -58,9 +58,6 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.secondary,
     marginBottom: theme.spacing(2),
   },
-  notice: {
-    marginBottom: theme.spacing(2),
-  },
   filterRow: {
     display: "flex",
     flexWrap: "wrap",
@@ -81,15 +78,65 @@ const useStyles = makeStyles((theme) => ({
   input: {
     flexGrow: 1,
     marginRight: theme.spacing(1),
+    "& .MuiOutlinedInput-root": {
+      backgroundColor:
+        theme.palette.type === "dark"
+          ? alpha(theme.palette.common.white, 0.06)
+          : alpha(theme.palette.common.black, 0.04),
+    },
+    "& .MuiInputLabel-root": {
+      color: theme.palette.text.secondary,
+    },
+    "& .MuiOutlinedInput-input": {
+      color: theme.palette.text.primary,
+    },
   },
   listContainer: {
     width: "100%",
     marginTop: theme.spacing(1),
-    backgroundColor: theme.palette.grey[100],
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? alpha(theme.palette.common.white, 0.04)
+        : theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
     borderRadius: theme.shape.borderRadius,
+    overflow: "hidden",
+  },
+  list: {
+    width: "100%",
+    padding: 0,
+    backgroundColor: "transparent",
   },
   listItem: {
-    marginBottom: theme.spacing(0.5),
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    "&:last-child": {
+      borderBottom: "none",
+    },
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+  listItemIcon: {
+    color: theme.palette.text.primary,
+    minWidth: 42,
+  },
+  listItemAction: {
+    color: theme.palette.text.secondary,
+    "&:hover": {
+      color: theme.palette.primary.main,
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+  notice: {
+    marginBottom: theme.spacing(2),
+    "&.MuiAlert-standardInfo": {
+      backgroundColor: alpha(theme.palette.info.main, 0.15),
+      color: theme.palette.text.primary,
+    },
+    "& .MuiAlert-icon": {
+      color: theme.palette.info.main,
+    },
   },
   primaryDone: {
     textDecoration: "line-through",
@@ -299,11 +346,12 @@ const ToDoList = () => {
                 : i18n.t("todolist.emptyFilter")}
             </Typography>
           )}
-          <List>
+          <List className={classes.list}>
             {visibleTasks.map((taskItem) => (
-              <ListItem key={taskItem.id} className={classes.listItem} dense>
-                <ListItemIcon>
+              <ListItem key={taskItem.id} className={classes.listItem} dense divider={false}>
+                <ListItemIcon className={classes.listItemIcon}>
                   <Checkbox
+                    color="primary"
                     edge="start"
                     checked={Boolean(taskItem.completed)}
                     tabIndex={-1}
@@ -331,16 +379,18 @@ const ToDoList = () => {
                   <IconButton
                     edge="end"
                     aria-label="edit"
+                    className={classes.listItemAction}
                     onClick={() => handleEditTask(taskItem.id)}
                   >
-                    <EditIcon />
+                    <EditIcon fontSize="small" />
                   </IconButton>
                   <IconButton
                     edge="end"
                     aria-label="delete"
+                    className={classes.listItemAction}
                     onClick={() => handleDeleteTask(taskItem.id)}
                   >
-                    <DeleteIcon />
+                    <DeleteIcon fontSize="small" />
                   </IconButton>
                 </ListItemSecondaryAction>
               </ListItem>

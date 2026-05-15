@@ -15,6 +15,7 @@ import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import ExpandLessIcon from "@material-ui/icons/ExpandLess";
 import { makeStyles, alpha } from "@material-ui/core/styles";
 import { i18n } from "../../translate/i18n";
+import { getFeatureLabel, getFeatureDescription } from "../../config/features";
 
 function isBranch(n) {
   return n && typeof n.children === "object";
@@ -31,7 +32,7 @@ function collectLeaves(rootKey, node) {
       });
     } else if (p) {
       keys.push(p);
-      leaves.push({ key: p, label: nd.label });
+      leaves.push({ key: p });
     }
   };
   walk(rootKey, node);
@@ -195,7 +196,7 @@ export default function PlanFeatureGroupCard({
         >
           <Box className={classes.headerMain}>
             <Typography variant="subtitle1" className={classes.title} component="div">
-              {node.label}
+              {i18n.t(`plans.featureGroups.${rootKey}`, { defaultValue: node.label })}
             </Typography>
             <Box className={classes.meta}>
               <Typography className={classes.count} component="span">
@@ -242,22 +243,39 @@ export default function PlanFeatureGroupCard({
             </Link>
           </Box>
           <Box display="flex" flexDirection="column">
-            {leaves.map(({ key, label }) => (
-              <Box key={key}>
-                <FormControlLabel
-                  className={classes.leafRow}
-                  control={
-                    <Checkbox
-                      color="primary"
-                      size="small"
-                      checked={value[key] === true}
-                      onChange={(e) => toggleOne(key, e.target.checked)}
+            {leaves.map(({ key }) => {
+              const label = getFeatureLabel(key);
+              const description = getFeatureDescription(key);
+              return (
+                <Box key={key}>
+                  <Tooltip
+                    title={description || label}
+                    arrow
+                    placement="right"
+                    enterDelay={500}
+                    disableHoverListener={!description}
+                  >
+                    <FormControlLabel
+                      className={classes.leafRow}
+                      control={
+                        <Checkbox
+                          color="primary"
+                          size="small"
+                          checked={value[key] === true}
+                          onChange={(e) => toggleOne(key, e.target.checked)}
+                        />
+                      }
+                      label={<span className={classes.leafLabel}>{label}</span>}
                     />
-                  }
-                  label={<span className={classes.leafLabel}>{label}</span>}
-                />
-              </Box>
-            ))}
+                  </Tooltip>
+                  {description ? (
+                    <Typography className={classes.leafHint} component="p">
+                      {description}
+                    </Typography>
+                  ) : null}
+                </Box>
+              );
+            })}
           </Box>
         </Collapse>
       </CardContent>

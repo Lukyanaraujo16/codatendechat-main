@@ -77,15 +77,17 @@ export const FEATURE_ENFORCEMENT_MAP: Array<{
   },
   {
     feature: "campaigns.sends",
-    menu: "Campanhas",
-    frontendRoutes: ["/campaigns", "/campaign/*"],
-    backendRoutes: ["/campaigns/*"]
+    menu: "Campanhas → Disparos em massa",
+    frontendRoutes: ["/campaigns", "/campaign/*", "/campaigns-config"],
+    backendRoutes: ["/campaigns/*"],
+    notes: "Criação, configuração e disparo de campanhas (não inclui listas de destinatários)."
   },
   {
     feature: "campaigns.lists",
-    menu: "Campanhas → Listas",
-    frontendRoutes: ["/contact-lists"],
-    backendRoutes: ["/contact-lists/*", "/contact-list-items/*"]
+    menu: "Campanhas → Listas de destinatários",
+    frontendRoutes: ["/contact-lists", "/contact-list-items"],
+    backendRoutes: ["/contact-lists/*", "/contact-list-items/*"],
+    notes: "Listas de destinatários para campanhas — distinto do cadastro geral de contatos."
   },
   {
     feature: "team.users",
@@ -131,13 +133,17 @@ export const FEATURE_ENFORCEMENT_MAP: Array<{
   },
   {
     feature: "contacts.tags",
-    menu: "Etiquetas",
-    frontendRoutes: ["/tags"]
+    menu: "Tags de contatos",
+    frontendRoutes: ["/tags"],
+    backendRoutes: ["/tags/*", "GET /ticket/kanban"],
+    notes: "Etiquetas para contatos, tickets e Kanban."
   },
   {
     feature: "contacts.files",
-    menu: "Ficheiros",
-    frontendRoutes: ["/files"]
+    menu: "Biblioteca de arquivos",
+    frontendRoutes: ["/files"],
+    backendRoutes: ["/files/*"],
+    notes: "Biblioteca de arquivos do sistema (menu Arquivos), não listas de campanha."
   },
   {
     feature: "crm.pipeline",

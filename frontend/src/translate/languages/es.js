@@ -37,7 +37,7 @@ const messages = {
         categories: {
           attendance: "Atención",
           management: "Gestión",
-          marketing: "Marketing / Automatización",
+          marketing: "Marketing / Automatización de atención",
           administration: "Administración",
         },
         presets: {
@@ -85,7 +85,7 @@ const messages = {
       crm: {
         common: { cancel: "Cancelar", save: "Guardar" },
         summary: {
-          pipeline: "Pipeline",
+          pipeline: "Embudo de ventas",
           openDeals: "Elementos (filtrados)",
           totalValue: "Valor total",
         },
@@ -964,7 +964,7 @@ const messages = {
           kanban: "Kanban",
           integrations: "Integraciones",
           campaigns: "Campañas",
-          schedules: "Programaciones",
+          schedules: "Envío programado",
           enabled: "Habilitadas",
           disabled: "Deshabilitadas",
           clear: "Cancelar",
@@ -998,7 +998,7 @@ const messages = {
         featureGroups: {
           dashboard: "Panel",
           attendance: "Atención",
-          automation: "Automatización",
+          automation: "Automatización de atención",
           agenda: "Agenda",
           team: "Equipo",
           finance: "Facturación",
@@ -1006,6 +1006,134 @@ const messages = {
           contacts: "Contactos",
           crm: "CRM",
           settings: "Configuración",
+        },
+        features: {
+          dashboard: {
+            main: {
+              label: "Panel principal",
+              description: "Visión general de indicadores y actividad de la operación.",
+            },
+            reports: {
+              label: "Informes",
+              description: "Informes y métricas de atención.",
+            },
+          },
+          attendance: {
+            inbox: {
+              label: "Conversaciones / bandeja",
+              description: "Atención de conversaciones y tickets de WhatsApp.",
+            },
+            kanban: {
+              label: "Kanban",
+              description: "Tablero visual para organizar atenciones por etapa.",
+            },
+            schedules: {
+              label: "Envío programado",
+              description: "Programa envíos de mensajes en fecha y hora definidas.",
+            },
+            internal_chat: {
+              label: "Comunicación interna",
+              description: "Chat entre miembros del equipo, fuera de WhatsApp.",
+            },
+          },
+          automation: {
+            chatbot: {
+              label: "Flujos y chatbot",
+              description: "Automatización de atención con flujos y chatbot.",
+            },
+            openai: {
+              label: "Inteligencia artificial (OpenAI)",
+              description: "Prompts y respuestas asistidas por IA.",
+            },
+            keywords: {
+              label: "Disparadores por palabra clave",
+              description: "Activa flujos cuando el contacto envía palabras específicas.",
+            },
+            integrations: {
+              label: "Integraciones de sector",
+              description: "Integraciones externas ligadas a los sectores de atención.",
+            },
+            quick_replies: {
+              label: "Respuestas rápidas",
+              description: "Mensajes listos para usar durante la atención.",
+            },
+          },
+          agenda: {
+            calendar: {
+              label: "Calendario y citas",
+              description: "Agenda de citas y vista de calendario.",
+            },
+            appointments: {
+              label: "Horarios de envío (agenda)",
+              description: "Configura horarios permitidos para envíos programados.",
+            },
+          },
+          team: {
+            users: {
+              label: "Miembros del equipo",
+              description: "Registro y gestión de usuarios de la empresa.",
+            },
+            queues: {
+              label: "Sectores y colas",
+              description: "Sectores de atención y distribución de conversaciones.",
+            },
+            groups: {
+              label: "Grupos de WhatsApp",
+              description: "Gestión de grupos de la conexión WhatsApp.",
+            },
+            ratings: {
+              label: "Evaluaciones",
+              description: "Encuestas de satisfacción después de la atención.",
+            },
+          },
+          finance: {
+            subscription: {
+              label: "Suscripción",
+              description: "Gestión de la suscripción del plan.",
+            },
+            invoices: {
+              label: "Facturas",
+              description: "Consulta de facturas y cobros.",
+            },
+          },
+          campaigns: {
+            sends: {
+              label: "Envíos masivos",
+              description: "Envía mensajes a varios contactos al mismo tiempo.",
+            },
+            lists: {
+              label: "Listas de destinatarios",
+              description:
+                "Permite crear listas de contactos para envío de campañas.",
+            },
+          },
+          contacts: {
+            tags: {
+              label: "Etiquetas de contactos",
+              description:
+                "Crea y gestiona etiquetas para organizar contactos y atenciones.",
+            },
+            files: {
+              label: "Biblioteca de archivos",
+              description: "Permite gestionar archivos del sistema.",
+            },
+          },
+          crm: {
+            pipeline: {
+              label: "Embudo de ventas",
+              description: "CRM con embudo de oportunidades y etapas de venta.",
+            },
+          },
+          settings: {
+            connections: {
+              label: "Conexiones WhatsApp",
+              description: "Conexiones y sesiones de WhatsApp de la empresa.",
+            },
+            api: {
+              label: "API de mensajes",
+              description: "Envío de mensajes por API externa.",
+            },
+          },
         },
       },
       kanban: {
@@ -1953,9 +2081,9 @@ const messages = {
         sections: {
           dashboard: "Dashboard",
           atendimento: "Atención",
-          chatInterno: "Chat interno",
+          chatInterno: "Comunicación interna",
           equipe: "Equipo",
-          automacao: "Automatización",
+          automacao: "Automatización de atención",
           campanhas: "Campañas",
           financeiro: "Financiero",
           configuracoes: "Configuración",
@@ -1966,7 +2094,7 @@ const messages = {
           connections: "Conexiones",
           tickets: "Atenciones",
           quickMessages: "Respuestas rápidas",
-          tasks: "Tareas",
+          tasks: "Gestión de tareas",
           agenda: "Agenda",
           crm: "CRM",
           contacts: "Contactos",
@@ -1978,9 +2106,9 @@ const messages = {
           settings: "Configuración",
           helps: "Ayuda",
           messagesAPI: "API WhatsApp",
-          schedules: "Programaciones",
+          schedules: "Envío programado",
           campaigns: "Campañas",
-          contactLists: "Listas de contactos",
+          contactLists: "Listas de destinatarios",
           campaignSettings: "Configuración",
           flows: "Flujos",
           flowsChatbot: "Flujos (Chatbot)",
@@ -1991,9 +2119,9 @@ const messages = {
           groups: "Grupos",
           evaluation: "Evaluación",
           annoucements: "Informativos",
-          chats: "Chat interno",
+          chats: "Comunicación interna",
           finance: "Financiero",
-          files: "Lista de archivos",
+          files: "Biblioteca de archivos",
           prompts: "OpenAI",
           queueIntegration: "Automatizaciones por sector",
           notificationCenter: "Centro de notificaciones",
@@ -2926,7 +3054,7 @@ const messages = {
         },
       },
       files: {
-        title: "Lista de archivos",
+        title: "Biblioteca de archivos",
         table: {
           name: "Nombre",
           contacts: "Contactos",
@@ -3659,7 +3787,7 @@ const messages = {
         },
       },
       schedules: {
-        title: "Programaciones",
+        title: "Envío programado",
         pageSubtitle: "{{count}} programación(es) cargada(s).",
         searchPlaceholder: "Buscar programaciones…",
         typeSingle: "Único",
@@ -4219,7 +4347,8 @@ const messages = {
               useKanban: "Kanban",
               useKanbanHelp: "Tablero kanban (attendance.kanban).",
               useCampaigns: "Campañas",
-              useCampaignsHelp: "Envíos y listas (campaigns.sends / campaigns.lists). Independientes del chatbot.",
+              useCampaignsHelp:
+                "Envíos masivos y listas de destinatarios (campaigns.sends / campaigns.lists). Independientes del chatbot.",
               useFlowbuilders: "Flujos (chatbot)",
               useFlowbuildersHelp: "Flowbuilder (automation.chatbot). No exige campañas en el plan.",
               useOpenAi: "OpenAI / Prompts",
