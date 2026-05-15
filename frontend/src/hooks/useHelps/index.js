@@ -1,58 +1,74 @@
 import api from "../../services/api";
 
-const usePlans = () => {
+const useHelps = () => {
+  const findAll = async (params) => {
+    const { data } = await api.request({
+      url: `/helps`,
+      method: "GET",
+      params
+    });
+    return data;
+  };
 
-    const findAll = async (params) => {
-        const { data } = await api.request({
-            url: `/helps`,
-            method: 'GET',
-            params
-        });
-        return data;
-    }
+  const list = async (params) => {
+    const { data } = await api.request({
+      url: "/helps/list",
+      method: "GET",
+      params
+    });
+    return data;
+  };
 
-    const list = async (params) => {
-        const { data } = await api.request({
-            url: '/helps/list',
-            method: 'GET',
-            params
-        });
-        return data;
-    }
+  const save = async (data) => {
+    const { data: responseData } = await api.request({
+      url: "/helps",
+      method: "POST",
+      data
+    });
+    return responseData;
+  };
 
-    const save = async (data) => {
-        const { data: responseData } = await api.request({
-            url: '/helps',
-            method: 'POST',
-            data
-        });
-        return responseData;
-    }
+  const update = async (data) => {
+    const { data: responseData } = await api.request({
+      url: `/helps/${data.id}`,
+      method: "PUT",
+      data
+    });
+    return responseData;
+  };
 
-    const update = async (data) => {
-        const { data: responseData } = await api.request({
-            url: `/helps/${data.id}`,
-            method: 'PUT',
-            data
-        });
-        return responseData;
-    }
+  const remove = async (id) => {
+    const { data } = await api.request({
+      url: `/helps/${id}`,
+      method: "DELETE"
+    });
+    return data;
+  };
 
-    const remove = async (id) => {
-        const { data } = await api.request({
-            url: `/helps/${id}`,
-            method: 'DELETE'
-        });
-        return data;
-    }
+  const uploadThumbnail = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("typeArch", "helps");
 
-    return {
-        findAll,
-        list,
-        save,
-        update,
-        remove
-    }
-}
+    const { data } = await api.request({
+      url: "/helps/thumbnail-upload",
+      method: "POST",
+      data: formData,
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
+    return data;
+  };
 
-export default usePlans;
+  return {
+    findAll,
+    list,
+    save,
+    update,
+    remove,
+    uploadThumbnail
+  };
+};
+
+export default useHelps;

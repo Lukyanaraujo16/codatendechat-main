@@ -7,6 +7,10 @@ interface Data {
   description?: string;
   video?: string;
   link?: string;
+  thumbnailUrl?: string;
+  category?: string;
+  order?: number;
+  isFeatured?: boolean;
 }
 
 const CreateService = async (data: Data): Promise<Help> => {

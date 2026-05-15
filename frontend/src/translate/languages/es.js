@@ -3749,6 +3749,38 @@ const messages = {
       },
       helps: {
         title: "Centro de Ayuda",
+        trainingCenter: "Centro de formación",
+        heroSubtitle:
+          "Aprenda a configurar y usar el sistema con tutoriales rápidos y objetivos.",
+        videoCount: "{{count}} tutoriales disponibles",
+        startBasics: "Empezar por lo básico",
+        searchPlaceholder: "Buscar tutoriales...",
+        filterAll: "Todos",
+        watch: "Ver",
+        featured: "Destacado",
+        empty: "No hay tutoriales disponibles por el momento.",
+        notFound: "No se encontraron tutoriales.",
+        close: "Cerrar",
+        nextVideo: "Siguiente vídeo",
+        previewUntitled: "Título del tutorial",
+        previewNoDescription: "La descripción aparecerá aquí.",
+      },
+      onboarding: {
+        title: "Primeros pasos",
+        subtitle:
+          "Configure lo esencial para que su equipo empiece a atender con confianza.",
+        progress: "{{done}} de {{total}} completados",
+        open: "Abrir",
+        tutorial: "Ver tutorial",
+        hideGuide: "Ocultar guía",
+        steps: {
+          whatsapp: "Conectar WhatsApp",
+          queues: "Crear sectores",
+          users: "Registrar equipo",
+          greeting: "Configurar mensaje de bienvenida",
+          flow: "Crear primer flujo de automatización",
+          firstTicket: "Realizar primera atención"
+        }
       },
       evaluation: {
         title: "Evaluación",
@@ -4250,7 +4282,23 @@ const messages = {
           grid: {
             title: "Título",
             description: "Descripción",
-            video: "Video",
+            video: "Código o URL de YouTube",
+          },
+          form: {
+            category: "Categoría",
+            order: "Orden",
+            orderHint: "Los números más bajos aparecen primero.",
+            featured: "Vídeo destacado",
+            featuredShort: "Destacado",
+            uploadThumbnail: "Subir miniatura",
+            removeThumbnail: "Quitar miniatura",
+            thumbnailEmpty: "Sin imagen — se usará la miniatura de YouTube",
+            thumbnailAutoHint:
+              "Si no se envía una portada, usaremos la miniatura de YouTube automáticamente.",
+            thumbnailInvalid: "Seleccione un archivo de imagen válido.",
+            thumbnailUploaded: "Miniatura subida con éxito.",
+            videoHint: "ID del vídeo o URL completa de YouTube",
+            livePreview: "Vista previa de la tarjeta"
           },
           confirmModal: {
             title: "Eliminación de Registro",

@@ -7,6 +7,10 @@ interface Data {
   description?: string;
   video?: string;
   link?: string;
+  thumbnailUrl?: string;
+  category?: string;
+  order?: number;
+  isFeatured?: boolean;
 }
 
 const UpdateService = async (data: Data): Promise<Help> => {
@@ -18,7 +22,8 @@ const UpdateService = async (data: Data): Promise<Help> => {
     throw new AppError("ERR_NO_HELP_FOUND", 404);
   }
 
-  await record.update(data);
+  const { id: _id, ...payload } = data;
+  await record.update(payload);
 
   return record;
 };

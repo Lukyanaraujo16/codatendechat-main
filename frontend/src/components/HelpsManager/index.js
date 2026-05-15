@@ -1,291 +1,540 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-    makeStyles,
-    Paper,
-    Grid,
-    TextField,
-    Table,
-    TableHead,
-    TableBody,
-    TableCell,
-    TableRow,
-    IconButton
+  makeStyles,
+  Paper,
+  Grid,
+  TextField,
+  Table,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableRow,
+  IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Checkbox,
+  Typography,
+  Box,
+  Chip
 } from "@material-ui/core";
-import { Formik, Form, Field } from 'formik';
+import { Formik, Form, Field } from "formik";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConfirmationModal from "../ConfirmationModal";
-
-import { Edit as EditIcon } from "@material-ui/icons";
-
+import { Edit as EditIcon, CloudUpload as CloudUploadIcon } from "@material-ui/icons";
 import { toast } from "react-toastify";
 import useHelps from "../../hooks/useHelps";
 import { i18n } from "../../translate/i18n";
+import HelpVideoCard from "../HelpVideoCard";
+import {
+  HELP_CATEGORIES,
+  resolveHelpThumbnailUrl
+} from "../../utils/helpThumbnail";
 
-
-const useStyles = makeStyles(theme => ({
-	root: {
-		width: '100%'
-	},
-    mainPaper: {
-		width: '100%',
-		flex: 1,
-		padding: theme.spacing(2)
-    },
-	fullWidth: {
-		width: '100%'
-	},
-    tableContainer: {
-		width: '100%',
-		overflowX: "scroll",
-		...theme.scrollbarStyles
-    },
-	textfield: {
-		width: '100%'
-	},
-    textRight: {
-        textAlign: 'right'
-    },
-    row: {
-		paddingTop: theme.spacing(2),
-		paddingBottom: theme.spacing(2)
-    },
-    control: {
-		paddingRight: theme.spacing(1),
-		paddingLeft: theme.spacing(1)
-	},
-    buttonContainer: {
-        textAlign: 'right',
-		padding: theme.spacing(1)
-	}
+const useStyles = makeStyles((theme) => ({
+  root: {
+    width: "100%"
+  },
+  mainPaper: {
+    width: "100%",
+    flex: 1,
+    padding: theme.spacing(2)
+  },
+  fullWidth: {
+    width: "100%"
+  },
+  tableContainer: {
+    width: "100%",
+    overflowX: "auto",
+    ...theme.scrollbarStyles
+  },
+  textfield: {
+    width: "100%"
+  },
+  row: {
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(2)
+  },
+  buttonContainer: {
+    textAlign: "right",
+    padding: theme.spacing(1)
+  },
+  thumbnailPreview: {
+    width: "100%",
+    maxWidth: 280,
+    aspectRatio: "16 / 9",
+    objectFit: "cover",
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default
+  },
+  thumbnailPlaceholder: {
+    width: "100%",
+    maxWidth: 280,
+    aspectRatio: "16 / 9",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.shape.borderRadius,
+    border: `1px dashed ${theme.palette.divider}`,
+    color: theme.palette.text.secondary,
+    backgroundColor: theme.palette.background.default
+  },
+  uploadRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(1)
+  },
+  previewPanel: {
+    padding: theme.spacing(2),
+    borderRadius: theme.shape.borderRadius,
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default
+  },
+  previewTitle: {
+    fontWeight: 700,
+    marginBottom: theme.spacing(1.5),
+    color: theme.palette.text.primary
+  },
+  helperText: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.8rem",
+    marginTop: theme.spacing(0.5)
+  }
 }));
 
-export function HelpManagerForm (props) {
-    const { onSubmit, onDelete, onCancel, initialValue, loading } = props;
-    const classes = useStyles()
+const emptyRecord = {
+  title: "",
+  description: "",
+  video: "",
+  thumbnailUrl: "",
+  category: "Atendimento",
+  order: 0,
+  isFeatured: false
+};
 
-    const [record, setRecord] = useState(initialValue);
+export function HelpManagerForm(props) {
+  const { onSubmit, onDelete, onCancel, initialValue, loading, onUploadThumbnail } =
+    props;
+  const classes = useStyles();
+  const fileInputRef = useRef(null);
+  const [record, setRecord] = useState(initialValue);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
 
-    useEffect(() => {
-        setRecord(initialValue)
-    }, [initialValue])
+  useEffect(() => {
+    setRecord(initialValue);
+  }, [initialValue]);
 
-    const handleSubmit = async(data) => {
-        onSubmit(data)
+  const handleSubmit = async (data) => {
+    onSubmit(data);
+  };
+
+  const handleThumbnailPick = async (event, setFieldValue) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
     }
 
-    return (
-        <Formik
-            enableReinitialize
-            className={classes.fullWidth}
-            initialValues={record}
-            onSubmit={(values, { resetForm }) =>
-                setTimeout(() => {
-                    handleSubmit(values)
-                    resetForm()
-                }, 500)
-            }
-        >
-            {(values) => (
-                <Form className={classes.fullWidth}>
-                    <Grid spacing={2} justifyContent="flex-end" container>
-                        <Grid xs={12} sm={6} md={3} item>
-                            <Field
-                                as={TextField}
-                                label="Título"
-                                name="title"
-                                variant="outlined"
-                                className={classes.fullWidth}
-                                margin="dense"
-                            />
-                        </Grid>
-                        <Grid xs={12} sm={6} md={3} item>
-                            <Field
-                                as={TextField}
-                                label="Código do Vídeo"
-                                name="video"
-                                variant="outlined"
-                                className={classes.fullWidth}
-                                margin="dense"
-                            />
-                        </Grid>
-                        <Grid xs={12} sm={12} md={6} item>
-                            <Field
-                                as={TextField}
-                                label="Descrição"
-                                name="description"
-                                variant="outlined"
-                                className={classes.fullWidth}
-                                margin="dense"
-                            />
-                        </Grid>
-                        <Grid sm={3} md={1} item>
-                            <ButtonWithSpinner className={classes.fullWidth} loading={loading} onClick={() => onCancel()} variant="contained">
-                                {i18n.t('settings.helps.buttons.clean')}
-                            </ButtonWithSpinner>
-                        </Grid>
-                        { record.id !== undefined ? (
-                            <Grid sm={3} md={1} item>
-                                <ButtonWithSpinner className={classes.fullWidth} loading={loading} onClick={() => onDelete(record)} variant="contained" color="secondary">
-                                    {i18n.t('settings.helps.buttons.delete')}
-                                </ButtonWithSpinner>
-                            </Grid>
-                        ) : null}
-                        <Grid sm={3} md={1} item>
-                            <ButtonWithSpinner className={classes.fullWidth} loading={loading} type="submit" variant="contained" color="primary">
-                                {i18n.t('settings.helps.buttons.save')}
-                            </ButtonWithSpinner>
-                        </Grid>
-                    </Grid>
-                </Form>
-            )}
-        </Formik>
-    )
-}
-
-export function HelpsManagerGrid (props) {
-    const { records, onSelect } = props
-    const classes = useStyles()
-
-    return (
-        <Paper className={classes.tableContainer}>
-            <Table className={classes.fullWidth} size="small" aria-label="a dense table">
-                <TableHead>
-                <TableRow>
-                    <TableCell align="center" style={{width: '1%'}}>#</TableCell>
-                    <TableCell align="left">{i18n.t("settings.helps.grid.title")}</TableCell>
-                    <TableCell align="left">{i18n.t("settings.helps.grid.description")}</TableCell>
-                    <TableCell align="left">{i18n.t("settings.helps.grid.video")}</TableCell>
-                </TableRow>
-                </TableHead>
-                <TableBody>
-                {records.map((row) => (
-                    <TableRow key={row.id}>
-                        <TableCell align="center" style={{width: '1%'}}>
-                            <IconButton onClick={() => onSelect(row)} aria-label="delete">
-                                <EditIcon />
-                            </IconButton>
-                        </TableCell>
-                        <TableCell align="left">{row.title || '-'}</TableCell>
-                        <TableCell align="left">{row.description || '-'}</TableCell>
-                        <TableCell align="left">{row.video || '-'}</TableCell>
-                    </TableRow>
-                ))}
-                </TableBody>
-            </Table>
-        </Paper>
-    )
-}
-
-export default function HelpsManager () {
-    const classes = useStyles()
-    const { list, save, update, remove } = useHelps()
-    
-    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-    const [loading, setLoading] = useState(false)
-    const [records, setRecords] = useState([])
-    const [record, setRecord] = useState({
-        title: '',
-        description: '',
-        video: ''
-    })
-
-    useEffect(() => {
-        async function fetchData () {
-            await loadHelps()
-        }
-        fetchData()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    const loadHelps = async () => {
-        setLoading(true)
-        try {
-            const helpList = await list()
-            setRecords(helpList)
-        } catch (e) {
-            toast.error(i18n.t('settings.helps.toasts.errorList'))
-        }
-        setLoading(false)
+    if (!file.type.startsWith("image/")) {
+      toast.error(i18n.t("settings.helps.form.thumbnailInvalid"));
+      return;
     }
 
-    const handleSubmit = async (data) => {
-        setLoading(true)
-        try {
-            if (data.id !== undefined) {
-                await update(data)
-            } else {
-                await save(data)
-            }
-            await loadHelps()
-            handleCancel()
-            toast.success(i18n.t('settings.helps.toasts.success'))
-        } catch (e) {
-            toast.error(i18n.t('settings.helps.toasts.error'))
-        }
-        setLoading(false)
+    setUploadingThumb(true);
+    try {
+      const { thumbnailUrl } = await onUploadThumbnail(file);
+      setFieldValue("thumbnailUrl", thumbnailUrl);
+      setRecord((prev) => ({ ...prev, thumbnailUrl }));
+      toast.success(i18n.t("settings.helps.form.thumbnailUploaded"));
+    } catch {
+      toast.error(i18n.t("settings.helps.toasts.error"));
     }
+    setUploadingThumb(false);
+    event.target.value = "";
+  };
 
-    const handleDelete = async () => {
-        setLoading(true)
-        try {
-            await remove(record.id)
-            await loadHelps()
-            handleCancel()
-            toast.success(i18n.t('settings.helps.toasts.success'))
-        } catch (e) {
-            toast.error(i18n.t('settings.helps.toasts.errorOperation'))
-        }
-        setLoading(false)
-    }
+  return (
+    <Formik
+      enableReinitialize
+      className={classes.fullWidth}
+      initialValues={record}
+      onSubmit={(values, { resetForm }) =>
+        setTimeout(() => {
+          handleSubmit(values);
+          resetForm();
+        }, 300)
+      }
+    >
+      {({ values, setFieldValue }) => {
+        const thumbPreview = resolveHelpThumbnailUrl(values);
 
-    const handleOpenDeleteDialog = () => {
-        setShowConfirmDialog(true)
-    }
-
-    const handleCancel = () => {
-        setRecord({
-            title: '',
-            description: '',
-            video: ''
-        })
-    }
-
-    const handleSelect = (data) => {
-        setRecord({
-            id: data.id,
-            title: data.title || '',
-            description: data.description || '',
-            video: data.video || ''
-        })
-    }
-
-    return (
-        <Paper className={classes.mainPaper} elevation={0}>
-            <Grid spacing={2} container>
-                <Grid xs={12} item>
-                    <HelpManagerForm 
-                        initialValue={record} 
-                        onDelete={handleOpenDeleteDialog} 
-                        onSubmit={handleSubmit} 
-                        onCancel={handleCancel} 
-                        loading={loading}
-                    />
-                </Grid>
-                <Grid xs={12} item>
-                    <HelpsManagerGrid 
-                        records={records}
-                        onSelect={handleSelect}
-                    />
-                </Grid>
+        return (
+        <Form className={classes.fullWidth}>
+          <Grid spacing={2} container>
+            <Grid xs={12} lg={5} item>
+              <Box className={classes.previewPanel}>
+                <Typography variant="subtitle1" className={classes.previewTitle}>
+                  {i18n.t("settings.helps.form.livePreview")}
+                </Typography>
+                <HelpVideoCard
+                  record={values}
+                  featured={Boolean(values.isFeatured)}
+                  showFeaturedBadge={Boolean(values.isFeatured)}
+                  preview
+                />
+              </Box>
             </Grid>
-            <ConfirmationModal
-                title={i18n.t('settings.helps.confirmModal.title')}
-                open={showConfirmDialog}
-                onClose={() => setShowConfirmDialog(false)}
-                onConfirm={() => handleDelete()}
-            >
-                {i18n.t('settings.helps.confirmModal.confirm')}
-            </ConfirmationModal>
-        </Paper>
-    )
+
+            <Grid xs={12} lg={7} item>
+              <Grid spacing={2} container>
+            <Grid xs={12} md={5} item>
+              <Box className={classes.uploadRow}>
+                {thumbPreview ? (
+                  <img
+                    src={thumbPreview}
+                    alt=""
+                    className={classes.thumbnailPreview}
+                  />
+                ) : (
+                  <Box className={classes.thumbnailPlaceholder}>
+                    <Typography variant="caption" color="textSecondary">
+                      {i18n.t("settings.helps.form.thumbnailEmpty")}
+                    </Typography>
+                  </Box>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => handleThumbnailPick(e, setFieldValue)}
+                />
+                <ButtonWithSpinner
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<CloudUploadIcon />}
+                  loading={uploadingThumb}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {i18n.t("settings.helps.form.uploadThumbnail")}
+                </ButtonWithSpinner>
+                <Typography className={classes.helperText}>
+                  {i18n.t("settings.helps.form.thumbnailAutoHint")}
+                </Typography>
+                {values.thumbnailUrl ? (
+                  <ButtonWithSpinner
+                    variant="text"
+                    size="small"
+                    onClick={() => setFieldValue("thumbnailUrl", "")}
+                  >
+                    {i18n.t("settings.helps.form.removeThumbnail")}
+                  </ButtonWithSpinner>
+                ) : null}
+              </Box>
+            </Grid>
+
+            <Grid xs={12} md={7} item>
+              <Grid spacing={2} container>
+                <Grid xs={12} sm={6} item>
+                  <Field
+                    as={TextField}
+                    label={i18n.t("settings.helps.grid.title")}
+                    name="title"
+                    variant="outlined"
+                    className={classes.fullWidth}
+                    margin="dense"
+                  />
+                </Grid>
+                <Grid xs={12} sm={6} item>
+                  <Field
+                    as={TextField}
+                    label={i18n.t("settings.helps.grid.video")}
+                    name="video"
+                    variant="outlined"
+                    className={classes.fullWidth}
+                    margin="dense"
+                    helperText={i18n.t("settings.helps.form.videoHint")}
+                  />
+                </Grid>
+                <Grid xs={12} sm={6} item>
+                  <FormControl
+                    variant="outlined"
+                    margin="dense"
+                    className={classes.fullWidth}
+                  >
+                    <InputLabel id="help-category-label">
+                      {i18n.t("settings.helps.form.category")}
+                    </InputLabel>
+                    <Select
+                      labelId="help-category-label"
+                      label={i18n.t("settings.helps.form.category")}
+                      value={values.category || "Atendimento"}
+                      onChange={(e) =>
+                        setFieldValue("category", e.target.value)
+                      }
+                    >
+                      {HELP_CATEGORIES.map((cat) => (
+                        <MenuItem key={cat} value={cat}>
+                          {cat}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid xs={12} sm={3} item>
+                  <Field
+                    as={TextField}
+                    type="number"
+                    label={i18n.t("settings.helps.form.order")}
+                    name="order"
+                    variant="outlined"
+                    className={classes.fullWidth}
+                    margin="dense"
+                    inputProps={{ min: 0 }}
+                    helperText={i18n.t("settings.helps.form.orderHint")}
+                  />
+                </Grid>
+                <Grid xs={12} sm={3} item>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        color="primary"
+                        checked={Boolean(values.isFeatured)}
+                        onChange={(e) =>
+                          setFieldValue("isFeatured", e.target.checked)
+                        }
+                      />
+                    }
+                    label={i18n.t("settings.helps.form.featured")}
+                  />
+                </Grid>
+                <Grid xs={12} item>
+                  <Field
+                    as={TextField}
+                    label={i18n.t("settings.helps.grid.description")}
+                    name="description"
+                    variant="outlined"
+                    className={classes.fullWidth}
+                    margin="dense"
+                    multiline
+                    minRows={2}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+              </Grid>
+            </Grid>
+
+            <Grid xs={12} item className={classes.buttonContainer}>
+              <ButtonWithSpinner
+                loading={loading}
+                onClick={() => onCancel()}
+                variant="contained"
+                style={{ marginRight: 8 }}
+              >
+                {i18n.t("settings.helps.buttons.clean")}
+              </ButtonWithSpinner>
+              {record.id !== undefined ? (
+                <ButtonWithSpinner
+                  loading={loading}
+                  onClick={() => onDelete(record)}
+                  variant="contained"
+                  color="secondary"
+                  style={{ marginRight: 8 }}
+                >
+                  {i18n.t("settings.helps.buttons.delete")}
+                </ButtonWithSpinner>
+              ) : null}
+              <ButtonWithSpinner
+                loading={loading}
+                type="submit"
+                variant="contained"
+                color="primary"
+              >
+                {i18n.t("settings.helps.buttons.save")}
+              </ButtonWithSpinner>
+            </Grid>
+          </Grid>
+        </Form>
+        );
+      }}
+    </Formik>
+  );
+}
+
+export function HelpsManagerGrid(props) {
+  const { records, onSelect } = props;
+  const classes = useStyles();
+
+  return (
+    <Paper className={classes.tableContainer} elevation={0}>
+      <Table className={classes.fullWidth} size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell align="center" style={{ width: "1%" }}>
+              #
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.helps.grid.title")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.helps.form.category")}
+            </TableCell>
+            <TableCell align="center">
+              {i18n.t("settings.helps.form.order")}
+            </TableCell>
+            <TableCell align="center">
+              {i18n.t("settings.helps.form.featured")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.helps.grid.video")}
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {records.map((row) => (
+            <TableRow key={row.id} hover>
+              <TableCell align="center" style={{ width: "1%" }}>
+                <IconButton onClick={() => onSelect(row)} aria-label="edit">
+                  <EditIcon />
+                </IconButton>
+              </TableCell>
+              <TableCell align="left">{row.title || "-"}</TableCell>
+              <TableCell align="left">{row.category || "-"}</TableCell>
+              <TableCell align="center">{row.order ?? 0}</TableCell>
+              <TableCell align="center">
+                {row.isFeatured ? (
+                  <Chip
+                    size="small"
+                    color="primary"
+                    label={i18n.t("settings.helps.form.featuredShort")}
+                  />
+                ) : (
+                  "-"
+                )}
+              </TableCell>
+              <TableCell align="left">{row.video || "-"}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Paper>
+  );
+}
+
+export default function HelpsManager() {
+  const classes = useStyles();
+  const { list, save, update, remove, uploadThumbnail } = useHelps();
+
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [records, setRecords] = useState([]);
+  const [record, setRecord] = useState(emptyRecord);
+
+  useEffect(() => {
+    loadHelps();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadHelps = async () => {
+    setLoading(true);
+    try {
+      const helpList = await list();
+      setRecords(helpList);
+    } catch {
+      toast.error(i18n.t("settings.helps.toasts.errorList"));
+    }
+    setLoading(false);
+  };
+
+  const normalizePayload = (data) => ({
+    ...data,
+    order: Number(data.order) || 0,
+    isFeatured: Boolean(data.isFeatured),
+    category: data.category || "Atendimento",
+    thumbnailUrl: data.thumbnailUrl || ""
+  });
+
+  const handleSubmit = async (data) => {
+    setLoading(true);
+    try {
+      const payload = normalizePayload(data);
+      if (data.id !== undefined) {
+        await update(payload);
+      } else {
+        await save(payload);
+      }
+      await loadHelps();
+      handleCancel();
+      toast.success(i18n.t("settings.helps.toasts.success"));
+    } catch {
+      toast.error(i18n.t("settings.helps.toasts.error"));
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      await remove(record.id);
+      await loadHelps();
+      handleCancel();
+      toast.success(i18n.t("settings.helps.toasts.success"));
+    } catch {
+      toast.error(i18n.t("settings.helps.toasts.errorOperation"));
+    }
+    setLoading(false);
+    setShowConfirmDialog(false);
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleCancel = () => {
+    setRecord({ ...emptyRecord });
+  };
+
+  const handleSelect = (data) => {
+    setRecord({
+      id: data.id,
+      title: data.title || "",
+      description: data.description || "",
+      video: data.video || "",
+      thumbnailUrl: data.thumbnailUrl || "",
+      category: data.category || "Atendimento",
+      order: data.order ?? 0,
+      isFeatured: Boolean(data.isFeatured)
+    });
+  };
+
+  return (
+    <Paper className={classes.mainPaper} elevation={0}>
+      <Grid spacing={2} container>
+        <Grid xs={12} item>
+          <HelpManagerForm
+            initialValue={record}
+            onDelete={handleOpenDeleteDialog}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            onUploadThumbnail={uploadThumbnail}
+            loading={loading}
+          />
+        </Grid>
+        <Grid xs={12} item>
+          <HelpsManagerGrid records={records} onSelect={handleSelect} />
+        </Grid>
+      </Grid>
+      <ConfirmationModal
+        title={i18n.t("settings.helps.confirmModal.title")}
+        open={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={() => handleDelete()}
+      >
+        {i18n.t("settings.helps.confirmModal.confirm")}
+      </ConfirmationModal>
+    </Paper>
+  );
 }

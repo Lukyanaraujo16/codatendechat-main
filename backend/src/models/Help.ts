@@ -29,6 +29,18 @@ class Help extends Model<Help> {
   @Column
   link: string;
 
+  @Column
+  thumbnailUrl: string;
+
+  @Column
+  category: string;
+
+  @Column({ field: "helpOrder" })
+  order: number;
+
+  @Column
+  isFeatured: boolean;
+
   @CreatedAt
   createdAt: Date;
 

@@ -12,6 +12,7 @@ import FindService from "../services/HelpServices/FindService";
 import Help from "../models/Help";
 
 import AppError from "../errors/AppError";
+import { head } from "lodash";
 
 type IndexQuery = {
   searchParam: string;
@@ -23,6 +24,10 @@ type StoreData = {
   description: string;
   video?: string;
   link?: string;
+  thumbnailUrl?: string;
+  category?: string;
+  order?: number;
+  isFeatured?: boolean;
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -128,4 +133,20 @@ export const findList = async (
   const records: Help[] = await FindService();
 
   return res.status(200).json(records);
+};
+
+export const thumbnailUpload = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const files = req.files as Express.Multer.File[];
+  const file = head(files);
+
+  if (!file) {
+    throw new AppError("ERR_NO_FILE", 400);
+  }
+
+  const thumbnailUrl = `helps/${file.filename}`;
+
+  return res.status(200).json({ thumbnailUrl });
 };

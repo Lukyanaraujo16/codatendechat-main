@@ -43,6 +43,7 @@ import moment from "moment";
 import { ChartsDate } from "./ChartsDate";
 import { i18n } from "../../translate/i18n";
 import CompanyStorageUsageCard from "../../components/CompanyStorageUsageCard";
+import OnboardingChecklist from "../../components/OnboardingChecklist";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles((theme) => ({
@@ -471,6 +472,11 @@ const Dashboard = () => {
 
         {/* Cards */}
         <Grid container spacing={3}>
+          {user?.profile === "admin" ? (
+            <Grid item xs={12}>
+              <OnboardingChecklist />
+            </Grid>
+          ) : null}
           {user?.profile === "admin" || user?.supportMode === true ? (
             <Grid item xs={12} sm={6} md={4}>
               <CompanyStorageUsageCard data={companyStorage} loading={companyStorageLoading} />

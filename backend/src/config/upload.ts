@@ -17,6 +17,8 @@ export default {
         folder =  path.resolve(publicFolder , typeArch, fileId ? fileId : "") 
       } else if (typeArch && typeArch === "announcements") {
         folder =  path.resolve(publicFolder , typeArch) 
+      } else if (typeArch && typeArch === "helps") {
+        folder = path.resolve(publicFolder, "helps");
       }
       else
       {

@@ -3835,6 +3835,38 @@ const messages = {
 			},
 			helps: {
 				title: "Help Center",
+				trainingCenter: "Training center",
+				heroSubtitle:
+					"Learn how to set up and use the platform with quick, focused tutorials.",
+				videoCount: "{{count}} tutorials available",
+				startBasics: "Start with the basics",
+				searchPlaceholder: "Search tutorials...",
+				filterAll: "All",
+				watch: "Watch",
+				featured: "Featured",
+				empty: "No tutorials available at the moment.",
+				notFound: "No tutorials found.",
+				close: "Close",
+				nextVideo: "Next video",
+				previewUntitled: "Tutorial title",
+				previewNoDescription: "Description will appear here.",
+			},
+			onboarding: {
+				title: "Getting started",
+				subtitle:
+					"Set up the essentials so your team can start handling conversations with confidence.",
+				progress: "{{done}} of {{total}} completed",
+				open: "Open",
+				tutorial: "View tutorial",
+				hideGuide: "Hide guide",
+				steps: {
+					whatsapp: "Connect WhatsApp",
+					queues: "Create departments",
+					users: "Add team members",
+					greeting: "Set greeting message",
+					flow: "Create your first automation flow",
+					firstTicket: "Handle your first conversation"
+				}
 			},
 			evaluation: {
 				title: "Evaluation",
@@ -4339,7 +4371,23 @@ const messages = {
 					grid: {
 						title: "Title",
 						description: "Description",
-						video: "Video",
+						video: "YouTube code or URL",
+					},
+					form: {
+						category: "Category",
+						order: "Order",
+						orderHint: "Lower numbers appear first.",
+						featured: "Featured video",
+						featuredShort: "Featured",
+						uploadThumbnail: "Upload thumbnail",
+						removeThumbnail: "Remove thumbnail",
+						thumbnailEmpty: "No image — YouTube thumbnail will be used",
+						thumbnailAutoHint:
+							"If no cover is uploaded, we will use the YouTube thumbnail automatically.",
+						thumbnailInvalid: "Please select a valid image file.",
+						thumbnailUploaded: "Thumbnail uploaded successfully.",
+						videoHint: "Video ID or full YouTube URL",
+						livePreview: "Card preview"
 					},
 					confirmModal: {
 						title: "Delete Record",
