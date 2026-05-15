@@ -1,7 +1,21 @@
-import { Transaction } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import Ticket from "../../models/Ticket";
 import TicketDeletionGuard from "../../models/TicketDeletionGuard";
 import { logger } from "../../utils/logger";
+
+function guardWhereClause(
+  companyId: number,
+  contactId: number,
+  whatsappId?: number | null
+) {
+  const where: Record<string, unknown> = { companyId, contactId };
+  if (whatsappId != null && whatsappId !== undefined) {
+    where.whatsappId = whatsappId;
+  } else {
+    where.whatsappId = { [Op.is]: null };
+  }
+  return where;
+}
 
 const GRACE_MS = 2000;
 
@@ -25,13 +39,29 @@ export const registerTicketDeletionGuard = async (
   deletedBy?: number | null,
   transaction?: Transaction
 ): Promise<void> => {
+  if (!ticket.contactId) {
+    logger.warn(
+      {
+        ticketId: ticket.id,
+        companyId: ticket.companyId,
+        whatsappId: ticket.whatsappId ?? null
+      },
+      "[TicketDeletionGuard] skipped — ticket without contactId"
+    );
+    return;
+  }
+
   const deletedAt = new Date();
+  const whatsappId =
+    ticket.whatsappId != null && ticket.whatsappId !== undefined
+      ? ticket.whatsappId
+      : null;
 
   await TicketDeletionGuard.upsert(
     {
       companyId: ticket.companyId,
       contactId: ticket.contactId,
-      whatsappId: ticket.whatsappId,
+      whatsappId,
       deletedAt,
       deletedBy: deletedBy ?? null,
       lastTicketId: ticket.id
@@ -44,7 +74,7 @@ export const registerTicketDeletionGuard = async (
       companyId: ticket.companyId,
       ticketId: ticket.id,
       contactId: ticket.contactId,
-      whatsappId: ticket.whatsappId,
+      whatsappId,
       deletedAt: deletedAt.toISOString(),
       deletedBy: deletedBy ?? null
     },
@@ -55,11 +85,11 @@ export const registerTicketDeletionGuard = async (
 export const clearTicketDeletionGuard = async (
   companyId: number,
   contactId: number,
-  whatsappId: number,
+  whatsappId?: number | null,
   transaction?: Transaction
 ): Promise<void> => {
   const removed = await TicketDeletionGuard.destroy({
-    where: { companyId, contactId, whatsappId },
+    where: guardWhereClause(companyId, contactId, whatsappId),
     transaction
   });
 
@@ -84,7 +114,7 @@ export const assertTicketRecreationAllowed = async ({
 }: {
   companyId: number;
   contactId: number;
-  whatsappId: number;
+  whatsappId?: number | null;
   messageReceivedAt?: Date | null;
   forceCreate?: boolean;
 }): Promise<void> => {
@@ -94,7 +124,7 @@ export const assertTicketRecreationAllowed = async ({
   }
 
   const guard = await TicketDeletionGuard.findOne({
-    where: { companyId, contactId, whatsappId }
+    where: guardWhereClause(companyId, contactId, whatsappId)
   });
 
   if (!guard) {
@@ -138,7 +168,7 @@ export const assertTicketRecreationAllowed = async ({
   throw new TicketRecreationBlockedError(
     companyId,
     contactId,
-    whatsappId,
+    whatsappId ?? 0,
     deletedAt,
     messageReceivedAt
   );

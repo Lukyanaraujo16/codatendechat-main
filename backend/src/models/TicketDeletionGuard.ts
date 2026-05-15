@@ -7,7 +7,8 @@ import {
   PrimaryKey,
   AutoIncrement,
   ForeignKey,
-  BelongsTo
+  BelongsTo,
+  AllowNull
 } from "sequelize-typescript";
 import User from "./User";
 
@@ -24,8 +25,9 @@ class TicketDeletionGuard extends Model<TicketDeletionGuard> {
   @Column
   contactId: number;
 
+  @AllowNull
   @Column
-  whatsappId: number;
+  whatsappId: number | null;
 
   @Column
   deletedAt: Date;

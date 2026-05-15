@@ -528,7 +528,9 @@ const TicketsListCustom = (props) => {
       if (typeof inbox?.removeTickets === "function") {
         inbox.removeTickets(removedIds);
       }
-      if (failed > 0) {
+      if (deleted === 0 && failed > 0) {
+        toast.error(i18n.t("ticket.delete.bulkNoneFailed"));
+      } else if (failed > 0) {
         toast.info(
           i18n.t("ticket.delete.bulkPartial", { deleted, failed })
         );

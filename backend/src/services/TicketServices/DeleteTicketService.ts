@@ -51,7 +51,21 @@ const DeleteTicketService = async (
 
   await sequelize.transaction(async (transaction: Transaction) => {
     await destroyTicketDependents(ticketIdNum, transaction);
-    await registerTicketDeletionGuard(ticket, deletedBy, transaction);
+    try {
+      await registerTicketDeletionGuard(ticket, deletedBy, transaction);
+    } catch (guardErr) {
+      logger.error(
+        {
+          err: guardErr,
+          ticketId: ticketIdNum,
+          companyId,
+          contactId: ticket.contactId,
+          whatsappId: ticket.whatsappId ?? null,
+          queueId: ticket.queueId ?? null
+        },
+        "[TicketDeletionGuard] register failed — continuing ticket delete"
+      );
+    }
     await Ticket.destroy({
       where: { id: ticketIdNum, companyId },
       transaction

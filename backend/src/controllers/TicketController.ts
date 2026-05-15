@@ -372,7 +372,8 @@ export const removeBatch = async (
       companyId,
       deletedCount: result.deletedCount,
       failedCount: result.failedCount,
-      deletedIds: deleted.map((d) => d.id)
+      deletedIds: result.deletedIds,
+      failedIds: result.failedIds
     },
     "[TicketDelete] batch success"
   );
@@ -389,10 +390,7 @@ export const removeBatch = async (
     });
   }
 
-  return res.status(200).json({
-    ...result,
-    deletedIds: deleted.map((d) => d.id)
-  });
+  return res.status(200).json(result);
 };
 
 export const listWithoutConnection = async (req: Request, res: Response): Promise<Response> => {

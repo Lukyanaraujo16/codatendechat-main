@@ -2118,6 +2118,8 @@ const messages = {
           bulkSuccess: "{{deleted}} conversa(s) excluída(s).",
           bulkPartial:
             "{{deleted}} excluída(s), {{failed}} não puderam ser excluídas.",
+          bulkNoneFailed:
+            "Nenhuma conversa foi excluída. Verifique se elas ainda existem ou se você tem permissão.",
           selectAll: "Selecionar todos desta aba",
         },
       },

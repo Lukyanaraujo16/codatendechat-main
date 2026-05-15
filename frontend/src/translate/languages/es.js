@@ -2035,6 +2035,8 @@ const messages = {
           bulkSuccess: "{{deleted}} conversación(es) eliminada(s).",
           bulkPartial:
             "{{deleted}} eliminada(s), {{failed}} no se pudieron eliminar.",
+          bulkNoneFailed:
+            "No se eliminó ninguna conversación. Verifique que aún existan o que tenga permiso.",
           selectAll: "Seleccionar todos de esta pestaña",
         },
       },

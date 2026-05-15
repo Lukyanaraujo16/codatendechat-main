@@ -2032,6 +2032,8 @@ const messages = {
 					bulkSuccess: "{{deleted}} conversation(s) deleted.",
 					bulkPartial:
 						"{{deleted}} deleted, {{failed}} could not be deleted.",
+					bulkNoneFailed:
+						"No conversations were deleted. Check that they still exist and that you have permission.",
 					selectAll: "Select all in this tab",
 				},
 			},
