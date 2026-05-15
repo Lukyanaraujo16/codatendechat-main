@@ -34,6 +34,7 @@ import TabPanel from "../TabPanel";
 
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { TicketsContext } from "../../context/Tickets/TicketsContext";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import { Can } from "../Can";
 import api from "../../services/api";
@@ -512,6 +513,7 @@ const InboxOpenListPanel = memo(function InboxOpenListPanel({
       onControlledLoadMore={loadMore}
       compact={compactList}
       style={style}
+      enableBulkDelete
     />
   );
 });
@@ -532,6 +534,7 @@ const InboxPendingListPanel = memo(function InboxPendingListPanel({
       onControlledLoadMore={loadMore}
       compact={compactList}
       style={style}
+      enableBulkDelete
     />
   );
 });
@@ -553,6 +556,7 @@ const InboxChatbotListPanel = memo(function InboxChatbotListPanel({
       onControlledLoadMore={loadMore}
       compact={compactList}
       style={style}
+      enableBulkDelete
     />
   );
 });
@@ -602,7 +606,8 @@ const TicketsManagerTabs = () => {
   /** Texto exibido no campo (debounce só atualiza `searchParam` para a API) */
   const [searchInputDraft, setSearchInputDraft] = useState("");
   const [tab, setTab] = useState("open");
-  const [tabOpen, setTabOpen] = useState("open");
+  const { inboxSubTab: tabOpen, setInboxSubTab: setTabOpen } =
+    useContext(TicketsContext);
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [bulkActionsModalOpen, setBulkActionsModalOpen] = useState(false);
   const [bulkSelectedConnection, setBulkSelectedConnection] = useState("");

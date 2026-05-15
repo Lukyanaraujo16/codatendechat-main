@@ -7,6 +7,9 @@ import { logger } from "../utils/logger";
 
 import CreateTicketService from "../services/TicketServices/CreateTicketService";
 import DeleteTicketService from "../services/TicketServices/DeleteTicketService";
+import BatchDeleteTicketsService from "../services/TicketServices/BatchDeleteTicketsService";
+import { userCanDeleteTicket } from "../helpers/canDeleteTicket";
+import { assertTicketAccess } from "../helpers/ticketAccess";
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUIDService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
@@ -182,9 +185,14 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
-  const { companyId, profile, supportMode } = req.user;
+  const { companyId, profile, supportMode, id } = req.user;
 
   const ticket = await ShowTicketService(ticketId, companyId);
+
+  await assertTicketAccess(
+    { id, profile, supportMode },
+    { userId: ticket.userId, queueId: ticket.queueId }
+  );
 
   const privileged =
     profile === "admin" || profile === "supervisor" || supportMode === true;
@@ -206,7 +214,17 @@ export const showFromUUID = async (
 
   const ticket: Ticket = await ShowTicketUUIDService(uuid);
 
-  const { profile, supportMode, companyId } = req.user;
+  const { profile, supportMode, companyId, id } = req.user;
+
+  if (ticket.companyId !== companyId) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  await assertTicketAccess(
+    { id, profile, supportMode },
+    { userId: ticket.userId, queueId: ticket.queueId }
+  );
+
   const privileged =
     profile === "admin" || profile === "supervisor" || supportMode === true;
   if (!privileged && ticket.companyId === companyId && (ticket as any).isGroup === true) {
@@ -259,7 +277,13 @@ export const update = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
-  const { companyId, id} = req.user;
+  const { companyId, id, profile, supportMode } = req.user;
+
+  const existing = await ShowTicketService(ticketId, companyId);
+  await assertTicketAccess(
+    { id, profile, supportMode },
+    { userId: existing.userId, queueId: existing.queueId }
+  );
 
   const { ticket } = await UpdateTicketService({
     ticketData,
@@ -277,7 +301,11 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { ticketId } = req.params;
-  const { companyId, id: userId } = req.user;
+  const { companyId, id: userId, profile, supportMode } = req.user;
+
+  if (!userCanDeleteTicket({ profile, supportMode })) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
 
   const ticket = await DeleteTicketService(
     ticketId,
@@ -296,6 +324,47 @@ export const remove = async (
   });
 
   return res.status(200).json({ message: "ticket deleted" });
+};
+
+export const removeBatch = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { companyId, id: userId, profile, supportMode } = req.user;
+  const { ticketIds } = req.body as { ticketIds?: unknown };
+
+  if (!userCanDeleteTicket({ profile, supportMode })) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+    return res.status(400).json({ error: "ticketIds must be a non-empty array" });
+  }
+
+  const ids = ticketIds.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0);
+  if (ids.length === 0) {
+    return res.status(400).json({ error: "ticketIds must contain valid numeric ids" });
+  }
+
+  const { deleted, result } = await BatchDeleteTicketsService(
+    ids,
+    companyId,
+    userId != null ? Number(userId) : null
+  );
+
+  const io = getIO();
+  for (const item of deleted) {
+    toCompanyTicketDeleteAudience(io, companyId, {
+      id: item.id,
+      status: item.status,
+      queueId: item.queueId
+    }).emit(`company-${companyId}-ticket`, {
+      action: "delete",
+      ticketId: item.id
+    });
+  }
+
+  return res.status(200).json(result);
 };
 
 export const listWithoutConnection = async (req: Request, res: Response): Promise<Response> => {

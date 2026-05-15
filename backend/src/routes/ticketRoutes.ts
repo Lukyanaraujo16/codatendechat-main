@@ -40,6 +40,8 @@ ticketRoutes.put("/tickets/:ticketId/reassign-whatsapp", TicketController.reassi
 
 ticketRoutes.put("/tickets/:ticketId", TicketController.update);
 
+ticketRoutes.delete("/tickets/batch", TicketController.removeBatch);
+
 ticketRoutes.delete("/tickets/:ticketId", TicketController.remove);
 
 export default ticketRoutes;

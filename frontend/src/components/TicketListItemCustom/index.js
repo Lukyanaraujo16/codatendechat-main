@@ -34,13 +34,20 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 import MarkdownWrapper from "../MarkdownWrapper";
 import AndroidIcon from "@material-ui/icons/Android";
 import VisibilityIcon from "@material-ui/icons/Visibility";
+import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
+import Checkbox from "@material-ui/core/Checkbox";
+import IconButton from "@material-ui/core/IconButton";
 import TicketMessagesDialog from "../TicketMessagesDialog";
+import ConfirmationModal from "../ConfirmationModal";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TicketsSetContext } from "../../context/Tickets/TicketsContext";
 import toastError from "../../errors/toastError";
 import { v4 as uuidv4 } from "uuid";
+import { useAcceptTicket } from "../../hooks/useAcceptTicket";
 
 import ContactTag from "../ContactTag";
+import { canDeleteTickets } from "../../utils/canDeleteTickets";
+import { toast } from "react-toastify";
 
 const MAX_TAGS_VISIBLE = 3;
 
@@ -112,8 +119,15 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: theme.spacing(0.25),
     marginRight: theme.spacing(0.25),
   },
-  pendingTicket: {
-    cursor: "default",
+  bulkCheckbox: {
+    padding: 4,
+    marginRight: theme.spacing(0.5),
+    flexShrink: 0,
+  },
+  listDeleteBtn: {
+    padding: 4,
+    flexShrink: 0,
+    color: theme.palette.error.main,
   },
   queueBar: {
     flex: "none",
@@ -297,7 +311,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => {
+const TicketListItemCustom = ({
+  ticket,
+  compact = false,
+  selected = false,
+  bulkSelectMode = false,
+  bulkSelected = false,
+  onBulkToggle,
+}) => {
   const classes = useStyles();
   const theme = useTheme();
   const history = useHistory();
@@ -306,10 +327,14 @@ const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => 
   const [tag, setTag] = useState([]);
 
   const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const isMounted = useRef(true);
   const setCurrentTicket = useContext(TicketsSetContext);
   const { user } = useContext(AuthContext);
   const { profile } = user;
+  const mayDelete = canDeleteTickets(user);
+  const { completeAcceptTicket } = useAcceptTicket();
 
   useEffect(() => {
     if (ticket.userId && ticket.user) {
@@ -365,51 +390,15 @@ const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => 
     history.push(`/tickets/${ticket.uuid}`);
   };
 
-  const handleAcepptTicket = async (id) => {
+  const handleAcepptTicket = async () => {
     setLoading(true);
     try {
-      await api.put(`/tickets/${id}`, {
-        status: "open",
-        userId: user?.id,
-      });
-
-      let settingIndex = [];
-      try {
-        const { data } = await api.get("/settings/");
-        settingIndex = Array.isArray(data)
-          ? data.filter((s) => s.key === "sendGreetingAccepted")
-          : [];
-      } catch (err) {
-        toastError(err);
-      }
-
-      if (settingIndex[0]?.value === "enabled" && !ticket.isGroup) {
-        handleSendMessage(ticket.id);
-      }
+      await completeAcceptTicket(ticket);
     } catch (err) {
-      setLoading(false);
-
       toastError(err);
     }
     if (isMounted.current) {
       setLoading(false);
-    }
-
-    history.push(`/tickets/${ticket.uuid}`);
-  };
-
-  const handleSendMessage = async (id) => {
-    const msg = `{{ms}} *{{name}}*, meu nome é *${user?.name}* e agora vou prosseguir com seu atendimento!`;
-    const message = {
-      read: 1,
-      fromMe: true,
-      mediaUrl: "",
-      body: `*Mensagem Automática:*\n${msg.trim()}`,
-    };
-    try {
-      await api.post(`/messages/${id}`, message);
-    } catch (err) {
-      toastError(err);
     }
   };
 
@@ -421,6 +410,24 @@ const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => 
     },
     [setCurrentTicket]
   );
+
+  const handleDeleteTicket = async () => {
+    setDeleteLoading(true);
+    try {
+      await api.delete(`/tickets/${ticket.id}`);
+      toast.success(i18n.t("ticketOptionsMenu.confirmationModal.deleteSuccess"));
+      if (selected) {
+        history.push("/tickets");
+      }
+    } catch (err) {
+      toastError(err);
+    } finally {
+      if (isMounted.current) {
+        setDeleteLoading(false);
+        setDeleteConfirmOpen(false);
+      }
+    }
+  };
 
   const queueColor = ticket.queue?.color || theme.palette.grey[500];
   const updatedAt = ticket.updatedAt ? parseISO(ticket.updatedAt) : null;
@@ -489,22 +496,40 @@ const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => 
         handleClose={() => setOpenTicketMessageDialog(false)}
         ticketId={ticket.id}
       />
+      <ConfirmationModal
+        title={i18n.t("ticket.delete.confirmTitle")}
+        open={deleteConfirmOpen}
+        onClose={setDeleteConfirmOpen}
+        onConfirm={handleDeleteTicket}
+      >
+        {i18n.t("ticket.delete.confirmMessage")}
+      </ConfirmationModal>
       <ListItem
         dense
         button
         data-ticket-list-item
         tabIndex={-1}
         aria-label={ticket.contact?.name || i18n.t("ticketsListItem.ariaTicketRow")}
-        onClick={(e) => {
-          if (ticket.status === "pending") return;
-          handleSelectTicket(ticket);
-        }}
-        selected={selected}
+        onClick={() => handleSelectTicket(ticket)}
+        selected={selected || bulkSelected}
         className={clsx(classes.listItemRoot, {
-          [classes.pendingTicket]: ticket.status === "pending",
           [classes.listItemCompact]: compact,
         })}
       >
+        {bulkSelectMode ? (
+          <Checkbox
+            className={classes.bulkCheckbox}
+            color="primary"
+            checked={bulkSelected}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              if (typeof onBulkToggle === "function") {
+                onBulkToggle(ticket.id);
+              }
+            }}
+          />
+        ) : null}
         <Tooltip
           arrow
           placement="right"
@@ -649,10 +674,12 @@ const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => 
                   loading={loading}
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleAcepptTicket(ticket.id);
+                    handleAcepptTicket();
                   }}
                 >
-                  {i18n.t("ticketsList.buttons.accept")}
+                  {loading
+                    ? i18n.t("ticketsList.buttons.accepting")
+                    : i18n.t("ticketsList.buttons.accept")}
                 </ButtonWithSpinner>
               )}
               {ticket.status !== "closed" && (
@@ -683,6 +710,22 @@ const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => 
                   {i18n.t("ticketsList.buttons.reopen")}
                 </ButtonWithSpinner>
               )}
+              {mayDelete && !bulkSelectMode ? (
+                <Tooltip title={i18n.t("ticketOptionsMenu.delete")}>
+                  <IconButton
+                    size="small"
+                    className={classes.listDeleteBtn}
+                    disabled={loading || deleteLoading}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteConfirmOpen(true);
+                    }}
+                    aria-label={i18n.t("ticketOptionsMenu.delete")}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
             </Box>
           )}
         </Box>
@@ -694,6 +737,8 @@ const TicketListItemCustom = ({ ticket, compact = false, selected = false }) => 
 function ticketListItemPropsAreEqual(prev, next) {
   if (prev.compact !== next.compact) return false;
   if (prev.selected !== next.selected) return false;
+  if (prev.bulkSelectMode !== next.bulkSelectMode) return false;
+  if (prev.bulkSelected !== next.bulkSelected) return false;
   return prev.ticket === next.ticket;
 }
 

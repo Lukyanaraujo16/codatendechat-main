@@ -20,6 +20,7 @@ import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessag
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
+import { assertTicketAccess } from "../helpers/ticketAccess";
 import { incrementCompanyStorageUsage } from "../services/CompanyService/adjustCompanyStorageUsage";
 import CheckContactNumber from "../services/WbotServices/CheckNumber";
 import CheckIsValidContact from "../services/WbotServices/CheckIsValidContact";
@@ -42,10 +43,16 @@ type MessageData = {
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
   const { pageNumber } = req.query as IndexQuery;
-  const { companyId, profile } = req.user;
+  const { companyId, profile, supportMode, id } = req.user;
   const queues: number[] = [];
 
-  if (profile !== "admin") {
+  const ticketForAccess = await ShowTicketService(ticketId, companyId);
+  await assertTicketAccess(
+    { id, profile, supportMode },
+    { userId: ticketForAccess.userId, queueId: ticketForAccess.queueId }
+  );
+
+  if (profile !== "admin" && supportMode !== true) {
     const user = await User.findByPk(req.user.id, {
       include: [{ model: Queue, as: "queues" }]
     });
@@ -58,7 +65,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     pageNumber,
     ticketId,
     companyId,
-    queues
+    queues,
+    actorUserId: id
   });
 
   await SetTicketMessagesAsRead(ticket, HUMAN_PANEL_LIST_MESSAGES);
@@ -71,9 +79,14 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const { body, quotedMsg }: MessageData = req.body;
   const asSticker = req.body.asSticker === "true" || req.body.asSticker === "1";
   const medias = req.files as Express.Multer.File[];
-  const { companyId } = req.user;
+  const { companyId, profile, supportMode, id } = req.user;
 
   const ticket = await ShowTicketService(ticketId, companyId);
+
+  await assertTicketAccess(
+    { id, profile, supportMode },
+    { userId: ticket.userId, queueId: ticket.queueId }
+  );
 
   /** Mesma regra do GET da conversa: atendente humano no painel ao enviar resposta. */
   await SetTicketMessagesAsRead(ticket, HUMAN_PANEL_SEND_MESSAGE);

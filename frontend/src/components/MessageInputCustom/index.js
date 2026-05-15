@@ -48,6 +48,15 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     borderTop: "1px solid rgba(0, 0, 0, 0.12)",
   },
+  pendingHint: {
+    width: "100%",
+    padding: theme.spacing(1, 2),
+    textAlign: "center",
+    fontSize: "0.8125rem",
+    color: theme.palette.text.secondary,
+    backgroundColor: theme.palette.action.hover,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
 
   newMessageBox: {
     backgroundColor: theme.palette.newmessagebox, //DARK MODE PLW DESIGN//
@@ -817,6 +826,11 @@ const MessageInputCustom = (props) => {
   else {
     return (
       <Paper square elevation={0} className={classes.mainWrapper}>
+        {ticketStatus === "pending" && (
+          <div className={classes.pendingHint} data-ticket-pending-input-hint>
+            {i18n.t("ticket.pendingPreview.inputHint")}
+          </div>
+        )}
         {replyingMessage && renderReplyingMessage(replyingMessage)}
         <div className={classes.newMessageBox}>
           <EmojiOptions

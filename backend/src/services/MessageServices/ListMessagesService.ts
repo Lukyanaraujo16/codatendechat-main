@@ -11,6 +11,8 @@ interface Request {
   companyId: number;
   pageNumber?: string;
   queues?: number[];
+  /** Quando o ticket está atribuído a este utilizador, não filtra mensagens por fila. */
+  actorUserId?: string | number;
 }
 
 interface Response {
@@ -24,7 +26,8 @@ const ListMessagesService = async ({
   pageNumber = "1",
   ticketId,
   companyId,
-  queues = []
+  queues = [],
+  actorUserId
 }: Request): Promise<Response> => {
   const ticket = await ShowTicketService(ticketId, companyId);
 
@@ -43,7 +46,12 @@ const ListMessagesService = async ({
     }
   };
 
-  if (queues.length > 0) {
+  const isDirectAssignee =
+    actorUserId != null &&
+    ticket.userId != null &&
+    Number(ticket.userId) === Number(actorUserId);
+
+  if (queues.length > 0 && !isDirectAssignee) {
     options.where["queueId"] = {
       [Op.or]: {
         [Op.in]: queues,

@@ -12,7 +12,13 @@ import ScheduleModal from "../ScheduleModal";
  * Encapsula modais de agendamento, transferência e exclusão de ticket.
  * Usa render props: children({ openSchedule, openTransfer, openDelete })
  */
-const TicketActionModals = ({ ticket, children }) => {
+const TicketActionModals = ({
+  ticket,
+  children,
+  deleteTitle,
+  deleteMessage,
+  onDeleted,
+}) => {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
   const isMounted = useRef(true);
@@ -35,6 +41,9 @@ const TicketActionModals = ({ ticket, children }) => {
       toast.success(
         i18n.t("ticketOptionsMenu.confirmationModal.deleteSuccess")
       );
+      if (typeof onDeleted === "function") {
+        onDeleted();
+      }
     } catch (err) {
       toastError(err);
     }
@@ -71,16 +80,19 @@ const TicketActionModals = ({ ticket, children }) => {
         ? children({ openSchedule, openTransfer, openDelete })
         : children}
       <ConfirmationModal
-        title={`${i18n.t("ticketOptionsMenu.confirmationModal.title")}${
-          ticket.id
-        } ${i18n.t("ticketOptionsMenu.confirmationModal.titleFrom")} ${
-          ticket.contact.name
-        }?`}
+        title={
+          deleteTitle ||
+          `${i18n.t("ticketOptionsMenu.confirmationModal.title")}${
+            ticket.id
+          } ${i18n.t("ticketOptionsMenu.confirmationModal.titleFrom")} ${
+            ticket.contact?.name || ""
+          }?`
+        }
         open={confirmationOpen}
         onClose={setConfirmationOpen}
         onConfirm={handleDeleteTicket}
       >
-        {i18n.t("ticketOptionsMenu.confirmationModal.message")}
+        {deleteMessage || i18n.t("ticketOptionsMenu.confirmationModal.message")}
       </ConfirmationModal>
       <TransferTicketModalCustom
         modalOpen={transferTicketModalOpen}

@@ -948,7 +948,7 @@ const messages = {
 					storageLimitGbShort: "Stor. (GB)",
 					storageLimitGbHelper: "Empty = unlimited. E.g. 10 or 10.5",
 					storageLimitInvalid: "Invalid storage limit.",
-					internalChat: "Internal Chat",
+					internalChat: "Internal chat",
 					internalChatHelp:
 						"Internal messaging between users of the same company (outside WhatsApp).",
 					modulesSectionTitle: "Plan modules",
@@ -1029,7 +1029,7 @@ const messages = {
 							description: "Schedule messages for a specific date and time.",
 						},
 						internal_chat: {
-							label: "Internal communication",
+							label: "Internal chat",
 							description: "Team chat outside WhatsApp.",
 						},
 					},
@@ -2015,6 +2015,25 @@ const messages = {
 					disableForContact: "Disable chatbot for this contact",
 					enableForContact: "Enable chatbot for this contact",
 				},
+				pendingPreview: {
+					banner:
+						"This conversation is waiting to be accepted. You can review the history, close or delete it. Accept to reply.",
+					inputHint: "This conversation is waiting. Accept to reply.",
+				},
+				delete: {
+					confirmTitle: "Delete conversation",
+					confirmMessage:
+						"Delete this conversation? This action cannot be undone.",
+					bulkSelected: "{{count}} conversations selected",
+					bulkDeleteButton: "Delete selected",
+					bulkConfirmTitle: "Delete conversations",
+					bulkConfirmMessage:
+						"Are you sure you want to delete {{count}} conversations? This action cannot be undone.",
+					bulkSuccess: "{{deleted}} conversation(s) deleted.",
+					bulkPartial:
+						"{{deleted}} deleted, {{failed}} could not be deleted.",
+					selectAll: "Select all in this tab",
+				},
 			},
 			ticketsList: {
 				pendingHeader: "Waiting",
@@ -2033,6 +2052,7 @@ const messages = {
 				compactListOff: "Comfortable list",
 				buttons: {
 					accept: "Accept",
+					accepting: "Accepting...",
 					closed: "Finish",
 					reopen: "Reopen",
 				},
@@ -2086,7 +2106,7 @@ const messages = {
 				sections: {
 					dashboard: "Dashboard",
 					atendimento: "Customer service",
-					chatInterno: "Internal communication",
+					chatInterno: "Internal chat",
 					equipe: "Team",
 					automacao: "Support automation",
 					campanhas: "Campaigns",
@@ -2124,7 +2144,7 @@ const messages = {
 					groups: "Groups",
 					evaluation: "Evaluation",
 					annoucements: "Announcements",
-					chats: "Internal communication",
+					chats: "Internal chat",
 					finance: "Financial",
 					files: "File library",
 					prompts: "OpenAI",

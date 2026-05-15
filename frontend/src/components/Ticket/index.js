@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import clsx from "clsx";
 
 import { Paper, makeStyles } from "@material-ui/core";
+import Alert from "@material-ui/lab/Alert";
 
 import ErrorBoundary from "../ErrorBoundary";
 import ContactDrawer from "../ContactDrawer";
@@ -22,6 +23,7 @@ import { TagsContainer } from "../TagsContainer";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 import QuickMessageChatModal from "../QuickMessageChatModal";
+import { canAccessTicket } from "../../utils/canAccessTicket";
 
 const drawerWidth = 320;
 
@@ -111,13 +113,9 @@ const Ticket = () => {
       const fetchTicket = async () => {
         try {
           const { data } = await api.get("/tickets/u/" + ticketId);
-          const { queueId } = data;
           const u = userRef.current;
-          const queues = u?.queues || [];
-          const { profile } = u || {};
 
-          const queueAllowed = queues.find((q) => q.id === queueId);
-          if (queueAllowed === undefined && profile !== "admin") {
+          if (!canAccessTicket(u, data)) {
             toast.error(i18n.t("tickets.toasts.unauthorized"));
             history.push("/tickets");
             return;
@@ -279,6 +277,11 @@ const Ticket = () => {
             onCrmDealSaved={() => setCrmPanelRefreshKey((n) => n + 1)}
           />
         </TicketHeader>
+        {ticket?.status === "pending" && (
+          <Alert severity="info" data-ticket-pending-banner>
+            {i18n.t("ticket.pendingPreview.banner")}
+          </Alert>
+        )}
         {ticket?.id && (
           <ErrorBoundary>
             <div className={classes.chatBody}>

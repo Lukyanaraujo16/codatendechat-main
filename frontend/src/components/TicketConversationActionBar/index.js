@@ -105,6 +105,7 @@ const TicketConversationActionBar = ({
   onQuickRepliesClick,
   ticketId,
   extraIconActions,
+  showDelete,
 }) => {
   const classes = useStyles();
   const theme = useTheme();
@@ -234,24 +235,39 @@ const TicketConversationActionBar = ({
       </div>
 
       {/* Bloco 3: destrutivo */}
-      <Can
-        role={userProfile}
-        perform="ticket-options:deleteTicket"
-        yes={() => (
-          <div className={classes.destructive}>
-            <Tooltip title={i18n.t("ticketOptionsMenu.delete")}>
-              <IconButton
-                size="small"
-                onClick={onDeleteClick}
-                aria-label={i18n.t("ticketOptionsMenu.delete")}
-                className={classes.deleteIcon}
-              >
-                <DeleteOutlineIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </div>
-        )}
-      />
+      {showDelete === true ? (
+        <div className={classes.destructive}>
+          <Tooltip title={i18n.t("ticketOptionsMenu.delete")}>
+            <IconButton
+              size="small"
+              onClick={onDeleteClick}
+              aria-label={i18n.t("ticketOptionsMenu.delete")}
+              className={classes.deleteIcon}
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </div>
+      ) : showDelete === false ? null : (
+        <Can
+          role={userProfile}
+          perform="ticket-options:deleteTicket"
+          yes={() => (
+            <div className={classes.destructive}>
+              <Tooltip title={i18n.t("ticketOptionsMenu.delete")}>
+                <IconButton
+                  size="small"
+                  onClick={onDeleteClick}
+                  aria-label={i18n.t("ticketOptionsMenu.delete")}
+                  className={classes.deleteIcon}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </div>
+          )}
+        />
+      )}
     </div>
   );
 };

@@ -17,6 +17,10 @@ const rules = {
 			"connections-page:editOrDeleteConnection"
 		],
 	},
+
+	supervisor: {
+		static: ["ticket-options:deleteTicket"],
+	},
 };
 
 export default rules;

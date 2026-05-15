@@ -36,7 +36,7 @@ export const FEATURES = {
         description: "Agenda envios de mensagens em data e hora definidas.",
       },
       internal_chat: {
-        label: "Comunicação interna",
+        label: "Chat interno",
         description: "Chat entre membros da equipe, fora do WhatsApp.",
       },
     },

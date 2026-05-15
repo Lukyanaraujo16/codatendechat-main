@@ -8,10 +8,11 @@ const TicketsSetContext = createContext();
 
 const TicketsContextProvider = ({ children }) => {
 	const [currentTicket, setCurrentTicket] = useState({ id: null, code: null });
+	const [inboxSubTab, setInboxSubTab] = useState("open");
     const history = useHistory();
 
     useEffect(() => {
-        if (currentTicket.id !== null) {
+        if (currentTicket.id !== null && currentTicket.uuid) {
             history.push(`/tickets/${currentTicket.uuid}`);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -20,7 +21,12 @@ const TicketsContextProvider = ({ children }) => {
 	return (
 		<TicketsSetContext.Provider value={setCurrentTicket}>
 			<TicketsContext.Provider
-				value={{ currentTicket, setCurrentTicket }}
+				value={{
+					currentTicket,
+					setCurrentTicket,
+					inboxSubTab,
+					setInboxSubTab,
+				}}
 			>
 				{children}
 			</TicketsContext.Provider>

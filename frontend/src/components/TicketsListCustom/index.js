@@ -5,7 +5,15 @@ import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
 import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
+import Checkbox from "@material-ui/core/Checkbox";
+import Button from "@material-ui/core/Button";
+import Typography from "@material-ui/core/Typography";
+import { toast } from "react-toastify";
 import { AppEmptyState } from "../../ui";
+import ConfirmationModal from "../ConfirmationModal";
+import toastError from "../../errors/toastError";
+import api from "../../services/api";
+import { canDeleteTickets } from "../../utils/canDeleteTickets";
 
 /**
  * Lista de tickets usada na tela de Atendimentos (fluxo atual).
@@ -59,6 +67,21 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.secondary,
     marginLeft: theme.spacing(1),
     fontSize: "0.875rem",
+  },
+
+  bulkToolbar: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    padding: theme.spacing(0.75, 1.5),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
+    flexShrink: 0,
+  },
+  bulkToolbarLabel: {
+    flex: 1,
+    fontSize: "0.8125rem",
+    color: theme.palette.text.secondary,
   },
 }));
 
@@ -166,10 +189,14 @@ const TicketsListCustom = (props) => {
     controlledLoading = false,
     controlledHasMore = false,
     onControlledLoadMore,
+    enableBulkDelete = false,
   } = props;
   const classes = useStyles();
   const { ticketId: routeTicketId } = useParams();
   const [pageNumber, setPageNumber] = useState(1);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [ticketsList, dispatch] = useReducer(reducer, []);
   const { user } = useContext(AuthContext);
   const { profile, queues } = user || {};
@@ -453,8 +480,98 @@ const TicketsListCustom = (props) => {
       ticket.uuid === routeTicketId || String(ticket.id) === String(routeTicketId);
   }, [routeTicketId]);
 
+  const bulkEnabled = enableBulkDelete && canDeleteTickets(user);
+  const selectedCount = selectedIds.size;
+  const allVisibleSelected =
+    displayTickets.length > 0 && selectedCount === displayTickets.length;
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [status, chatbotOnly, groupsOnly, searchParam, selectedQueueIds]);
+
+  const toggleBulkSelect = useCallback((ticketId) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(ticketId)) {
+        next.delete(ticketId);
+      } else {
+        next.add(ticketId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(displayTickets.map((t) => t.id)));
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const { data } = await api.delete("/tickets/batch", {
+        data: { ticketIds: ids },
+      });
+      const deleted = data?.deletedCount ?? 0;
+      const failed = data?.failedCount ?? 0;
+      if (failed > 0) {
+        toast.info(
+          i18n.t("ticket.delete.bulkPartial", { deleted, failed })
+        );
+      } else {
+        toast.success(i18n.t("ticket.delete.bulkSuccess", { deleted }));
+      }
+      setSelectedIds(new Set());
+      setBulkConfirmOpen(false);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   return (
     <Paper className={classes.ticketsListWrapper} style={style} data-tickets-list-panel>
+      {bulkEnabled ? (
+        <Box className={classes.bulkToolbar} data-tickets-bulk-toolbar>
+          <Checkbox
+            color="primary"
+            checked={allVisibleSelected}
+            indeterminate={selectedCount > 0 && !allVisibleSelected}
+            onChange={handleSelectAllVisible}
+            inputProps={{ "aria-label": i18n.t("ticket.delete.selectAll") }}
+          />
+          <Typography className={classes.bulkToolbarLabel}>
+            {selectedCount > 0
+              ? i18n.t("ticket.delete.bulkSelected", { count: selectedCount })
+              : i18n.t("ticket.delete.selectAll")}
+          </Typography>
+          {selectedCount > 0 ? (
+            <Button
+              size="small"
+              color="secondary"
+              variant="contained"
+              disabled={bulkDeleting}
+              onClick={() => setBulkConfirmOpen(true)}
+            >
+              {i18n.t("ticket.delete.bulkDeleteButton")}
+            </Button>
+          ) : null}
+        </Box>
+      ) : null}
+      <ConfirmationModal
+        title={i18n.t("ticket.delete.bulkConfirmTitle")}
+        open={bulkConfirmOpen}
+        onClose={setBulkConfirmOpen}
+        onConfirm={handleBulkDelete}
+      >
+        {i18n.t("ticket.delete.bulkConfirmMessage", { count: selectedCount })}
+      </ConfirmationModal>
       <Paper
         square
         name="closed"
@@ -477,6 +594,9 @@ const TicketsListCustom = (props) => {
                   key={ticket.id}
                   compact={compact}
                   selected={isRowSelected(ticket)}
+                  bulkSelectMode={bulkEnabled}
+                  bulkSelected={selectedIds.has(ticket.id)}
+                  onBulkToggle={toggleBulkSelect}
                 />
               ))}
             </>

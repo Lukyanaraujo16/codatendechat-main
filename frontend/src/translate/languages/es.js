@@ -951,7 +951,7 @@ const messages = {
           storageLimitGbShort: "Almac. (GB)",
           storageLimitGbHelper: "Vacío = sin límite. Ej.: 10 o 10,5",
           storageLimitInvalid: "Límite de almacenamiento inválido.",
-          internalChat: "Chat Interno",
+          internalChat: "Chat interno",
           internalChatHelp:
             "Mensajería interna entre usuarios de la misma empresa (fuera de WhatsApp).",
           modulesSectionTitle: "Módulos del plan",
@@ -1032,7 +1032,7 @@ const messages = {
               description: "Programa envíos de mensajes en fecha y hora definidas.",
             },
             internal_chat: {
-              label: "Comunicación interna",
+              label: "Chat interno",
               description: "Chat entre miembros del equipo, fuera de WhatsApp.",
             },
           },
@@ -2017,6 +2017,26 @@ const messages = {
           disableForContact: "Desactivar chatbot para este contacto",
           enableForContact: "Activar chatbot para este contacto",
         },
+        pendingPreview: {
+          banner:
+            "Atención en espera de aceptación. Puede revisar el historial, finalizar o eliminar. Para responder, acepte la atención.",
+          inputHint:
+            "Esta atención está en espera. Acepte para responder.",
+        },
+        delete: {
+          confirmTitle: "Eliminar conversación",
+          confirmMessage:
+            "¿Desea eliminar esta conversación? Esta acción no se puede deshacer.",
+          bulkSelected: "{{count}} conversaciones seleccionadas",
+          bulkDeleteButton: "Eliminar seleccionadas",
+          bulkConfirmTitle: "Eliminar conversaciones",
+          bulkConfirmMessage:
+            "¿Está seguro de que desea eliminar {{count}} conversaciones? Esta acción no se puede deshacer.",
+          bulkSuccess: "{{deleted}} conversación(es) eliminada(s).",
+          bulkPartial:
+            "{{deleted}} eliminada(s), {{failed}} no se pudieron eliminar.",
+          selectAll: "Seleccionar todos de esta pestaña",
+        },
       },
       ticketsList: {
         pendingHeader: "En espera",
@@ -2036,6 +2056,7 @@ const messages = {
         compactListOff: "Lista cómoda",
         buttons: {
           accept: "Aceptar",
+          accepting: "Aceptando...",
           closed: "Finalizar",
           reopen: "Reabrir",
         },
@@ -2090,7 +2111,7 @@ const messages = {
         sections: {
           dashboard: "Dashboard",
           atendimento: "Atención",
-          chatInterno: "Comunicación interna",
+          chatInterno: "Chat interno",
           equipe: "Equipo",
           automacao: "Automatización de atención",
           campanhas: "Campañas",
@@ -2128,7 +2149,7 @@ const messages = {
           groups: "Grupos",
           evaluation: "Evaluación",
           annoucements: "Informativos",
-          chats: "Comunicación interna",
+          chats: "Chat interno",
           finance: "Financiero",
           files: "Biblioteca de archivos",
           prompts: "OpenAI",

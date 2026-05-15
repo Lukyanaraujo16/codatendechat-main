@@ -6,6 +6,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import { Replay } from "@material-ui/icons";
 import Tooltip from "@material-ui/core/Tooltip";
 import IconButton from "@material-ui/core/IconButton";
+import Button from "@material-ui/core/Button";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 
@@ -19,6 +20,8 @@ import { TicketsSetContext } from "../../context/Tickets/TicketsContext";
 import TicketConversationActionBar from "../TicketConversationActionBar";
 import usePlanFlags from "../../hooks/usePlanFlags";
 import TicketCrmDealButton from "../Crm/TicketCrmDealButton";
+import { canDeleteTickets } from "../../utils/canDeleteTickets";
+import { useAcceptTicket } from "../../hooks/useAcceptTicket";
 
 const useStyles = makeStyles((theme) => ({
   actionButtons: {
@@ -54,6 +57,19 @@ const TicketActionButtonsCustom = ({
   const setCurrentTicket = useContext(TicketsSetContext);
   const planFlags = usePlanFlags();
   const fx = planFlags.effectiveFeatures || {};
+  const mayDelete = canDeleteTickets(user);
+  const { completeAcceptTicket } = useAcceptTicket();
+
+  const handleAcceptTicket = async () => {
+    setLoading(true);
+    try {
+      await completeAcceptTicket(ticket);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUpdateTicketStatus = async (e, status, userId) => {
     setLoading(true);
@@ -68,7 +84,12 @@ const TicketActionButtonsCustom = ({
 
       setLoading(false);
       if (status === "open") {
-        setCurrentTicket({ ...ticket, code: "#open" });
+        setCurrentTicket({
+          ...ticket,
+          status: "open",
+          userId: userId || user?.id,
+          code: "#reopen",
+        });
       } else {
         setCurrentTicket({ id: null, code: null });
         history.push("/tickets");
@@ -122,6 +143,7 @@ const TicketActionButtonsCustom = ({
             <TicketConversationActionBar
               loading={loading}
               userProfile={user?.profile}
+              showDelete={mayDelete}
               ticketId={ticket.id}
               onResolve={(e) =>
                 handleUpdateTicketStatus(e, "closed", user?.id)
@@ -176,17 +198,50 @@ const TicketActionButtonsCustom = ({
         </TicketActionModals>
       )}
       {ticket.status === "pending" && (
-        <div className={classes.legacyCluster}>
-          <ButtonWithSpinner
-            loading={loading}
-            size="small"
-            variant="contained"
-            color="primary"
-            onClick={(e) => handleUpdateTicketStatus(e, "open", user?.id)}
-          >
-            {i18n.t("messagesList.header.buttons.accept")}
-          </ButtonWithSpinner>
-        </div>
+        <TicketActionModals
+          ticket={ticket}
+          deleteTitle={i18n.t("ticket.delete.confirmTitle")}
+          deleteMessage={i18n.t("ticket.delete.confirmMessage")}
+          onDeleted={() => {
+            setCurrentTicket({ id: null, code: null });
+            history.push("/tickets");
+          }}
+        >
+          {({ openDelete }) => (
+            <div className={classes.legacyCluster}>
+              <ButtonWithSpinner
+                loading={loading}
+                size="small"
+                variant="contained"
+                color="primary"
+                onClick={handleAcceptTicket}
+              >
+                {loading
+                  ? i18n.t("ticketsList.buttons.accepting")
+                  : i18n.t("messagesList.header.buttons.accept")}
+              </ButtonWithSpinner>
+              <ButtonWithSpinner
+                loading={loading}
+                size="small"
+                variant="outlined"
+                onClick={(e) => handleUpdateTicketStatus(e, "closed", user?.id)}
+              >
+                {i18n.t("messagesList.header.buttons.resolve")}
+              </ButtonWithSpinner>
+              {mayDelete ? (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  disabled={loading}
+                  onClick={openDelete}
+                >
+                  {i18n.t("ticketOptionsMenu.buttons.delete")}
+                </Button>
+              ) : null}
+            </div>
+          )}
+        </TicketActionModals>
       )}
     </div>
   );

@@ -1018,7 +1018,7 @@ const messages = {
           storageLimitGbShort: "Armaz. (GB)",
           storageLimitGbHelper: "Vazio = sem limite. Ex.: 10 ou 10,5",
           storageLimitInvalid: "Limite de armazenamento inválido.",
-          internalChat: "Chat Interno",
+          internalChat: "Chat interno",
           internalChatHelp:
             "Mensagens internas entre utilizadores da mesma empresa (fora do WhatsApp).",
           modulesSectionTitle: "Módulos do plano",
@@ -1099,7 +1099,7 @@ const messages = {
               description: "Agenda envios de mensagens em data e hora definidas.",
             },
             internal_chat: {
-              label: "Comunicação interna",
+              label: "Chat interno",
               description: "Chat entre membros da equipe, fora do WhatsApp.",
             },
           },
@@ -2100,6 +2100,26 @@ const messages = {
           disableForContact: "Desativar chatbot para este contato",
           enableForContact: "Ativar chatbot para este contato",
         },
+        pendingPreview: {
+          banner:
+            "Atendimento aguardando aceite. Você pode analisar o histórico, finalizar ou excluir. Para responder, aceite o atendimento.",
+          inputHint:
+            "Este atendimento está aguardando. Aceite para responder.",
+        },
+        delete: {
+          confirmTitle: "Excluir conversa",
+          confirmMessage:
+            "Deseja excluir esta conversa? Essa ação não poderá ser desfeita.",
+          bulkSelected: "{{count}} conversas selecionadas",
+          bulkDeleteButton: "Excluir selecionadas",
+          bulkConfirmTitle: "Excluir conversas",
+          bulkConfirmMessage:
+            "Tem certeza que deseja excluir {{count}} conversas? Essa ação não poderá ser desfeita.",
+          bulkSuccess: "{{deleted}} conversa(s) excluída(s).",
+          bulkPartial:
+            "{{deleted}} excluída(s), {{failed}} não puderam ser excluídas.",
+          selectAll: "Selecionar todos desta aba",
+        },
       },
       ticketsList: {
         pendingHeader: "Aguardando",
@@ -2119,6 +2139,7 @@ const messages = {
         compactListOff: "Lista confortável",
         buttons: {
           accept: "Aceitar",
+          accepting: "Aceitando...",
           closed: "Finalizar",
           reopen: "Reabrir",
         },
@@ -2173,7 +2194,7 @@ const messages = {
         sections: {
           dashboard: "Dashboard",
           atendimento: "Atendimento",
-          chatInterno: "Comunicação interna",
+          chatInterno: "Chat interno",
           equipe: "Equipe",
           automacao: "Automação de atendimento",
           campanhas: "Campanhas",
@@ -2211,7 +2232,7 @@ const messages = {
           groups: "Grupos",
           evaluation: "Avaliação",
           annoucements: "Informativos",
-          chats: "Comunicação interna",
+          chats: "Chat interno",
           finance: "Financeiro",
           files: "Biblioteca de arquivos",
           prompts: "OpenAI",
