@@ -80,22 +80,25 @@ function formatWhatsAppListTime(date) {
 const MICRO_MS = 180;
 const MICRO_EASE = "ease";
 const CARD_MS = 220;
+const CARD_RADIUS = 14;
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === "dark";
   return {
   listItemRoot: {
     position: "relative",
-    alignItems: "flex-start",
+    alignItems: "stretch",
     padding: 14,
-    borderRadius: 14,
+    borderRadius: CARD_RADIUS,
     marginLeft: theme.spacing(0.75),
     marginRight: theme.spacing(0.75),
     marginBottom: 10,
     border: `1px solid ${theme.palette.divider}`,
-    borderLeft: "3px solid transparent",
     backgroundColor: theme.palette.background.paper,
-    boxShadow: isDark ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
+    boxShadow: isDark ? "none" : "0 2px 6px rgba(0,0,0,0.06)",
+    "&.MuiListItem-root": {
+      borderRadius: CARD_RADIUS,
+    },
     transition: `all ${CARD_MS}ms ${MICRO_EASE}`,
     cursor: "pointer",
     "@media (hover: hover)": {
@@ -146,8 +149,13 @@ const useStyles = makeStyles((theme) => {
         ? `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.2)}, ${alpha(theme.palette.background.paper, 0.95)})`
         : `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.12)}, ${theme.palette.background.paper})`,
     borderColor: alpha(theme.palette.success.main, isDark ? 0.45 : 0.35),
-    borderLeft: `3px solid ${theme.palette.success.main}`,
-    boxShadow: `0 0 0 2px ${alpha(theme.palette.success.main, 0.25)}`,
+    boxShadow: [
+      `inset 4px 0 0 0 ${theme.palette.success.main}`,
+      `inset 0 0 0 1px ${alpha(theme.palette.success.main, isDark ? 0.35 : 0.28)}`,
+      isDark ? "none" : "0 2px 8px rgba(0,0,0,0.08)",
+    ]
+      .filter(Boolean)
+      .join(", "),
   },
   listItemBusy: {
     opacity: 0.6,
@@ -163,22 +171,23 @@ const useStyles = makeStyles((theme) => {
   bulkCheckbox: {
     padding: 4,
     marginRight: theme.spacing(0.75),
-    marginTop: theme.spacing(0.5),
-    alignSelf: "flex-start",
+    alignSelf: "center",
     flexShrink: 0,
   },
   queueBar: {
     flex: "none",
-    width: 3,
-    minHeight: 52,
+    width: 4,
     alignSelf: "stretch",
-    borderRadius: 2,
+    flexShrink: 0,
+    borderRadius: 999,
     marginRight: theme.spacing(1.25),
-    marginTop: theme.spacing(0.5),
+    marginTop: 2,
+    marginBottom: 2,
+    minHeight: 0,
   },
   avatarWrap: {
-    marginTop: theme.spacing(0.25),
-    alignSelf: "flex-start",
+    alignSelf: "center",
+    flexShrink: 0,
   },
   avatar: {
     width: 42,
@@ -219,6 +228,9 @@ const useStyles = makeStyles((theme) => {
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(0.5),
+    alignSelf: "center",
+    paddingTop: 1,
+    paddingBottom: 1,
   },
   topRow: {
     display: "flex",

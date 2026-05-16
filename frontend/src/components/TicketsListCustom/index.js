@@ -599,7 +599,13 @@ const TicketsListCustom = (props) => {
         className={classes.ticketsList}
         onScroll={handleScroll}
       >
-        <List style={{ paddingTop: 0, height: "100%" }}>
+        <List
+          style={{
+            paddingTop: 0,
+            height: "100%",
+            overflow: "visible",
+          }}
+        >
           {displayTickets.length === 0 && !displayLoading ? (
             <Box className={classes.emptyStateWrap}>
               <AppEmptyState
