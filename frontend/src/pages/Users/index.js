@@ -292,7 +292,7 @@ const Users = () => {
 						InputProps={{
 							startAdornment: (
 								<InputAdornment position="start">
-									<SearchIcon style={{ color: "gray" }} />
+									<SearchIcon fontSize="small" color="inherit" />
 								</InputAdornment>
 							),
 						}}

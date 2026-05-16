@@ -16,8 +16,7 @@ import {
 import { ptBR } from "date-fns/locale";
 import clsx from "clsx";
 
-import { makeStyles, useTheme } from "@material-ui/core/styles";
-import { grey, blue, amber } from "@material-ui/core/colors";
+import { makeStyles, useTheme, alpha } from "@material-ui/core/styles";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
 import Typography from "@material-ui/core/Typography";
@@ -48,6 +47,7 @@ import { useAcceptTicket } from "../../hooks/useAcceptTicket";
 
 import ContactTag from "../ContactTag";
 import { canDeleteTickets } from "../../utils/canDeleteTickets";
+import { formatTicketLastMessagePreview } from "../../utils/formatTicketLastMessagePreview";
 import { toast } from "react-toastify";
 
 const MAX_TAGS_VISIBLE = 3;
@@ -77,41 +77,81 @@ function formatWhatsAppListTime(date) {
  * Ações rápidas extras por ícone na linha não foram adicionadas para não repetir Aceitar/Finalizar já na base do card;
  * o ponto natural seria ListItemSecondaryAction com IconButton size="small" + Tooltip só no hover.
  */
-const useStyles = makeStyles((theme) => ({
+const MICRO_MS = 180;
+const MICRO_EASE = "ease";
+const CARD_MS = 220;
+
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
   listItemRoot: {
     position: "relative",
     alignItems: "flex-start",
-    paddingTop: 14,
-    paddingBottom: 14,
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
-    borderRadius: theme.spacing(1),
-    marginLeft: theme.spacing(0.5),
-    marginRight: theme.spacing(0.5),
-    marginBottom: theme.spacing(0.25),
-    borderBottom: `1px solid ${theme.palette.divider}`,
-    transition: theme.transitions.create(["background-color"], { duration: 200 }),
+    padding: 14,
+    borderRadius: 14,
+    marginLeft: theme.spacing(0.75),
+    marginRight: theme.spacing(0.75),
+    marginBottom: 10,
+    border: `1px solid ${theme.palette.divider}`,
+    borderLeft: "3px solid transparent",
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: isDark ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
+    transition: `all ${CARD_MS}ms ${MICRO_EASE}`,
     cursor: "pointer",
-    "&:hover": {
+    "@media (hover: hover)": {
+      "&:hover:not($listItemSelected):not($listItemBusy)": {
+        backgroundColor: theme.palette.action.hover,
+        transform: "scale(1.01)",
+        boxShadow: isDark
+          ? `0 4px 14px ${alpha(theme.palette.common.black, 0.35)}`
+          : `0 4px 14px ${alpha(theme.palette.common.black, 0.08)}`,
+      },
+    },
+    "&:hover:not($listItemSelected)": {
       backgroundColor: theme.palette.action.hover,
     },
+    "&$listItemSelected:hover": {
+      background:
+        isDark
+          ? `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.22)}, ${alpha(theme.palette.background.paper, 0.95)})`
+          : `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.14)}, ${theme.palette.background.paper})`,
+    },
     "&:focus-visible": {
-      outline: `2px solid ${theme.palette.primary.main}`,
+      outline: `2px solid ${alpha(theme.palette.success.main, 0.55)}`,
       outlineOffset: 2,
     },
     "&.Mui-selected": {
-      backgroundColor:
-        theme.palette.type === "dark"
-          ? "rgba(25, 118, 210, 0.16)"
-          : "rgba(25, 118, 210, 0.07)",
-      boxShadow: `inset 3px 0 0 ${theme.palette.primary.main}`,
+      backgroundColor: "transparent",
     },
-    "&.Mui-selected:hover": {
-      backgroundColor:
-        theme.palette.type === "dark"
-          ? "rgba(25, 118, 210, 0.22)"
-          : "rgba(25, 118, 210, 0.1)",
+    "&:hover $actionsRow, &$listItemSelected $actionsRow": {
+      opacity: 1,
+      maxHeight: 120,
+      marginTop: theme.spacing(1),
+      paddingTop: theme.spacing(0.75),
+      borderTopWidth: 1,
     },
+    "@media (max-width: 959px)": {
+      "& $actionsRow": {
+        opacity: 1,
+        maxHeight: 120,
+        marginTop: theme.spacing(1),
+        paddingTop: theme.spacing(0.75),
+        borderTopWidth: 1,
+      },
+    },
+  },
+  listItemSelected: {
+    background:
+      isDark
+        ? `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.2)}, ${alpha(theme.palette.background.paper, 0.95)})`
+        : `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.12)}, ${theme.palette.background.paper})`,
+    borderColor: alpha(theme.palette.success.main, isDark ? 0.45 : 0.35),
+    borderLeft: `3px solid ${theme.palette.success.main}`,
+    boxShadow: `0 0 0 2px ${alpha(theme.palette.success.main, 0.25)}`,
+  },
+  listItemBusy: {
+    opacity: 0.6,
+    pointerEvents: "none",
   },
   listItemCompact: {
     paddingTop: theme.spacing(0.5),
@@ -122,13 +162,10 @@ const useStyles = makeStyles((theme) => ({
   },
   bulkCheckbox: {
     padding: 4,
-    marginRight: theme.spacing(0.5),
+    marginRight: theme.spacing(0.75),
+    marginTop: theme.spacing(0.5),
+    alignSelf: "flex-start",
     flexShrink: 0,
-  },
-  listDeleteBtn: {
-    padding: 4,
-    flexShrink: 0,
-    color: theme.palette.error.main,
   },
   queueBar: {
     flex: "none",
@@ -144,25 +181,37 @@ const useStyles = makeStyles((theme) => ({
     alignSelf: "flex-start",
   },
   avatar: {
-    width: 48,
-    height: 48,
-    fontSize: "1.1rem",
+    width: 42,
+    height: 42,
+    fontSize: "1rem",
     fontWeight: 600,
-    border: `1px solid ${theme.palette.divider}`,
-    boxShadow: theme.palette.type === "dark" ? "none" : "0 1px 2px rgba(0,0,0,0.06)",
+    borderRadius: "50%",
+    overflow: "hidden",
+    border: `2px solid ${alpha(theme.palette.success.main, 0.25)}`,
+    boxShadow: isDark ? "none" : "0 2px 6px rgba(0,0,0,0.08)",
+    "& .MuiAvatar-img": {
+      borderRadius: "50%",
+      objectFit: "cover",
+      width: "100%",
+      height: "100%",
+    },
+  },
+  avatarSelected: {
+    border: `2px solid ${alpha(theme.palette.success.main, 0.8)}`,
   },
   avatarCompact: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
   },
   unreadBadge: {
-    fontSize: "0.62rem",
+    fontSize: "0.65rem",
     fontWeight: 700,
     minWidth: 18,
     height: 18,
     padding: "0 5px",
     lineHeight: "18px",
-    transform: "scale(1) translate(20%, -10%)",
+    borderRadius: 999,
+    transform: "scale(1) translate(18%, -12%)",
   },
   mainColumn: {
     flex: 1,
@@ -215,13 +264,13 @@ const useStyles = makeStyles((theme) => ({
     letterSpacing: "0.01em",
   },
   statusChip: {
-    height: 22,
-    fontSize: "0.7rem",
+    height: "auto",
+    fontSize: "0.68rem",
     fontWeight: 600,
-    borderRadius: 8,
+    borderRadius: 999,
+    transition: `all ${MICRO_MS}ms ${MICRO_EASE}`,
     "& .MuiChip-label": {
-      paddingLeft: theme.spacing(0.75),
-      paddingRight: theme.spacing(0.75),
+      padding: "3px 8px",
     },
   },
   lastMessagePreview: {
@@ -235,6 +284,11 @@ const useStyles = makeStyles((theme) => ({
     wordBreak: "break-word",
     marginTop: theme.spacing(0.5),
     opacity: 0.92,
+    transition: `color ${MICRO_MS}ms ${MICRO_EASE}`,
+  },
+  lastMessageMedia: {
+    fontStyle: "normal",
+    fontWeight: 500,
   },
   chipsRow: {
     display: "flex",
@@ -246,38 +300,52 @@ const useStyles = makeStyles((theme) => ({
     rowGap: theme.spacing(0.5),
   },
   moreTagsChip: {
-    height: 22,
-    fontSize: "0.65rem",
+    height: "auto",
+    fontSize: "0.68rem",
     fontWeight: 600,
-    borderRadius: 8,
+    borderRadius: 999,
     opacity: 0.85,
+    "& .MuiChip-label": {
+      padding: "3px 8px",
+    },
   },
   chipQueue: {
     maxWidth: "100%",
-    height: 22,
-    fontSize: "0.7rem",
-    borderRadius: 8,
+    height: "auto",
+    fontSize: "0.68rem",
+    fontWeight: 600,
+    borderRadius: 999,
+    backgroundColor: alpha(theme.palette.text.secondary, isDark ? 0.12 : 0.08),
     "& .MuiChip-label": {
+      padding: "3px 8px",
       overflow: "hidden",
       textOverflow: "ellipsis",
     },
   },
   chipUser: {
     maxWidth: "100%",
-    height: 22,
-    fontSize: "0.7rem",
-    borderRadius: 8,
+    height: "auto",
+    fontSize: "0.68rem",
+    fontWeight: 600,
+    borderRadius: 999,
+    borderColor: alpha(theme.palette.text.secondary, 0.35),
+    backgroundColor: alpha(theme.palette.text.secondary, isDark ? 0.1 : 0.06),
     "& .MuiChip-label": {
+      padding: "3px 8px",
       overflow: "hidden",
       textOverflow: "ellipsis",
     },
   },
   chipConnection: {
     maxWidth: "100%",
-    height: 22,
-    fontSize: "0.7rem",
-    borderRadius: 8,
+    height: "auto",
+    fontSize: "0.68rem",
+    fontWeight: 600,
+    borderRadius: 999,
+    borderColor: alpha(theme.palette.text.secondary, 0.25),
+    backgroundColor: alpha(theme.palette.text.secondary, isDark ? 0.08 : 0.04),
     "& .MuiChip-label": {
+      padding: "3px 8px",
       overflow: "hidden",
       textOverflow: "ellipsis",
     },
@@ -285,32 +353,71 @@ const useStyles = makeStyles((theme) => ({
   actionsRow: {
     display: "flex",
     flexWrap: "wrap",
-    gap: theme.spacing(0.75),
+    gap: theme.spacing(0.5),
     justifyContent: "flex-end",
-    marginTop: theme.spacing(1),
-    paddingTop: theme.spacing(0.5),
+    alignItems: "center",
+    marginTop: 0,
+    paddingTop: 0,
     borderTop: `1px solid ${theme.palette.divider}`,
+    borderTopWidth: 0,
+    opacity: 0,
+    maxHeight: 0,
+    overflow: "hidden",
+    transition: theme.transitions.create(
+      ["opacity", "max-height", "margin-top", "padding-top", "border-top-width"],
+      { duration: 200 }
+    ),
   },
   actionBtn: {
-    minWidth: 72,
-    fontSize: "0.65rem",
-    padding: "4px 8px",
+    minWidth: 64,
+    fontSize: "0.68rem",
+    fontWeight: 600,
+    padding: "4px 12px",
+    borderRadius: 999,
+    textTransform: "none",
+    boxShadow: "none",
+    transition: `all ${MICRO_MS}ms ${MICRO_EASE}`,
+    "@media (max-width: 959px)": {
+      minWidth: 72,
+      padding: "5px 14px",
+    },
   },
   actionAccept: {
     backgroundColor: theme.palette.success.main,
     color: theme.palette.success.contrastText,
     "&:hover": {
       backgroundColor: theme.palette.success.dark,
+      transform: "translateY(-1px)",
     },
   },
   actionDanger: {
-    backgroundColor: theme.palette.error.main,
+    backgroundColor: alpha(theme.palette.error.main, isDark ? 0.85 : 0.92),
     color: theme.palette.error.contrastText,
     "&:hover": {
       backgroundColor: theme.palette.error.dark,
+      transform: "translateY(-1px)",
     },
   },
-}));
+  listDeleteBtn: {
+    padding: 4,
+    flexShrink: 0,
+    color: theme.palette.error.main,
+    transition: `all ${MICRO_MS}ms ${MICRO_EASE}`,
+    "@media (max-width: 959px)": {
+      padding: 6,
+    },
+  },
+  peekIcon: {
+    color: alpha(theme.palette.success.main, isDark ? 0.9 : 0.85),
+    cursor: "pointer",
+    flexShrink: 0,
+    transition: `color ${MICRO_MS}ms ${MICRO_EASE}, transform ${MICRO_MS}ms ${MICRO_EASE}`,
+    "&:hover": {
+      transform: "scale(1.08)",
+    },
+  },
+};
+});
 
 const TicketListItemCustom = ({
   ticket,
@@ -445,12 +552,13 @@ const TicketListItemCustom = ({
     updatedAt != null ? formatWhatsAppListTime(updatedAt) : "";
 
   const statusChipMeta = useMemo(() => {
+    const isDark = theme.palette.type === "dark";
     if (ticket.status === "closed") {
       return {
         label: "Finalizado",
         style: {
-          backgroundColor: theme.palette.type === "dark" ? grey[700] : grey[200],
-          color: theme.palette.type === "dark" ? grey[100] : grey[800],
+          backgroundColor: alpha(theme.palette.text.secondary, isDark ? 0.18 : 0.1),
+          color: theme.palette.text.secondary,
         },
       };
     }
@@ -460,16 +568,16 @@ const TicketListItemCustom = ({
           label: i18n.t("ticketsListItem.tooltip.chatbot"),
           icon: <AndroidIcon style={{ fontSize: 14 }} />,
           style: {
-            backgroundColor: theme.palette.type === "dark" ? grey[700] : grey[200],
-            color: theme.palette.type === "dark" ? grey[100] : grey[700],
+            backgroundColor: alpha(theme.palette.info.main, isDark ? 0.22 : 0.12),
+            color: isDark ? theme.palette.info.light : theme.palette.info.dark,
           },
         };
       }
       return {
         label: i18n.t("ticketsList.pendingHeader"),
         style: {
-          backgroundColor: theme.palette.type === "dark" ? amber[900] : amber[100],
-          color: theme.palette.type === "dark" ? amber[100] : amber[900],
+          backgroundColor: alpha(theme.palette.warning.main, isDark ? 0.22 : 0.15),
+          color: isDark ? theme.palette.warning.light : theme.palette.warning.dark,
         },
       };
     }
@@ -477,18 +585,20 @@ const TicketListItemCustom = ({
       return {
         label: "Em atendimento",
         style: {
-          backgroundColor:
-            theme.palette.type === "dark"
-              ? "rgba(46, 125, 50, 0.35)"
-              : theme.palette.success.light,
-          color: theme.palette.type === "dark" ? theme.palette.success.light : theme.palette.success.dark,
+          backgroundColor: alpha(theme.palette.success.main, isDark ? 0.22 : 0.15),
+          color: isDark ? theme.palette.success.light : theme.palette.success.dark,
         },
       };
     }
     return null;
   }, [ticket.status, ticket.chatbot, theme]);
 
-  const lastMessageText = ticket.lastMessage != null ? String(ticket.lastMessage) : "";
+  const lastMessagePreview = useMemo(
+    () => formatTicketLastMessagePreview(ticket.lastMessage),
+    [ticket.lastMessage]
+  );
+
+  const actionBusy = loading || deleteLoading;
 
   const tagList = Array.isArray(tag) ? tag : [];
   const visibleTags = tagList.slice(0, MAX_TAGS_VISIBLE);
@@ -519,7 +629,10 @@ const TicketListItemCustom = ({
         selected={selected || bulkSelected}
         className={clsx(classes.listItemRoot, {
           [classes.listItemCompact]: compact,
+          [classes.listItemSelected]: selected || bulkSelected,
+          [classes.listItemBusy]: actionBusy,
         })}
+        disabled={actionBusy}
       >
         {bulkSelectMode ? (
           <Checkbox
@@ -557,7 +670,10 @@ const TicketListItemCustom = ({
             classes={{ badge: classes.unreadBadge }}
           >
             <Avatar
-              className={clsx(classes.avatar, { [classes.avatarCompact]: compact })}
+              className={clsx(classes.avatar, {
+                [classes.avatarCompact]: compact,
+                [classes.avatarSelected]: selected || bulkSelected,
+              })}
               src={ticket?.contact?.profilePicUrl}
             >
               {!ticket?.contact?.profilePicUrl && ticket.contact?.name
@@ -580,16 +696,12 @@ const TicketListItemCustom = ({
               {profile === "admin" && (
                 <Tooltip title={i18n.t("ticketsListItem.tooltip.peek")}>
                   <VisibilityIcon
+                    className={classes.peekIcon}
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenTicketMessageDialog(true);
                     }}
                     fontSize="small"
-                    style={{
-                      color: blue[700],
-                      cursor: "pointer",
-                      flexShrink: 0,
-                    }}
                   />
                 </Tooltip>
               )}
@@ -605,11 +717,16 @@ const TicketListItemCustom = ({
             </Box>
           </Box>
 
-          <Typography className={classes.lastMessagePreview} component="div">
-            {lastMessageText.includes("data:image/png;base64") ? (
-              <MarkdownWrapper> Localização</MarkdownWrapper>
+          <Typography
+            className={clsx(classes.lastMessagePreview, {
+              [classes.lastMessageMedia]: lastMessagePreview.isMedia,
+            })}
+            component="div"
+          >
+            {lastMessagePreview.useMarkdown ? (
+              <MarkdownWrapper>{lastMessagePreview.text}</MarkdownWrapper>
             ) : (
-              <MarkdownWrapper>{lastMessageText}</MarkdownWrapper>
+              lastMessagePreview.text
             )}
           </Typography>
 

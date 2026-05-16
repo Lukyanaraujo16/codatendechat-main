@@ -2129,7 +2129,7 @@ const messages = {
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
             "Nenhum atendimento encontrado com esse status ou termo pesquisado",
-        emptyStateTitle: "Nenhum atendimento por aqui",
+        emptyStateTitle: "Nenhuma conversa no momento",
         emptyStateMessage:
             "Não há tickets nesta visualização ou com os filtros e a busca atuais.",
         emptyStateHint:
@@ -2169,6 +2169,14 @@ const messages = {
           peek: "Espiar Conversa",
         },
         noQueue: "SEM SETOR",
+        preview: {
+          audio: "🎤 Áudio",
+          image: "📷 Imagem",
+          video: "🎬 Vídeo",
+          document: "📎 Arquivo",
+          media: "📎 Arquivo",
+          location: "📍 Localização",
+        },
       },
       ticketAdvanced: {
         selectTicket: "Selecionar Ticket",
@@ -4795,6 +4803,7 @@ const messages = {
         schedule: "Agendamento",
         delete: "Deletar",
         transfer: "Transferir",
+        moreActions: "Mais ações",
         registerAppointment: "Observações do Contato",
         appointmentsModal: {
           title: "Observações do Contato",

@@ -62,9 +62,18 @@ const useStyles = makeStyles((theme) => ({
     flex: "1 1 260px",
     minWidth: 200,
     maxWidth: 400,
+    "& .MuiSvgIcon-root": {
+      color: "inherit",
+    },
   },
   dateField: {
     flex: "0 1 160px",
+    "& .MuiSvgIcon-root": {
+      color: "inherit",
+    },
+  },
+  titleIcon: {
+    color: theme.palette.text.primary,
   },
   tableCard: {
     flex: 1,
@@ -218,7 +227,7 @@ const Evaluation = () => {
             component="h1"
             className={classes.titleWithIcon}
           >
-            <AssessmentOutlinedIcon fontSize="small" />
+            <AssessmentOutlinedIcon fontSize="small" className={classes.titleIcon} />
             {i18n.t("evaluation.title", "Avaliação")}
           </Typography>
         }
@@ -302,7 +311,7 @@ const Evaluation = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon color="action" fontSize="small" />
+                  <SearchIcon fontSize="small" color="inherit" />
                 </InputAdornment>
               ),
             }}

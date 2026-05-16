@@ -33,6 +33,9 @@ const useStyles = makeStyles((theme) => ({
   searchField: {
     flex: "1 1 220px",
     minWidth: 200,
+    "& .MuiSvgIcon-root": {
+      color: "inherit",
+    },
   },
 }));
 
@@ -79,7 +82,7 @@ const AgendaFilters = ({ quickFilter, onQuickFilter, searchQuery, onSearchChange
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon color="action" fontSize="small" />
+                <SearchIcon fontSize="small" color="inherit" />
               </InputAdornment>
             ),
             endAdornment: searchQuery ? (
@@ -89,7 +92,7 @@ const AgendaFilters = ({ quickFilter, onQuickFilter, searchQuery, onSearchChange
                   onClick={() => onSearchChange("")}
                   aria-label={i18n.t("agenda.filters.clearSearch")}
                 >
-                  <ClearIcon fontSize="small" />
+                  <ClearIcon fontSize="small" color="inherit" />
                 </IconButton>
               </InputAdornment>
             ) : null,

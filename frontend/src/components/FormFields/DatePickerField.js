@@ -1,13 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useField } from 'formik';
 import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
 import {
   MuiPickersUtilsProvider,
   KeyboardDatePicker
 } from '@material-ui/pickers';
 import DateFnsUtils from '@date-io/date-fns';
 
+const useStyles = makeStyles((theme) => ({
+  picker: {
+    width: '100%',
+    '& .MuiInputBase-root': {
+      color: theme.palette.text.primary,
+    },
+    '& .MuiInputLabel-root': {
+      color: theme.palette.text.secondary,
+    },
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: theme.palette.divider,
+    },
+    '& .MuiSvgIcon-root': {
+      color: theme.palette.text.secondary,
+    },
+  },
+}));
+
 export default function DatePickerField(props) {
+  const classes = useStyles();
   const [field, meta, helper] = useField(props);
   const { touched, error } = meta;
   const { setValue } = helper;
@@ -42,11 +62,23 @@ export default function DatePickerField(props) {
         <KeyboardDatePicker
           {...field}
           {...props}
+          className={classes.picker}
           value={selectedDate}
           onChange={_onChange}
           error={isError}
           invalidDateMessage={isError && error}
           helperText={isError && error}
+          InputProps={{
+            ...(props.InputProps || {}),
+            style: {
+              color: 'inherit',
+              ...(props.InputProps?.style || {}),
+            },
+          }}
+          keyboardIconProps={{
+            color: 'inherit',
+            ...(props.keyboardIconProps || {}),
+          }}
         />
       </MuiPickersUtilsProvider>
     </Grid>

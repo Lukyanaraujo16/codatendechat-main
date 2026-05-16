@@ -1,12 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 
 import Button from "@material-ui/core/Button";
 import IconButton from "@material-ui/core/IconButton";
 import Tooltip from "@material-ui/core/Tooltip";
+import Menu from "@material-ui/core/Menu";
+import MenuItem from "@material-ui/core/MenuItem";
+import ListItemIcon from "@material-ui/core/ListItemIcon";
+import ListItemText from "@material-ui/core/ListItemText";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, alpha, useTheme } from "@material-ui/core/styles";
 import useMediaQuery from "@material-ui/core/useMediaQuery";
-import { green } from "@material-ui/core/colors";
 import clsx from "clsx";
 
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
@@ -16,11 +19,14 @@ import UndoRoundedIcon from "@material-ui/icons/UndoRounded";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import AccountTreeIcon from "@material-ui/icons/AccountTree";
 import FlashOnIcon from "@material-ui/icons/FlashOn";
+import MoreVertIcon from "@material-ui/icons/MoreVert";
 
 import { i18n } from "../../translate/i18n";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import TicketFlowExecutionLogModal from "../TicketFlowExecutionLogModal";
 import { Can } from "../Can";
+
+const MICRO_MS = 180;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -31,7 +37,7 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: "100%",
     marginLeft: "auto",
     marginRight: theme.spacing(0.5),
-    gap: theme.spacing(2),
+    gap: theme.spacing(1),
     minWidth: 0,
     [theme.breakpoints.down("xs")]: {
       overflowX: "auto",
@@ -40,31 +46,30 @@ const useStyles = makeStyles((theme) => ({
       justifyContent: "flex-start",
     },
   },
-  iconGroup: {
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(1),
-    flexShrink: 0,
-  },
   actionGroup: {
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
     flexShrink: 0,
   },
-  destructive: {
-    display: "flex",
-    alignItems: "center",
-    flexShrink: 0,
-    marginLeft: theme.spacing(1),
-    paddingLeft: theme.spacing(2),
-    borderLeft: `1px solid ${theme.palette.divider}`,
+  moreMenuBtn: {
+    transition: `all ${MICRO_MS}ms ease`,
+    "&:hover": {
+      backgroundColor: theme.palette.action.hover,
+    },
   },
   resolveContained: {
-    backgroundColor: green[600],
-    color: theme.palette.common.white,
+    backgroundColor: theme.palette.success.main,
+    color: theme.palette.success.contrastText,
+    borderRadius: 999,
+    textTransform: "none",
+    fontWeight: 600,
+    transition: `all ${MICRO_MS}ms ease`,
+    boxShadow: `0 2px 8px ${alpha(theme.palette.success.main, 0.35)}`,
     "&:hover": {
-      backgroundColor: green[700],
+      backgroundColor: theme.palette.success.dark,
+      transform: "translateY(-1px)",
+      boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.4)}`,
     },
   },
   resolveIconOnly: {
@@ -73,26 +78,34 @@ const useStyles = makeStyles((theme) => ({
   },
   transferOutlined: {
     textTransform: "none",
+    borderRadius: 999,
+    transition: `all ${MICRO_MS}ms ease`,
+    "&:hover": {
+      transform: "translateY(-1px)",
+    },
   },
   transferIconCompact: {
     border: `1px solid ${theme.palette.primary.main}`,
     borderRadius: theme.shape.borderRadius,
     color: theme.palette.primary.main,
+    transition: `all ${MICRO_MS}ms ease`,
     "&:hover": {
       backgroundColor: theme.palette.action.hover,
     },
   },
-  deleteIcon: {
+  menuDelete: {
     color: theme.palette.error.main,
-    "&:hover": {
-      backgroundColor: theme.palette.error.main,
-      color: theme.palette.common.white,
-    },
+  },
+  menuExtras: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(0.5),
+    padding: theme.spacing(0.5, 0),
   },
 }));
 
 /**
- * Barra de ações do ticket (status open) — padrão SaaS: uma ação dominante (Resolver) + ícones leves.
+ * Barra de ações do ticket (status open) — Transferir + Resolver visíveis; demais no menu ⋮.
  */
 const TicketConversationActionBar = ({
   loading,
@@ -110,76 +123,20 @@ const TicketConversationActionBar = ({
   const classes = useStyles();
   const theme = useTheme();
   const compact = useMediaQuery(theme.breakpoints.down("sm"));
+  const [menuAnchor, setMenuAnchor] = useState(null);
+
+  const openMenu = (event) => setMenuAnchor(event.currentTarget);
+  const closeMenu = () => setMenuAnchor(null);
+
+  const runMenuAction = (fn) => (event) => {
+    closeMenu();
+    if (typeof fn === "function") {
+      fn(event);
+    }
+  };
 
   return (
     <div className={classes.root} data-ticket-action-bar>
-      {/* Bloco 1: ações leves (somente ícones) */}
-      <div className={classes.iconGroup}>
-        <Tooltip title={i18n.t("messagesList.header.buttons.return")}>
-          <span>
-            <IconButton
-              size="small"
-              onClick={onReturn}
-              disabled={loading}
-              aria-label={i18n.t("messagesList.header.buttons.return")}
-            >
-              {loading ? (
-                <CircularProgress size={18} color="inherit" />
-              ) : (
-                <UndoRoundedIcon fontSize="small" />
-              )}
-            </IconButton>
-          </span>
-        </Tooltip>
-
-        {ticketId ? (
-          <TicketFlowExecutionLogModal
-            ticketId={ticketId}
-            renderTrigger={(open) => (
-              <Tooltip
-                title={i18n.t("messagesList.header.buttons.flowHistory")}
-              >
-                <IconButton
-                  size="small"
-                  onClick={open}
-                  aria-label={i18n.t("messagesList.header.buttons.flowHistory")}
-                >
-                  <AccountTreeIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-          />
-        ) : null}
-
-        {typeof onQuickRepliesClick === "function" ? (
-          <Tooltip title={i18n.t("messagesList.header.buttons.quickReplies")}>
-            <span>
-              <IconButton
-                size="small"
-                onClick={onQuickRepliesClick}
-                disabled={loading}
-                aria-label={i18n.t("messagesList.header.buttons.quickReplies")}
-              >
-                <FlashOnIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-        ) : null}
-
-        {extraIconActions || null}
-
-        <Tooltip title={i18n.t("ticketOptionsMenu.schedule")}>
-          <IconButton
-            size="small"
-            onClick={onScheduleClick}
-            aria-label={i18n.t("ticketOptionsMenu.schedule")}
-          >
-            <EventIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      </div>
-
-      {/* Bloco 2: Transferir (secundário) + Resolver (principal) */}
       <div className={classes.actionGroup}>
         <Tooltip title={i18n.t("ticketOptionsMenu.transfer")}>
           {compact ? (
@@ -232,42 +189,106 @@ const TicketConversationActionBar = ({
             )}
           </span>
         </Tooltip>
+
+        <Tooltip title={i18n.t("ticketOptionsMenu.moreActions")}>
+          <IconButton
+            size="small"
+            className={classes.moreMenuBtn}
+            onClick={openMenu}
+            aria-label={i18n.t("ticketOptionsMenu.moreActions")}
+            aria-haspopup="true"
+            aria-controls="ticket-action-menu"
+          >
+            <MoreVertIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </div>
 
-      {/* Bloco 3: destrutivo */}
-      {showDelete === true ? (
-        <div className={classes.destructive}>
-          <Tooltip title={i18n.t("ticketOptionsMenu.delete")}>
-            <IconButton
-              size="small"
-              onClick={onDeleteClick}
-              aria-label={i18n.t("ticketOptionsMenu.delete")}
-              className={classes.deleteIcon}
-            >
+      <Menu
+        id="ticket-action-menu"
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={closeMenu}
+        getContentAnchorEl={null}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <MenuItem onClick={runMenuAction(onReturn)} disabled={loading}>
+          <ListItemIcon>
+            {loading ? (
+              <CircularProgress size={18} />
+            ) : (
+              <UndoRoundedIcon fontSize="small" />
+            )}
+          </ListItemIcon>
+          <ListItemText primary={i18n.t("messagesList.header.buttons.return")} />
+        </MenuItem>
+
+        {ticketId ? (
+          <TicketFlowExecutionLogModal
+            ticketId={ticketId}
+            renderTrigger={(open) => (
+              <MenuItem onClick={runMenuAction(open)}>
+                <ListItemIcon>
+                  <AccountTreeIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary={i18n.t("messagesList.header.buttons.flowHistory")}
+                />
+              </MenuItem>
+            )}
+          />
+        ) : null}
+
+        {typeof onQuickRepliesClick === "function" ? (
+          <MenuItem onClick={runMenuAction(onQuickRepliesClick)} disabled={loading}>
+            <ListItemIcon>
+              <FlashOnIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary={i18n.t("messagesList.header.buttons.quickReplies")}
+            />
+          </MenuItem>
+        ) : null}
+
+        <MenuItem onClick={runMenuAction(onScheduleClick)}>
+          <ListItemIcon>
+            <EventIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={i18n.t("ticketOptionsMenu.schedule")} />
+        </MenuItem>
+
+        {extraIconActions ? (
+          <MenuItem disabled style={{ opacity: 1 }}>
+            <div className={classes.menuExtras}>{extraIconActions}</div>
+          </MenuItem>
+        ) : null}
+
+        {showDelete === true ? (
+          <MenuItem onClick={runMenuAction(onDeleteClick)} className={classes.menuDelete}>
+            <ListItemIcon className={classes.menuDelete}>
               <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </div>
-      ) : showDelete === false ? null : (
-        <Can
-          role={userProfile}
-          perform="ticket-options:deleteTicket"
-          yes={() => (
-            <div className={classes.destructive}>
-              <Tooltip title={i18n.t("ticketOptionsMenu.delete")}>
-                <IconButton
-                  size="small"
-                  onClick={onDeleteClick}
-                  aria-label={i18n.t("ticketOptionsMenu.delete")}
-                  className={classes.deleteIcon}
-                >
+            </ListItemIcon>
+            <ListItemText primary={i18n.t("ticketOptionsMenu.delete")} />
+          </MenuItem>
+        ) : showDelete === false ? null : (
+          <Can
+            role={userProfile}
+            perform="ticket-options:deleteTicket"
+            yes={() => (
+              <MenuItem
+                onClick={runMenuAction(onDeleteClick)}
+                className={classes.menuDelete}
+              >
+                <ListItemIcon className={classes.menuDelete}>
                   <DeleteOutlineIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </div>
-          )}
-        />
-      )}
+                </ListItemIcon>
+                <ListItemText primary={i18n.t("ticketOptionsMenu.delete")} />
+              </MenuItem>
+            )}
+          />
+        )}
+      </Menu>
     </div>
   );
 };

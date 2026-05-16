@@ -50,7 +50,8 @@ const useStyles = makeStyles((theme) => ({
     WebkitOverflowScrolling: "touch",
     ...theme.scrollbarStyles,
     borderTop: `1px solid ${theme.palette.divider}`,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.background.default,
+    padding: theme.spacing(1, 0.5, 1.5),
   },
 
   ticketsListHeader: {
@@ -83,6 +84,14 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     fontSize: "0.8125rem",
     color: theme.palette.text.secondary,
+  },
+
+  emptyStateWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 240,
+    padding: theme.spacing(4, 2),
   },
 }));
 
@@ -592,11 +601,13 @@ const TicketsListCustom = (props) => {
       >
         <List style={{ paddingTop: 0, height: "100%" }}>
           {displayTickets.length === 0 && !displayLoading ? (
-            <AppEmptyState
-              title={i18n.t("ticketsList.emptyStateTitle")}
-              description={i18n.t("ticketsList.emptyStateMessage")}
-              hint={i18n.t("ticketsList.emptyStateHint")}
-            />
+            <Box className={classes.emptyStateWrap}>
+              <AppEmptyState
+                title={i18n.t("ticketsList.emptyStateTitle")}
+                description={i18n.t("ticketsList.emptyStateMessage")}
+                hint={i18n.t("ticketsList.emptyStateHint")}
+              />
+            </Box>
           ) : (
             <>
               {displayTickets.map((ticket) => (

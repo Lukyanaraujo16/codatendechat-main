@@ -10,6 +10,7 @@ import {
   Divider,
   IconButton,
   makeStyles,
+  alpha,
 } from "@material-ui/core";
 
 import {
@@ -34,7 +35,9 @@ import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
   messagesListWrapper: {
     overflow: "hidden",
     position: "relative",
@@ -52,7 +55,7 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     flex: 1,
     minHeight: 0,
-    padding: "20px 20px 20px 20px",
+    padding: theme.spacing(2.5, 2),
     overflowY: "auto",
     WebkitOverflowScrolling: "touch",
     ...theme.scrollbarStyles,
@@ -69,7 +72,7 @@ const useStyles = makeStyles((theme) => ({
 
   messageLeft: {
     marginRight: 20,
-    marginTop: 2,
+    marginTop: 6,
     minWidth: 100,
     maxWidth: 600,
     height: "auto",
@@ -83,25 +86,29 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#ffffff",
-    color: "#303030",
+    backgroundColor: isDark
+      ? alpha(theme.palette.common.white, 0.08)
+      : theme.palette.background.paper,
+    color: theme.palette.text.primary,
     alignSelf: "flex-start",
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    paddingLeft: 5,
-    paddingRight: 5,
-    paddingTop: 5,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    paddingLeft: 8,
+    paddingRight: 8,
+    paddingTop: 6,
     paddingBottom: 0,
-    boxShadow: "0 1px 1px #b3b3b3",
+    boxShadow: isDark
+      ? "none"
+      : `0 1px 2px ${alpha(theme.palette.common.black, 0.08)}`,
   },
 
   quotedContainerLeft: {
     margin: "-3px -80px 6px -6px",
     overflow: "hidden",
-    backgroundColor: "#f0f0f0",
-    borderRadius: "7.5px",
+    backgroundColor: alpha(theme.palette.action.hover, isDark ? 0.6 : 1),
+    borderRadius: 12,
     display: "flex",
     position: "relative",
   },
@@ -118,12 +125,12 @@ const useStyles = makeStyles((theme) => ({
   quotedSideColorLeft: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#6bcbef",
+    backgroundColor: theme.palette.info.main,
   },
 
   messageRight: {
     marginLeft: 20,
-    marginTop: 2,
+    marginTop: 6,
     minWidth: 100,
     maxWidth: 600,
     height: "auto",
@@ -137,25 +144,29 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#dcf8c6",
-    color: "#303030",
+    backgroundColor: isDark
+      ? alpha(theme.palette.success.main, 0.22)
+      : alpha(theme.palette.success.main, 0.16),
+    color: theme.palette.text.primary,
     alignSelf: "flex-end",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 0,
-    paddingLeft: 5,
-    paddingRight: 5,
-    paddingTop: 5,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 4,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    paddingLeft: 8,
+    paddingRight: 8,
+    paddingTop: 6,
     paddingBottom: 0,
-    boxShadow: "0 1px 1px #b3b3b3",
+    boxShadow: isDark
+      ? "none"
+      : `0 1px 2px ${alpha(theme.palette.common.black, 0.06)}`,
   },
 
   quotedContainerRight: {
     margin: "-3px -80px 6px -6px",
     overflowY: "hidden",
-    backgroundColor: "#cfe9ba",
-    borderRadius: "7.5px",
+    backgroundColor: alpha(theme.palette.success.main, isDark ? 0.18 : 0.12),
+    borderRadius: 12,
     display: "flex",
     position: "relative",
   },
@@ -170,13 +181,13 @@ const useStyles = makeStyles((theme) => ({
   quotedSideColorRight: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#35cd96",
+    backgroundColor: theme.palette.success.main,
   },
 
   messageActionsButton: {
     display: "none",
     position: "relative",
-    color: "#999",
+    color: theme.palette.text.secondary,
     zIndex: 1,
     backgroundColor: "inherit",
     opacity: "90%",
@@ -185,8 +196,8 @@ const useStyles = makeStyles((theme) => ({
 
   messageContactName: {
     display: "flex",
-    color: "#6bcbef",
-    fontWeight: 500,
+    color: theme.palette.info.main,
+    fontWeight: 600,
   },
 
   textContentItem: {
@@ -201,7 +212,7 @@ const useStyles = makeStyles((theme) => ({
 
   textContentItemDeleted: {
     fontStyle: "italic",
-    color: "rgba(0, 0, 0, 0.36)",
+    color: theme.palette.text.disabled,
     overflowWrap: "break-word",
     padding: "3px 80px 6px 6px",
   },
@@ -221,7 +232,7 @@ const useStyles = makeStyles((theme) => ({
     position: "absolute",
     bottom: 0,
     right: 5,
-    color: "#999",
+    color: theme.palette.text.secondary,
   },
 
   dailyTimestamp: {
@@ -229,14 +240,16 @@ const useStyles = makeStyles((theme) => ({
     textAlign: "center",
     alignSelf: "center",
     width: "110px",
-    backgroundColor: "#e1f3fb",
-    margin: "10px",
-    borderRadius: "10px",
-    boxShadow: "0 1px 1px #b3b3b3",
+    backgroundColor: alpha(theme.palette.info.main, isDark ? 0.2 : 0.12),
+    margin: theme.spacing(1.25),
+    borderRadius: 12,
+    boxShadow: isDark
+      ? "none"
+      : `0 1px 2px ${alpha(theme.palette.common.black, 0.08)}`,
   },
 
   dailyTimestampText: {
-    color: "#808888",
+    color: theme.palette.text.secondary,
     padding: 8,
     alignSelf: "center",
     marginLeft: "0px",
@@ -268,7 +281,8 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "inherit",
     padding: 10,
   },
-}));
+};
+});
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_MESSAGES") {

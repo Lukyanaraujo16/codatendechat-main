@@ -118,7 +118,69 @@ export function getThemeOptions(mode) {
         "@global": {
           body: {
             backgroundColor: bgDefault,
+            color: textOnSurface,
           },
+          /** Ícones SVG sem fill explícito herdam a cor do texto (consistência Chrome/Firefox). */
+          "svg:not([fill]), svg[fill=''], svg[fill='none']": {
+            fill: "currentColor",
+          },
+          /** Indicador nativo de date/time no dark mode (Chrome/Edge). */
+          ...(!isLight
+            ? {
+                "input[type='date']::-webkit-calendar-picker-indicator, input[type='time']::-webkit-calendar-picker-indicator, input[type='datetime-local']::-webkit-calendar-picker-indicator":
+                  {
+                    filter: "invert(1)",
+                    opacity: 0.85,
+                  },
+              }
+            : {}),
+        },
+      },
+      MuiSvgIcon: {
+        root: {
+          color: textOnSurface,
+        },
+        colorAction: {
+          color: isLight ? "rgba(0, 0, 0, 0.54)" : "rgba(255, 255, 255, 0.56)",
+        },
+        colorDisabled: {
+          color: isLight ? "rgba(0, 0, 0, 0.26)" : "rgba(255, 255, 255, 0.3)",
+        },
+        colorPrimary: {
+          color: primaryMain,
+        },
+        colorSecondary: {
+          color: textSecondary,
+        },
+        colorError: {
+          color: errorMain,
+        },
+        colorInherit: {
+          color: "inherit",
+        },
+      },
+      MuiInputBase: {
+        root: {
+          color: textOnSurface,
+        },
+        input: {
+          color: textOnSurface,
+        },
+      },
+      MuiInputAdornment: {
+        root: {
+          color: textSecondary,
+        },
+        positionStart: {
+          color: textSecondary,
+        },
+        positionEnd: {
+          color: textSecondary,
+        },
+      },
+      MuiFormLabel: {
+        root: {
+          color: textSecondary,
         },
       },
       MuiAppBar: {
@@ -232,6 +294,7 @@ export function getThemeOptions(mode) {
       },
       MuiIconButton: {
         root: {
+          color: textOnSurface,
           transition: transitionSurface,
           '&[data-app-danger="true"]': {
             color: errorMain,
@@ -239,6 +302,9 @@ export function getThemeOptions(mode) {
               backgroundColor: alpha(errorMain, 0.08),
             },
           },
+        },
+        colorInherit: {
+          color: "inherit",
         },
       },
       MuiTab: {
@@ -279,6 +345,26 @@ export function getThemeOptions(mode) {
       MuiOutlinedInput: {
         root: {
           borderRadius: 10,
+          color: textOnSurface,
+          "& .MuiSvgIcon-root": {
+            color: "inherit",
+          },
+        },
+        input: {
+          color: textOnSurface,
+        },
+      },
+      MuiSelect: {
+        icon: {
+          color: textSecondary,
+        },
+      },
+      MuiAutocomplete: {
+        popupIndicator: {
+          color: textSecondary,
+        },
+        clearIndicator: {
+          color: textSecondary,
         },
       },
     },

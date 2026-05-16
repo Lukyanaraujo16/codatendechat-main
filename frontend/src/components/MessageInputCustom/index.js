@@ -5,7 +5,7 @@ import { Picker } from "emoji-mart";
 import clsx from "clsx";
 import { isNil } from "lodash";
 
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, alpha } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import InputBase from "@material-ui/core/InputBase";
 import CircularProgress from "@material-ui/core/CircularProgress";
@@ -40,13 +40,15 @@ import { useWhatsAppPanelRecorder } from "../../hooks/useWhatsAppPanelRecorder";
 import resolveQuickMessageTemplate from "../../utils/resolveQuickMessageTemplate";
 import { recordRecentUse } from "../../utils/quickMessageChatStorage";
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette.type === "dark";
+  return {
   mainWrapper: {
-    backgroundColor: theme.palette.bordabox, //DARK MODE PLW DESIGN//
+    backgroundColor: theme.palette.background.paper,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    borderTop: `1px solid ${theme.palette.divider}`,
   },
   pendingHint: {
     width: "100%",
@@ -59,30 +61,59 @@ const useStyles = makeStyles((theme) => ({
   },
 
   newMessageBox: {
-    backgroundColor: theme.palette.newmessagebox, //DARK MODE PLW DESIGN//
+    backgroundColor: theme.palette.background.paper,
     width: "100%",
     display: "flex",
-    padding: "7px",
+    padding: theme.spacing(1, 1.25),
     alignItems: "center",
+    gap: theme.spacing(0.25),
   },
 
   messageInputWrapper: {
-    padding: 6,
-    marginRight: 7,
-    backgroundColor: theme.palette.inputdigita, //DARK MODE PLW DESIGN//
+    padding: theme.spacing(0.75, 1.25),
+    marginRight: theme.spacing(0.75),
+    backgroundColor: isDark
+      ? alpha(theme.palette.common.white, 0.06)
+      : alpha(theme.palette.common.black, 0.04),
     display: "flex",
-    borderRadius: 20,
+    borderRadius: 999,
     flex: 1,
+    border: `1px solid ${theme.palette.divider}`,
+    transition: theme.transitions.create(["box-shadow", "border-color"], {
+      duration: 180,
+    }),
+    "&:focus-within": {
+      borderColor: alpha(theme.palette.success.main, 0.55),
+      boxShadow: `0 0 0 3px ${alpha(theme.palette.success.main, 0.14)}`,
+    },
   },
 
   messageInput: {
     paddingLeft: 10,
     flex: 1,
     border: "none",
+    color: theme.palette.text.primary,
   },
 
   sendMessageIcons: {
-    color: "grey",
+    color: theme.palette.text.secondary,
+  },
+
+  sendButton: {
+    backgroundColor: theme.palette.success.main,
+    color: theme.palette.success.contrastText,
+    marginLeft: theme.spacing(0.25),
+    padding: theme.spacing(1),
+    transition: "all 0.18s ease",
+    "&:hover": {
+      backgroundColor: theme.palette.success.dark,
+      transform: "scale(1.06)",
+      boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.35)}`,
+    },
+  },
+
+  sendIconActive: {
+    color: theme.palette.success.contrastText,
   },
 
   uploadInput: {
@@ -91,19 +122,19 @@ const useStyles = makeStyles((theme) => ({
 
   viewMediaInputWrapper: {
     display: "flex",
-    padding: "10px 13px",
+    padding: theme.spacing(1.25, 1.5),
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#eee",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    backgroundColor: theme.palette.background.paper,
+    borderTop: `1px solid ${theme.palette.divider}`,
   },
 
   emojiBox: {
     position: "absolute",
     bottom: 63,
     width: 40,
-    borderTop: "1px solid #e8e8e8",
+    borderTop: `1px solid ${theme.palette.divider}`,
   },
 
   circleLoading: {
@@ -148,8 +179,8 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     marginRight: 5,
     overflowY: "hidden",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    borderRadius: "7.5px",
+    backgroundColor: alpha(theme.palette.action.hover, 0.85),
+    borderRadius: 12,
     display: "flex",
     position: "relative",
   },
@@ -165,21 +196,22 @@ const useStyles = makeStyles((theme) => ({
   replyginContactMsgSideColor: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#35cd96",
+    backgroundColor: theme.palette.success.main,
   },
 
   replyginSelfMsgSideColor: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#6bcbef",
+    backgroundColor: theme.palette.info.main,
   },
 
   messageContactName: {
     display: "flex",
-    color: "#6bcbef",
-    fontWeight: 500,
+    color: theme.palette.info.main,
+    fontWeight: 600,
   },
-}));
+};
+});
 
 const EmojiOptions = (props) => {
   const { disabled, showEmoji, setShowEmoji, handleAddEmoji } = props;
@@ -294,10 +326,11 @@ const ActionButtons = (props) => {
       <IconButton
         aria-label="sendMessage"
         component="span"
+        className={classes.sendButton}
         onClick={handleSendMessage}
         disabled={loading}
       >
-        <SendIcon className={classes.sendMessageIcons} />
+        <SendIcon className={classes.sendIconActive} />
       </IconButton>
     );
   } else if (recording) {

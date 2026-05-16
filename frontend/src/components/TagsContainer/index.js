@@ -1,12 +1,43 @@
 import { Chip, Paper, TextField } from "@material-ui/core";
+import { makeStyles, alpha } from "@material-ui/core/styles";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import React, { useEffect, useRef, useState } from "react";
 import { isArray, isString } from "lodash";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 
-export function TagsContainer({ ticket }) {
+const useStyles = makeStyles((theme) => ({
+    root: {
+        padding: theme.spacing(0.75, 1.5),
+        backgroundColor: theme.palette.background.paper,
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        boxShadow: "none",
+    },
+    input: {
+        "& .MuiOutlinedInput-root": {
+            borderRadius: 12,
+            minHeight: 36,
+            fontSize: "0.875rem",
+            backgroundColor: alpha(
+                theme.palette.action.hover,
+                theme.palette.type === "dark" ? 0.35 : 0.5
+            ),
+        },
+        "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: theme.palette.divider,
+        },
+    },
+    chip: {
+        fontWeight: 600,
+        borderRadius: 999,
+        fontSize: "0.68rem",
+        height: 22,
+        marginRight: 4,
+    },
+}));
 
+export function TagsContainer({ ticket }) {
+    const classes = useStyles();
     const [tags, setTags] = useState([]);
     const [selecteds, setSelecteds] = useState([]);
     const isMounted = useRef(true);
@@ -80,7 +111,7 @@ export function TagsContainer({ ticket }) {
     }
 
     return (
-        <Paper style={{ padding: 12 }}>
+        <Paper elevation={0} square className={classes.root}>
             <Autocomplete
                 multiple
                 size="small"
@@ -93,14 +124,11 @@ export function TagsContainer({ ticket }) {
                     (Array.isArray(value) ? value : []).map((option, index) => (
                         <Chip
                             variant="outlined"
+                            className={classes.chip}
                             style={{
-                                background: option.color || '#eee',
-                                color: "#FFF",
-                                marginRight: 1,
-                                fontWeight: 600,
-                                borderRadius: 3,
-                                fontSize: "0.8em",
-                                whiteSpace: "nowrap"
+                                background: option.color || undefined,
+                                color: option.color ? "#FFF" : undefined,
+                                borderColor: option.color ? "transparent" : undefined,
                             }}
                             label={(typeof option === 'string' ? option : option?.name || '').toUpperCase()}
                             {...getTagProps({ index })}
@@ -109,7 +137,12 @@ export function TagsContainer({ ticket }) {
                     ))
                 }
                 renderInput={(params) => (
-                    <TextField {...params} variant="outlined" placeholder="Tags" />
+                    <TextField
+                        {...params}
+                        variant="outlined"
+                        placeholder="Tags"
+                        className={classes.input}
+                    />
                 )}
                 PaperComponent={({ children }) => (
                     <Paper style={{ width: 400, marginLeft: 12 }}>

@@ -277,8 +277,15 @@ const useStyles = makeStyles((theme) => ({
 	},
 	actionIconBtn: {
 		padding: theme.spacing(0.75),
+		color: theme.palette.text.secondary,
 		"&:hover": {
 			backgroundColor: alpha(theme.palette.primary.main, 0.1),
+			color: theme.palette.primary.main,
+		},
+	},
+	searchField: {
+		"& .MuiSvgIcon-root": {
+			color: "inherit",
 		},
 	},
 	csvLink: {
@@ -685,6 +692,7 @@ const Contacts = () => {
 						<Grid item xs={12} md={5}>
 							<TextField
 								fullWidth
+								className={classes.searchField}
 								placeholder={i18n.t("contacts.searchPlaceholder")}
 								type="search"
 								value={searchParam}
@@ -694,7 +702,7 @@ const Contacts = () => {
 								InputProps={{
 									startAdornment: (
 										<InputAdornment position="start">
-											<SearchIcon color="action" fontSize="small" />
+											<SearchIcon fontSize="small" color="inherit" />
 										</InputAdornment>
 									),
 								}}

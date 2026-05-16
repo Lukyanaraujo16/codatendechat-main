@@ -285,9 +285,7 @@ const Ticket = () => {
         {ticket?.id && (
           <ErrorBoundary>
             <div className={classes.chatBody}>
-              <Paper>
-                <TagsContainer ticket={ticket} />
-              </Paper>
+              <TagsContainer ticket={ticket} />
               <ReplyMessageProvider>
                 <div className={classes.chatBodyMain}>{renderMessagesList()}</div>
               </ReplyMessageProvider>

@@ -9,10 +9,10 @@ import InboxIcon from "@material-ui/icons/Inbox";
 
 const useStyles = makeStyles((theme) => ({
   paper: {
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
     borderRadius: 12,
-    boxShadow:
-      "0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)",
+    boxShadow: theme.shadows[8],
     overflow: "hidden",
     minWidth: 320,
     maxWidth: 350,
@@ -28,19 +28,20 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     gap: 10,
     marginBottom: 4,
+    color: theme.palette.text.primary,
   },
   headerIcon: {
-    color: "#000000",
+    color: theme.palette.text.primary,
     fontSize: 24,
   },
   headerTitle: {
     fontWeight: 600,
     fontSize: 16,
-    color: "rgba(0, 0, 0, 0.87)",
+    color: theme.palette.text.primary,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: "rgba(0, 0, 0, 0.6)",
+    color: theme.palette.text.secondary,
     marginLeft: 34,
   },
   divider: {
@@ -62,12 +63,12 @@ const useStyles = makeStyles((theme) => ({
   },
   emptyIcon: {
     fontSize: 64,
-    color: "rgba(0, 0, 0, 0.2)",
+    color: theme.palette.text.disabled,
     marginBottom: 16,
   },
   emptyText: {
     fontSize: 14,
-    color: "rgba(0, 0, 0, 0.6)",
+    color: theme.palette.text.secondary,
     fontWeight: 500,
   },
   pulsingDot: {

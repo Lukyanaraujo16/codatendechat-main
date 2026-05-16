@@ -2042,7 +2042,7 @@ const messages = {
 				assignedHeader: "In Progress",
 				noTicketsTitle: "Nothing here!",
 				noTicketsMessage: "No service found with this status or search term",
-				emptyStateTitle: "No conversations here",
+				emptyStateTitle: "No conversations at the moment",
 				emptyStateMessage:
 					"No tickets match this view or your current filters and search.",
 				emptyStateHint:
@@ -2082,6 +2082,14 @@ const messages = {
 					peek: "Peek Conversation",
 				},
 				noQueue: "NO QUEUE",
+				preview: {
+					audio: "🎤 Audio",
+					image: "📷 Image",
+					video: "🎬 Video",
+					document: "📎 File",
+					media: "📎 File",
+					location: "📍 Location",
+				},
 			},
 			ticketAdvanced: {
 				selectTicket: "Select Ticket",
@@ -4648,6 +4656,7 @@ const messages = {
 				schedule: "Schedule",
 				delete: "Delete",
 				transfer: "Transfer",
+				moreActions: "More actions",
 				registerAppointment: "Contact Notes",
 				appointmentsModal: {
 					title: "Contact Notes",

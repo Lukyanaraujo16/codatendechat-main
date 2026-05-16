@@ -47,7 +47,7 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 600,
   },
   tabs: {
-    borderBottom: "1px solid rgba(0,0,0,0.12)",
+    borderBottom: `1px solid ${theme.palette.divider}`,
     "& .MuiTab-root": {
       textTransform: "uppercase",
       fontWeight: 600,
@@ -69,6 +69,16 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     fontSize: "0.95rem",
     fontWeight: 600,
+    color: theme.palette.text.primary,
+    "& .MuiSvgIcon-root": {
+      color: theme.palette.text.primary,
+    },
+  },
+  accentIcon: {
+    color: "#e91e63",
+  },
+  deleteOptionBtn: {
+    color: theme.palette.error.main,
   },
   optionRow: {
     display: "flex",
@@ -84,12 +94,12 @@ const useStyles = makeStyles((theme) => ({
   },
   addOptionBtn: {
     width: "100%",
-    border: "1px dashed rgba(0,0,0,0.23)",
+    border: `1px dashed ${theme.palette.divider}`,
     borderRadius: 8,
     padding: theme.spacing(2),
     marginTop: theme.spacing(1),
     textTransform: "none",
-    color: "rgba(0,0,0,0.6)",
+    color: theme.palette.text.secondary,
     "&:hover": {
       borderColor: "#e91e63",
       color: "#e91e63",
@@ -101,10 +111,14 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
     padding: theme.spacing(1.5, 2),
-    border: "1px solid rgba(0,0,0,0.12)",
+    border: `1px solid ${theme.palette.divider}`,
     borderRadius: 8,
     marginBottom: theme.spacing(2),
-    backgroundColor: "rgba(0,0,0,0.02)",
+    backgroundColor: theme.palette.action.hover,
+    color: theme.palette.text.primary,
+    "& .MuiSvgIcon-root": {
+      color: theme.palette.text.primary,
+    },
   },
   previewBox: {
     border: "2px solid #1a1a1a",
@@ -311,7 +325,7 @@ const EvaluationModal = ({ open, onClose, onSave }) => {
         {tab === 1 && (
           <>
             <div className={classes.sectionTitle}>
-              <StarIcon fontSize="small" style={{ color: "#e91e63" }} />
+              <StarIcon fontSize="small" className={classes.accentIcon} />
               {i18n.t("evaluationModal.optionsTitle", "Opções de Avaliação")}
             </div>
             {options.map((opt, index) => (
@@ -336,8 +350,8 @@ const EvaluationModal = ({ open, onClose, onSave }) => {
                 />
                 <IconButton
                   size="small"
+                  className={classes.deleteOptionBtn}
                   onClick={() => handleRemoveOption(index)}
-                  style={{ color: "#e91e63" }}
                 >
                   <DeleteOutlineIcon />
                 </IconButton>

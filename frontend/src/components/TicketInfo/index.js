@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 import { Avatar, Button, CardHeader } from "@material-ui/core";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
+import { makeStyles, useTheme, alpha } from "@material-ui/core/styles";
 
 import { i18n } from "../../translate/i18n";
 
@@ -20,8 +20,16 @@ const useStyles = makeStyles((theme) => ({
 	avatar: {
 		width: 44,
 		height: 44,
-		border: `1px solid ${theme.palette.divider}`,
+		borderRadius: "50%",
+		overflow: "hidden",
+		border: `2px solid ${alpha(theme.palette.success.main, 0.35)}`,
 		boxShadow: theme.palette.type === "dark" ? "none" : theme.shadows[1],
+		"& .MuiAvatar-img": {
+			borderRadius: "50%",
+			objectFit: "cover",
+			width: "100%",
+			height: "100%",
+		},
 	},
 	title: {
 		fontWeight: 600,
