@@ -66,7 +66,7 @@ const useStyles = makeStyles(theme => ({
 		overflow: "hidden",
 		borderTopRightRadius: PANEL_RADIUS,
 		borderBottomRightRadius: PANEL_RADIUS,
-		borderTopLeftRadius: 0,
+		borderTopLeftRadius: PANEL_RADIUS,
 		borderBottomLeftRadius: 0,
 		border: "none",
 		background: getChatPanelBackground(theme),
@@ -81,7 +81,7 @@ const useStyles = makeStyles(theme => ({
 		height: "100%",
 		textAlign: "center",
 		padding: theme.spacing(4),
-		borderRadius: `0 ${PANEL_RADIUS}px ${PANEL_RADIUS}px 0`,
+		borderRadius: `${PANEL_RADIUS}px ${PANEL_RADIUS}px ${PANEL_RADIUS}px 0`,
 	},
 	placeholderIllustration: {
 		position: "relative",

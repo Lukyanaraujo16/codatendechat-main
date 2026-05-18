@@ -13,7 +13,7 @@ const useStyles = makeStyles((theme) => ({
 		flex: "none",
 		borderBottom: `1px solid ${theme.palette.divider}`,
 		borderTopRightRadius: PANEL_RADIUS,
-		borderTopLeftRadius: 0,
+		borderTopLeftRadius: PANEL_RADIUS,
 		overflow: "visible",
 	},
 }));

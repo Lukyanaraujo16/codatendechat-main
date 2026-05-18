@@ -29,6 +29,7 @@ import { TicketsInboxContext } from "../../context/TicketsInboxContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import {
   PANEL_RADIUS,
+  LIST_SIDE_PADDING_PX,
   getTicketPanelScrollbarStyles,
 } from "../../theme/ticketPanelStyles";
 
@@ -50,11 +51,15 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 0,
     maxHeight: "100%",
     overflowY: "auto",
+    overflowX: "hidden",
     WebkitOverflowScrolling: "touch",
+    scrollbarGutter: "stable",
+    boxSizing: "border-box",
     ...getTicketPanelScrollbarStyles(theme),
     borderTop: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default,
-    padding: theme.spacing(1, 0.5, 1.5),
+    padding: `0 ${LIST_SIDE_PADDING_PX}px ${LIST_SIDE_PADDING_PX}px ${LIST_SIDE_PADDING_PX}px`,
+    paddingRight: LIST_SIDE_PADDING_PX + 2,
     borderBottomLeftRadius: PANEL_RADIUS,
   },
 
@@ -79,10 +84,14 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
-    padding: theme.spacing(0.75, 1.5),
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    borderRadius: 10,
     backgroundColor: theme.palette.background.paper,
+    padding: "8px 12px",
+    margin: `8px ${LIST_SIDE_PADDING_PX}px 12px ${LIST_SIDE_PADDING_PX}px`,
+    overflow: "hidden",
     flexShrink: 0,
+    boxSizing: "border-box",
+    border: `1px solid ${theme.palette.divider}`,
   },
   bulkToolbarLabel: {
     flex: 1,
@@ -606,8 +615,11 @@ const TicketsListCustom = (props) => {
         <List
           style={{
             paddingTop: 0,
+            paddingLeft: 0,
+            paddingRight: 0,
+            width: "100%",
+            boxSizing: "border-box",
             height: "100%",
-            overflow: "visible",
           }}
         >
           {displayTickets.length === 0 && !displayLoading ? (

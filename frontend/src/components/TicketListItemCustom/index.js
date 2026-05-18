@@ -91,10 +91,13 @@ const useStyles = makeStyles((theme) => {
     alignItems: "stretch",
     padding: 14,
     borderRadius: CARD_RADIUS,
-    marginLeft: theme.spacing(0.75),
-    marginRight: theme.spacing(0.75),
+    marginLeft: 0,
+    marginRight: 0,
     marginBottom: 10,
-    border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
+    width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
     backgroundColor: theme.palette.background.paper,
     boxShadow: isDark
       ? "0 1px 2px rgba(0,0,0,0.25)"
@@ -107,6 +110,7 @@ const useStyles = makeStyles((theme) => {
     "@media (hover: hover)": {
       "&:hover:not($listItemSelected):not($listItemBusy)": {
         backgroundColor: getCardListHoverBackground(theme),
+        border: `1px solid ${alpha(theme.palette.success.main, 0.25)}`,
         transform: "scale(1.01)",
         boxShadow: isDark
           ? "0 2px 8px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.3)"
@@ -114,10 +118,7 @@ const useStyles = makeStyles((theme) => {
       },
     },
     "&$listItemSelected:hover": {
-      background:
-        isDark
-          ? `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.22)}, ${alpha(theme.palette.background.paper, 0.95)})`
-          : `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.14)}, ${theme.palette.background.paper})`,
+      background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.2)}, ${alpha(theme.palette.success.main, 0.1)})`,
     },
     "&:focus-visible": {
       outline: `2px solid ${alpha(theme.palette.success.main, 0.55)}`,
@@ -144,18 +145,9 @@ const useStyles = makeStyles((theme) => {
     },
   },
   listItemSelected: {
-    background:
-      isDark
-        ? `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.2)}, ${alpha(theme.palette.background.paper, 0.95)})`
-        : `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.12)}, ${theme.palette.background.paper})`,
-    borderColor: alpha(theme.palette.success.main, isDark ? 0.45 : 0.35),
-    boxShadow: [
-      `inset 4px 0 0 0 ${theme.palette.success.main}`,
-      `inset 0 0 0 1px ${alpha(theme.palette.success.main, isDark ? 0.35 : 0.28)}`,
-      isDark ? "none" : "0 2px 8px rgba(0,0,0,0.08)",
-    ]
-      .filter(Boolean)
-      .join(", "),
+    border: `1px solid ${alpha(theme.palette.success.main, 0.5)}`,
+    background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.18)}, ${alpha(theme.palette.success.main, 0.08)})`,
+    boxShadow: `0 0 0 1px ${alpha(theme.palette.success.main, 0.25)}`,
   },
   listItemBusy: {
     opacity: 0.6,
@@ -165,8 +157,8 @@ const useStyles = makeStyles((theme) => {
     paddingTop: theme.spacing(0.5),
     paddingBottom: theme.spacing(0.5),
     paddingLeft: theme.spacing(1),
-    marginLeft: theme.spacing(0.25),
-    marginRight: theme.spacing(0.25),
+    marginLeft: 0,
+    marginRight: 0,
   },
   bulkCheckbox: {
     padding: 4,

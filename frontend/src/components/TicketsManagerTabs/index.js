@@ -66,7 +66,7 @@ import {
   useTicketsInboxPendingColumn,
   useTicketsInboxChatbotColumn,
 } from "../../context/TicketsInboxContext";
-import { PANEL_RADIUS } from "../../theme/ticketPanelStyles";
+import { PANEL_RADIUS, LIST_SIDE_PADDING_PX } from "../../theme/ticketPanelStyles";
 
 /**
  * Atendimentos (desktop): abas, busca, filtros e lista.
@@ -101,7 +101,8 @@ const useStyles = makeStyles(theme => ({
 		flex: "none",
 		backgroundColor: theme.palette.background.paper,
 		borderTopLeftRadius: PANEL_RADIUS,
-		borderTopRightRadius: 0,
+		borderTopRightRadius: PANEL_RADIUS,
+		overflow: "hidden",
 		borderBottom: `1px solid ${theme.palette.divider}`,
 		paddingTop: theme.spacing(0.5),
 		boxShadow: "none",
@@ -234,7 +235,7 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		flexWrap: "wrap",
 		gap: theme.spacing(1),
-		padding: theme.spacing(1.25, 1.5),
+		padding: theme.spacing(1.25, LIST_SIDE_PADDING_PX / 8),
 		backgroundColor:
 			theme.palette.type === "dark" ? theme.palette.background.default : theme.palette.grey[50],
 		justifyContent: "center",
@@ -331,7 +332,7 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		flexWrap: "wrap",
 		gap: theme.spacing(1),
-		padding: theme.spacing(1.25, 1.5),
+		padding: theme.spacing(1.25, LIST_SIDE_PADDING_PX / 8),
 		borderBottom: `1px solid ${theme.palette.divider}`,
 		backgroundColor:
 			theme.palette.type === "dark" ? theme.palette.background.default : theme.palette.grey[50],

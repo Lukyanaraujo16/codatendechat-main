@@ -2,6 +2,8 @@ import { alpha } from "@material-ui/core/styles";
 
 export const PANEL_RADIUS = 14;
 export const PANEL_GAP_PX = 12;
+/** Padding lateral padrão da coluna de lista (busca, bulk, cards). */
+export const LIST_SIDE_PADDING_PX = 12;
 
 /** Sombra padrão dos painéis principais (lista + conversa). */
 export function getPanelElevation(theme) {

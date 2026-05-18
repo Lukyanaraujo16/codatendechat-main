@@ -22,7 +22,7 @@ const useStyles = makeStyles((theme) => {
 			borderBottom: `1px solid ${alpha(theme.palette.divider, 0.85)}`,
 			borderTop: "none",
 			borderTopRightRadius: PANEL_RADIUS,
-			borderTopLeftRadius: 0,
+			borderTopLeftRadius: PANEL_RADIUS,
 			boxShadow: "none",
 			overflow: "visible",
 			[theme.breakpoints.down("sm")]: {
