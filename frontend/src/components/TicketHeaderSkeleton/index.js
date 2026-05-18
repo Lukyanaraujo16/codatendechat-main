@@ -4,12 +4,17 @@ import { makeStyles } from "@material-ui/core/styles";
 import { Avatar, Card, CardHeader } from "@material-ui/core";
 import Skeleton from "@material-ui/lab/Skeleton";
 
-const useStyles = makeStyles(theme => ({
+import { PANEL_RADIUS } from "../../theme/ticketPanelStyles";
+
+const useStyles = makeStyles((theme) => ({
 	ticketHeader: {
 		display: "flex",
-		backgroundColor: "#eee",
+		backgroundColor: theme.palette.background.paper,
 		flex: "none",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+		borderBottom: `1px solid ${theme.palette.divider}`,
+		borderTopRightRadius: PANEL_RADIUS,
+		borderTopLeftRadius: 0,
+		overflow: "visible",
 	},
 }));
 
@@ -17,7 +22,7 @@ const TicketHeaderSkeleton = () => {
 	const classes = useStyles();
 
 	return (
-		<Card square className={classes.ticketHeader}>
+		<Card elevation={0} className={classes.ticketHeader}>
 			<CardHeader
 				titleTypographyProps={{ noWrap: true }}
 				subheaderTypographyProps={{ noWrap: true }}

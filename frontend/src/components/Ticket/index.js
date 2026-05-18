@@ -24,6 +24,11 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 import QuickMessageChatModal from "../QuickMessageChatModal";
 import { canAccessTicket } from "../../utils/canAccessTicket";
+import {
+  PANEL_RADIUS,
+  getPanelElevation,
+  getChatPanelBackground,
+} from "../../theme/ticketPanelStyles";
 
 const drawerWidth = 320;
 
@@ -43,10 +48,14 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden",
+    overflow: "visible",
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 0,
-    borderLeft: "0",
+    borderTopRightRadius: PANEL_RADIUS,
+    borderBottomRightRadius: PANEL_RADIUS,
+    border: "none",
+    background: getChatPanelBackground(theme),
+    boxShadow: getPanelElevation(theme),
     marginRight: -drawerWidth,
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.sharp,
@@ -55,8 +64,6 @@ const useStyles = makeStyles((theme) => ({
   },
 
   mainWrapperShift: {
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
     transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
@@ -70,6 +77,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
+    backgroundColor: theme.palette.background.default,
   },
 
   chatBodyMain: {
@@ -81,6 +89,13 @@ const useStyles = makeStyles((theme) => ({
   },
 
   messageInputFooter: {
+    flexShrink: 0,
+    backgroundColor: theme.palette.background.paper,
+    borderBottomRightRadius: PANEL_RADIUS,
+  },
+
+  pendingBanner: {
+    borderRadius: 0,
     flexShrink: 0,
   },
 }));
@@ -278,7 +293,7 @@ const Ticket = () => {
           />
         </TicketHeader>
         {ticket?.status === "pending" && (
-          <Alert severity="info" data-ticket-pending-banner>
+          <Alert severity="info" data-ticket-pending-banner className={classes.pendingBanner}>
             {i18n.t("ticket.pendingPreview.banner")}
           </Alert>
         )}

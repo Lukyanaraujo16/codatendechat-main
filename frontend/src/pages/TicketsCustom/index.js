@@ -7,6 +7,13 @@ import { makeStyles } from "@material-ui/core/styles";
 import TicketsManager from "../../components/TicketsManagerTabs/";
 import Ticket from "../../components/Ticket/";
 import { i18n } from "../../translate/i18n";
+import {
+	PANEL_RADIUS,
+	PANEL_GAP_PX,
+	getPanelElevation,
+	getPanelDividerBorder,
+	getChatPanelBackground,
+} from "../../theme/ticketPanelStyles";
 
 import PersonIcon from "@material-ui/icons/Person";
 
@@ -15,7 +22,7 @@ const useStyles = makeStyles(theme => ({
 		flex: 1,
 		minHeight: 0,
 		width: "100%",
-		padding: theme.spacing(0.5),
+		padding: theme.spacing(1),
 		overflow: "hidden",
 		display: "flex",
 		flexDirection: "column",
@@ -33,6 +40,7 @@ const useStyles = makeStyles(theme => ({
 		flex: 1,
 		minHeight: 0,
 		width: "100%",
+		height: "100%",
 	},
 
 	contactsWrapper: {
@@ -41,6 +49,14 @@ const useStyles = makeStyles(theme => ({
 		height: "100%",
 		flexDirection: "column",
 		overflow: "hidden",
+		borderTopLeftRadius: PANEL_RADIUS,
+		borderBottomLeftRadius: PANEL_RADIUS,
+		borderTopRightRadius: 0,
+		borderBottomRightRadius: 0,
+		border: "none",
+		borderRight: getPanelDividerBorder(theme),
+		backgroundColor: theme.palette.background.paper,
+		boxShadow: getPanelElevation(theme),
 	},
 	messagesWrapper: {
 		display: "flex",
@@ -48,9 +64,16 @@ const useStyles = makeStyles(theme => ({
 		height: "100%",
 		flexDirection: "column",
 		overflow: "hidden",
+		borderTopRightRadius: PANEL_RADIUS,
+		borderBottomRightRadius: PANEL_RADIUS,
+		borderTopLeftRadius: 0,
+		borderBottomLeftRadius: 0,
+		border: "none",
+		background: getChatPanelBackground(theme),
+		boxShadow: getPanelElevation(theme),
 	},
 	welcomeMsg: {
-		backgroundColor: theme.palette.boxticket || theme.palette.background.paper,
+		backgroundColor: theme.palette.background.default,
 		display: "flex",
 		flexDirection: "column",
 		justifyContent: "center",
@@ -58,6 +81,7 @@ const useStyles = makeStyles(theme => ({
 		height: "100%",
 		textAlign: "center",
 		padding: theme.spacing(4),
+		borderRadius: `0 ${PANEL_RADIUS}px ${PANEL_RADIUS}px 0`,
 	},
 	placeholderIllustration: {
 		position: "relative",
@@ -159,7 +183,12 @@ const TicketsCustom = () => {
 	return (
 		<div className={classes.chatContainer}>
 			<div className={classes.chatPapper}>
-				<Grid container spacing={0} className={classes.gridRoot} wrap="nowrap">
+				<Grid
+					container
+					spacing={PANEL_GAP_PX / 8}
+					className={classes.gridRoot}
+					wrap="nowrap"
+				>
 					<Grid item xs={4} className={classes.contactsWrapper}>
 						<TicketsManager />
 					</Grid>

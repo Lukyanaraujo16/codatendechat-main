@@ -66,6 +66,7 @@ import {
   useTicketsInboxPendingColumn,
   useTicketsInboxChatbotColumn,
 } from "../../context/TicketsInboxContext";
+import { PANEL_RADIUS } from "../../theme/ticketPanelStyles";
 
 /**
  * Atendimentos (desktop): abas, busca, filtros e lista.
@@ -82,10 +83,9 @@ const useStyles = makeStyles(theme => ({
 		width: "100%",
 		height: "100%",
 		overflow: "hidden",
-		borderTopRightRadius: 0,
-		borderBottomRightRadius: 0,
 		borderRadius: 0,
-		backgroundColor: theme.palette.background.paper,
+		backgroundColor: "transparent",
+		boxShadow: "none",
 	},
 	ticketsWrapper: {
 		position: "relative",
@@ -94,19 +94,17 @@ const useStyles = makeStyles(theme => ({
 		minHeight: 0,
 		flexDirection: "column",
 		overflow: "hidden",
-		borderTopRightRadius: 0,
-		borderBottomRightRadius: 0,
-		borderRadius: 0,
+		borderBottomLeftRadius: PANEL_RADIUS,
 	},
 
 	tabsHeader: {
 		flex: "none",
 		backgroundColor: theme.palette.background.paper,
-		borderTopLeftRadius: 12,
-		borderTopRightRadius: 12,
+		borderTopLeftRadius: PANEL_RADIUS,
+		borderTopRightRadius: 0,
 		borderBottom: `1px solid ${theme.palette.divider}`,
 		paddingTop: theme.spacing(0.5),
-		boxShadow: theme.palette.type === "dark" ? "none" : "0 1px 0 rgba(0,0,0,0.04)",
+		boxShadow: "none",
 		"& .MuiTabs-indicator": {
 			height: 3,
 			borderRadius: 2,

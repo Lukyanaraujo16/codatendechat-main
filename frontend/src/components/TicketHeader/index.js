@@ -3,6 +3,7 @@ import React from "react";
 import { Card } from "@material-ui/core";
 import { makeStyles, alpha } from "@material-ui/core/styles";
 import TicketHeaderSkeleton from "../TicketHeaderSkeleton";
+import { PANEL_RADIUS } from "../../theme/ticketPanelStyles";
 
 const useStyles = makeStyles((theme) => {
 	const isDark = theme.palette.type === "dark";
@@ -18,9 +19,12 @@ const useStyles = makeStyles((theme) => {
 			flex: "none",
 			minHeight: 56,
 			padding: theme.spacing(0, 0.5, 0, 0),
-			borderBottom: `1px solid ${theme.palette.divider}`,
-			borderTop: `1px solid ${alpha(theme.palette.success.main, 0.25)}`,
-			boxShadow: isDark ? "none" : `0 1px 0 ${alpha(theme.palette.common.black, 0.04)}`,
+			borderBottom: `1px solid ${alpha(theme.palette.divider, 0.85)}`,
+			borderTop: "none",
+			borderTopRightRadius: PANEL_RADIUS,
+			borderTopLeftRadius: 0,
+			boxShadow: "none",
+			overflow: "visible",
 			[theme.breakpoints.down("sm")]: {
 				flexWrap: "wrap",
 			},
@@ -37,7 +41,7 @@ const TicketHeader = ({ loading, children }) => {
 			{loading ? (
 				<TicketHeaderSkeleton />
 			) : (
-				<Card square className={classes.ticketHeader}>
+				<Card elevation={0} className={classes.ticketHeader}>
 					{children}
 				</Card>
 			)}

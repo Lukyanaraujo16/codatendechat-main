@@ -39,6 +39,7 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { useWhatsAppPanelRecorder } from "../../hooks/useWhatsAppPanelRecorder";
 import resolveQuickMessageTemplate from "../../utils/resolveQuickMessageTemplate";
 import { recordRecentUse } from "../../utils/quickMessageChatStorage";
+import { PANEL_RADIUS } from "../../theme/ticketPanelStyles";
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === "dark";
@@ -48,7 +49,10 @@ const useStyles = makeStyles((theme) => {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    borderTop: `1px solid ${theme.palette.divider}`,
+    borderTop: `1px solid ${alpha(theme.palette.divider, 0.85)}`,
+    borderBottomRightRadius: PANEL_RADIUS,
+    borderBottomLeftRadius: 0,
+    boxShadow: "none",
   },
   pendingHint: {
     width: "100%",
@@ -128,6 +132,9 @@ const useStyles = makeStyles((theme) => {
     alignItems: "center",
     backgroundColor: theme.palette.background.paper,
     borderTop: `1px solid ${theme.palette.divider}`,
+    borderBottomRightRadius: PANEL_RADIUS,
+    borderBottomLeftRadius: 0,
+    overflow: "hidden",
   },
 
   emojiBox: {

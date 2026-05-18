@@ -34,6 +34,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
+import { getTicketPanelScrollbarStyles } from "../../theme/ticketPanelStyles";
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === "dark";
@@ -58,7 +59,7 @@ const useStyles = makeStyles((theme) => {
     padding: theme.spacing(2.5, 2),
     overflowY: "auto",
     WebkitOverflowScrolling: "touch",
-    ...theme.scrollbarStyles,
+    ...getTicketPanelScrollbarStyles(theme),
   },
 
   circleLoading: {

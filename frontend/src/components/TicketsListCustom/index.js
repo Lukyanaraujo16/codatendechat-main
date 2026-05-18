@@ -27,6 +27,10 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TicketsInboxContext } from "../../context/TicketsInboxContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import {
+  PANEL_RADIUS,
+  getTicketPanelScrollbarStyles,
+} from "../../theme/ticketPanelStyles";
 
 const useStyles = makeStyles((theme) => ({
   ticketsListWrapper: {
@@ -38,8 +42,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     flexDirection: "column",
     overflow: "hidden",
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
+    borderBottomLeftRadius: PANEL_RADIUS,
   },
 
   ticketsList: {
@@ -48,10 +51,11 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: "100%",
     overflowY: "auto",
     WebkitOverflowScrolling: "touch",
-    ...theme.scrollbarStyles,
+    ...getTicketPanelScrollbarStyles(theme),
     borderTop: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default,
     padding: theme.spacing(1, 0.5, 1.5),
+    borderBottomLeftRadius: PANEL_RADIUS,
   },
 
   ticketsListHeader: {

@@ -48,6 +48,7 @@ import { useAcceptTicket } from "../../hooks/useAcceptTicket";
 import ContactTag from "../ContactTag";
 import { canDeleteTickets } from "../../utils/canDeleteTickets";
 import { formatTicketLastMessagePreview } from "../../utils/formatTicketLastMessagePreview";
+import { getCardListHoverBackground } from "../../theme/ticketPanelStyles";
 import { toast } from "react-toastify";
 
 const MAX_TAGS_VISIBLE = 3;
@@ -93,25 +94,24 @@ const useStyles = makeStyles((theme) => {
     marginLeft: theme.spacing(0.75),
     marginRight: theme.spacing(0.75),
     marginBottom: 10,
-    border: `1px solid ${theme.palette.divider}`,
+    border: `1px solid ${alpha(theme.palette.divider, 0.9)}`,
     backgroundColor: theme.palette.background.paper,
-    boxShadow: isDark ? "none" : "0 2px 6px rgba(0,0,0,0.06)",
+    boxShadow: isDark
+      ? "0 1px 2px rgba(0,0,0,0.25)"
+      : "0 1px 2px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.05)",
     "&.MuiListItem-root": {
       borderRadius: CARD_RADIUS,
     },
-    transition: `all ${CARD_MS}ms ${MICRO_EASE}`,
+    transition: `all ${MICRO_MS}ms ${MICRO_EASE}`,
     cursor: "pointer",
     "@media (hover: hover)": {
       "&:hover:not($listItemSelected):not($listItemBusy)": {
-        backgroundColor: theme.palette.action.hover,
+        backgroundColor: getCardListHoverBackground(theme),
         transform: "scale(1.01)",
         boxShadow: isDark
-          ? `0 4px 14px ${alpha(theme.palette.common.black, 0.35)}`
-          : `0 4px 14px ${alpha(theme.palette.common.black, 0.08)}`,
+          ? "0 2px 8px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.3)"
+          : "0 2px 8px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.08)",
       },
-    },
-    "&:hover:not($listItemSelected)": {
-      backgroundColor: theme.palette.action.hover,
     },
     "&$listItemSelected:hover": {
       background:
