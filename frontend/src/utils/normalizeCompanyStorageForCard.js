@@ -67,5 +67,7 @@ export function normalizeCompanyStorageForCard(data) {
     remainingFormatted,
     percent: percent != null ? Number(percent) : null,
     calculatedAt,
+    usedFromLiveSummary:
+      data.usedFromLiveSummary === true || usedFromSummaryFallback,
   };
 }

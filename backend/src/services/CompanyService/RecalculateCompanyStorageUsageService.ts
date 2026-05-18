@@ -1,6 +1,8 @@
 import Company from "../../models/Company";
 import AppError from "../../errors/AppError";
 import CalculateCompanyStorageUsageService from "./CalculateCompanyStorageUsageService";
+import { calculateCompanyMediaTotalBytes } from "../CompanyMediaService/ListCompanyMediaService";
+import SummarizeCompanyMediaBucketsService from "../CompanyMediaService/SummarizeCompanyMediaBucketsService";
 import CreateCompanyStorageSnapshotService, {
   type CompanyStorageSnapshotReason
 } from "./CreateCompanyStorageSnapshotService";
@@ -20,7 +22,29 @@ const RecalculateCompanyStorageUsageService = async (
   }
 
   logger.info({ companyId }, "[CompanyStorage] recalculate start");
+
+  const [summary, inventory] = await Promise.all([
+    SummarizeCompanyMediaBucketsService(companyId),
+    calculateCompanyMediaTotalBytes(companyId)
+  ]);
+
+  logger.info(
+    {
+      companyId,
+      summaryTotalBytes: summary.totalBytes,
+      scannerTotalBytes: inventory.totalBytes,
+      fileCount: inventory.fileCount
+    },
+    "[CompanyStorage] media-summary totalBytes"
+  );
+
   const usedBytes = await CalculateCompanyStorageUsageService(companyId);
+
+  logger.info(
+    { companyId, persistedStorageUsedBytes: usedBytes },
+    "[CompanyStorage] persisted storageUsedBytes"
+  );
+
   try {
     await setCompanyStorageUsage(companyId, usedBytes);
   } catch (err) {

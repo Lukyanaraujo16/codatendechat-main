@@ -676,6 +676,8 @@ const messages = {
 					"Your company has reached or exceeded the storage limit (informational; sending is still allowed in this phase).",
 				alertExceeded:
 					"Your company has reached or exceeded the storage limit (informational; sending is still allowed in this phase).",
+				syncPending:
+					"Estimated value from listed files; syncing with the official counter is in progress.",
 				toasts: {
 					recalculated: "Storage recalculated from files on the server.",
 				},

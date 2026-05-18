@@ -1,11 +1,11 @@
-import { scanCompanyPublicMediaBytes } from "../../helpers/companyPublicMediaScan";
+import { calculateCompanyMediaTotalBytes } from "../CompanyMediaService/ListCompanyMediaService";
 import { logger } from "../../utils/logger";
 
 const CalculateCompanyStorageUsageService = async (
   companyId: number
 ): Promise<number> => {
   try {
-    const { totalBytes } = await scanCompanyPublicMediaBytes(companyId);
+    const { totalBytes } = await calculateCompanyMediaTotalBytes(companyId);
     return totalBytes;
   } catch (err) {
     logger.error(

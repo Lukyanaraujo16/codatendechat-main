@@ -7,7 +7,7 @@ import {
   getCompanyStorageLimitBytes,
   resolveStorageAlertLevel
 } from "../../helpers/companyStorage";
-import SummarizeCompanyMediaBucketsService from "../CompanyMediaService/SummarizeCompanyMediaBucketsService";
+import { calculateCompanyMediaTotalBytes } from "../CompanyMediaService/ListCompanyMediaService";
 import RecalculateCompanyStorageUsageService from "./RecalculateCompanyStorageUsageService";
 import { logger } from "../../utils/logger";
 
@@ -133,17 +133,17 @@ const GetMyCompanyStorageService = async (
 
   if (usedBytes === 0) {
     try {
-      const summary = await SummarizeCompanyMediaBucketsService(companyId);
-      if (summary.totalBytes > 0) {
+      const inventory = await calculateCompanyMediaTotalBytes(companyId);
+      if (inventory.totalBytes > 0) {
         logger.warn(
           {
             companyId,
             dbUsedBytes: usedBytes,
-            summaryTotalBytes: summary.totalBytes
+            summaryTotalBytes: inventory.totalBytes
           },
-          "[CompanyStorage] db zero but disk summary positive — using summary for display"
+          "[CompanyStorage] db zero but inventory positive — using inventory for display"
         );
-        usedBytes = summary.totalBytes;
+        usedBytes = inventory.totalBytes;
         void RecalculateCompanyStorageUsageService(companyId, {
           snapshotReason: "auto_on_read"
         }).catch((syncErr) => {

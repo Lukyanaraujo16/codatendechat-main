@@ -1,4 +1,3 @@
-import fs from "fs";
 import path from "path";
 import { Op } from "sequelize";
 import Message from "../../models/Message";
@@ -14,7 +13,6 @@ import ChatMessage from "../../models/ChatMessage";
 import Chat from "../../models/Chat";
 import { FlowImgModel } from "../../models/FlowImg";
 import { FlowAudioModel } from "../../models/FlowAudio";
-import { getBackendPublicFolder } from "../../helpers/publicFolder";
 import { formatBytesPtBr } from "../../helpers/companyStorage";
 import {
   classifyMediaBucket,
@@ -22,9 +20,8 @@ import {
   CompanyMediaSource,
   normalizePublicRelPath
 } from "../../helpers/companyMediaTypes";
-import SummarizeCompanyMediaBucketsService, {
-  EMPTY_COMPANY_MEDIA_SUMMARY
-} from "./SummarizeCompanyMediaBucketsService";
+import { EMPTY_COMPANY_MEDIA_SUMMARY } from "./companyMediaSummaryConstants";
+import { resolvePublicMediaStat } from "../../helpers/resolvePublicMediaStat";
 import { logger } from "../../utils/logger";
 
 const MAX_PER_SOURCE = 800;
@@ -51,59 +48,32 @@ function toIsoOrEpoch(d: unknown): string {
 /** Estat local em public/; missing só quando há caminho relativo normalizado mas ficheiro não existe. */
 function safeStatRel(
   relRaw: string | null | undefined,
-  logMeta: { source: CompanyMediaSource; sourceId?: string }
-): { sizeBytes: number; missing: boolean } {
-  const norm = normalizePublicRelPath(relRaw);
-  if (!norm) {
-    return { sizeBytes: 0, missing: false };
-  }
-  const abs = path.join(getBackendPublicFolder(), norm);
-  try {
-    const st = fs.statSync(abs);
-    if (!st.isFile()) {
-      logger.warn(
-        { ...logMeta, file: path.basename(norm) },
-        "[CompanyMedia] missing media file"
-      );
-      return { sizeBytes: 0, missing: true };
-    }
-    return { sizeBytes: st.size, missing: false };
-  } catch {
+  logMeta: { source: CompanyMediaSource; sourceId?: string },
+  joinedRel?: string | null
+): { sizeBytes: number; missing: boolean; storageRel: string | null } {
+  const stat = resolvePublicMediaStat(relRaw, joinedRel);
+  if (stat.missing && stat.sizeBytes === 0) {
     logger.warn(
-      { ...logMeta, file: path.basename(norm) },
+      {
+        ...logMeta,
+        file: path.basename(String(stat.storageRel || relRaw || ""))
+      },
       "[CompanyMedia] missing media file"
     );
-    return { sizeBytes: 0, missing: true };
   }
+  return {
+    sizeBytes: stat.sizeBytes,
+    missing: stat.missing,
+    storageRel: stat.storageRel
+  };
 }
 
 /** Caminho relativo sob public/ (sem URL absoluta exposta). */
 function statSizeForJoinedRel(
   relJoined: string,
   logMeta: { source: CompanyMediaSource; sourceId?: string }
-): { sizeBytes: number; missing: boolean } {
-  const s = String(relJoined || "").trim().replace(/\\/g, "/").replace(/^\/+/, "");
-  if (!s) {
-    return { sizeBytes: 0, missing: true };
-  }
-  const abs = path.join(getBackendPublicFolder(), s);
-  try {
-    const st = fs.statSync(abs);
-    if (!st.isFile()) {
-      logger.warn(
-        { ...logMeta, file: path.basename(s) },
-        "[CompanyMedia] missing media file"
-      );
-      return { sizeBytes: 0, missing: true };
-    }
-    return { sizeBytes: st.size, missing: false };
-  } catch {
-    logger.warn(
-      { ...logMeta, file: path.basename(s) },
-      "[CompanyMedia] missing media file"
-    );
-    return { sizeBytes: 0, missing: true };
-  }
+): { sizeBytes: number; missing: boolean; storageRel: string | null } {
+  return safeStatRel(null, logMeta, relJoined);
 }
 
 function hrefForRel(rel: string): string {
@@ -134,6 +104,8 @@ export type CompanyMediaListItem = {
   contactName: string | null;
   /** Ficheiro local esperado em public/ mas não encontrado (ou path relativo vazio). */
   missing?: boolean;
+  /** Caminho relativo em public/ para deduplicação no cálculo de armazenamento. */
+  storageRel?: string | null;
 };
 
 export type ListCompanyMediaInput = {
@@ -201,7 +173,7 @@ async function loadMessageItems(companyId: number): Promise<CompanyMediaListItem
         const mime = (msg.getDataValue("mediaType") as string) || null;
         const nPath = normalizePublicRelPath(rel);
         const base = path.basename(String(nPath || rel || "file")) || "file";
-        const { sizeBytes, missing } = safeStatRel(rel, {
+        const { sizeBytes, missing, storageRel } = safeStatRel(rel, {
           source: "message",
           sourceId: String(msg.id)
         });
@@ -222,7 +194,8 @@ async function loadMessageItems(companyId: number): Promise<CompanyMediaListItem
           createdAt: toIsoOrEpoch(msg.createdAt),
           ticketId: msg.ticketId ?? null,
           contactName: c?.name != null ? String(c.name) : null,
-          missing
+          missing,
+          storageRel
         });
       } catch (rowErr) {
         logger.warn(
@@ -264,7 +237,7 @@ async function loadQuickMessageItems(companyId: number): Promise<CompanyMediaLis
       const inner = String(r.getDataValue("mediaPath") || "");
       const relJoined = path.join("quickMessage", inner);
       const name = r.mediaName || inner;
-      const { sizeBytes, missing } = statSizeForJoinedRel(relJoined, {
+      const { sizeBytes, missing, storageRel } = statSizeForJoinedRel(relJoined, {
         source: "quickMessage",
         sourceId: String(r.id)
       });
@@ -282,7 +255,8 @@ async function loadQuickMessageItems(companyId: number): Promise<CompanyMediaLis
         createdAt: toIsoOrEpoch(r.createdAt),
         ticketId: null,
         contactName: null,
-        missing
+        missing,
+        storageRel
       };
     });
   } catch (err) {
@@ -313,7 +287,7 @@ async function loadScheduleItems(companyId: number): Promise<CompanyMediaListIte
     return rows.map((r) => {
       const rel = String(r.getDataValue("mediaPath") || "");
       const name = r.mediaName || rel;
-      const { sizeBytes, missing } = safeStatRel(rel, {
+      const { sizeBytes, missing, storageRel } = safeStatRel(rel, {
         source: "schedule",
         sourceId: String(r.id)
       });
@@ -332,7 +306,8 @@ async function loadScheduleItems(companyId: number): Promise<CompanyMediaListIte
         createdAt: toIsoOrEpoch(r.updatedAt ?? r.createdAt),
         ticketId: r.ticketId ?? null,
         contactName: c?.name != null ? String(c.name) : null,
-        missing
+        missing,
+        storageRel
       };
     });
   } catch (err) {
@@ -362,7 +337,7 @@ async function loadCampaignItems(companyId: number): Promise<CompanyMediaListIte
     return rows.map((r) => {
       const rel = String(r.getDataValue("mediaPath") || "");
       const name = r.mediaName || rel;
-      const { sizeBytes, missing } = safeStatRel(rel, {
+      const { sizeBytes, missing, storageRel } = safeStatRel(rel, {
         source: "campaign",
         sourceId: String(r.id)
       });
@@ -380,7 +355,8 @@ async function loadCampaignItems(companyId: number): Promise<CompanyMediaListIte
         createdAt: toIsoOrEpoch(r.updatedAt ?? r.createdAt),
         ticketId: null,
         contactName: null,
-        missing
+        missing,
+        storageRel
       };
     });
   } catch (err) {
@@ -409,7 +385,7 @@ async function loadAnnouncementItems(companyId: number): Promise<CompanyMediaLis
     });
     return rows.map((r) => {
       const rel = String(r.getDataValue("mediaPath") || "");
-      const { sizeBytes, missing } = safeStatRel(rel, {
+      const { sizeBytes, missing, storageRel } = safeStatRel(rel, {
         source: "announcement",
         sourceId: String(r.id)
       });
@@ -427,7 +403,8 @@ async function loadAnnouncementItems(companyId: number): Promise<CompanyMediaLis
         createdAt: toIsoOrEpoch(r.updatedAt ?? r.createdAt),
         ticketId: null,
         contactName: null,
-        missing
+        missing,
+        storageRel
       };
     });
   } catch (err) {
@@ -457,7 +434,7 @@ async function loadFileListItems(companyId: number): Promise<CompanyMediaListIte
         try {
           if (!opt.path) continue;
           const relJoined = path.join("fileList", String(fl.id), opt.path);
-          const { sizeBytes, missing } = statSizeForJoinedRel(relJoined, {
+          const { sizeBytes, missing, storageRel } = statSizeForJoinedRel(relJoined, {
             source: "fileListOption",
             sourceId: String(opt.id)
           });
@@ -475,7 +452,8 @@ async function loadFileListItems(companyId: number): Promise<CompanyMediaListIte
             createdAt: toIsoOrEpoch(opt.updatedAt ?? opt.createdAt),
             ticketId: null,
             contactName: null,
-            missing
+            missing,
+            storageRel
           });
         } catch (rowErr) {
           logger.warn(
@@ -518,7 +496,7 @@ async function loadChatMessageItems(companyId: number): Promise<CompanyMediaList
     return rows.map((r) => {
       const rel = String(r.getDataValue("mediaPath") || "");
       const name = r.mediaName || rel;
-      const { sizeBytes, missing } = safeStatRel(rel, {
+      const { sizeBytes, missing, storageRel } = safeStatRel(rel, {
         source: "chatMessage",
         sourceId: String(r.id)
       });
@@ -536,7 +514,8 @@ async function loadChatMessageItems(companyId: number): Promise<CompanyMediaList
         createdAt: toIsoOrEpoch(r.createdAt),
         ticketId: null,
         contactName: null,
-        missing
+        missing,
+        storageRel
       };
     });
   } catch (err) {
@@ -562,7 +541,7 @@ async function loadFlowImageItems(companyId: number): Promise<CompanyMediaListIt
     });
     return rows.map((r) => {
       const rel = String(r.name || "");
-      const { sizeBytes, missing } = safeStatRel(rel, {
+      const { sizeBytes, missing, storageRel } = safeStatRel(rel, {
         source: "flowImage",
         sourceId: String(r.id)
       });
@@ -580,7 +559,8 @@ async function loadFlowImageItems(companyId: number): Promise<CompanyMediaListIt
         createdAt: toIsoOrEpoch(r.updatedAt ?? r.createdAt),
         ticketId: null,
         contactName: null,
-        missing
+        missing,
+        storageRel
       };
     });
   } catch (err) {
@@ -606,7 +586,7 @@ async function loadFlowAudioItems(companyId: number): Promise<CompanyMediaListIt
     });
     return rows.map((r) => {
       const rel = String(r.name || "");
-      const { sizeBytes, missing } = safeStatRel(rel, {
+      const { sizeBytes, missing, storageRel } = safeStatRel(rel, {
         source: "flowAudio",
         sourceId: String(r.id)
       });
@@ -624,7 +604,8 @@ async function loadFlowAudioItems(companyId: number): Promise<CompanyMediaListIt
         createdAt: toIsoOrEpoch(r.updatedAt ?? r.createdAt),
         ticketId: null,
         contactName: null,
-        missing
+        missing,
+        storageRel
       };
     });
   } catch (err) {
@@ -638,6 +619,111 @@ async function loadFlowAudioItems(companyId: number): Promise<CompanyMediaListIt
     );
     return [];
   }
+}
+
+export type CompanyMediaTotalResult = {
+  totalBytes: number;
+  imageBytes: number;
+  videoBytes: number;
+  audioBytes: number;
+  documentBytes: number;
+  otherBytes: number;
+  bySource: Record<string, { count: number; bytes: number }>;
+  fileCount: number;
+};
+
+/**
+ * Fonte única de verdade: mesmos loaders da tabela da Gestão de mídias,
+ * com deduplicação por ficheiro em public/.
+ */
+export async function calculateCompanyMediaTotalBytes(
+  companyId: number
+): Promise<CompanyMediaTotalResult> {
+  logger.info({ companyId }, "[CompanyStorage] calculate start (inventory)");
+
+  const settled = await Promise.allSettled([
+    loadMessageItems(companyId),
+    loadQuickMessageItems(companyId),
+    loadScheduleItems(companyId),
+    loadCampaignItems(companyId),
+    loadAnnouncementItems(companyId),
+    loadFileListItems(companyId),
+    loadChatMessageItems(companyId),
+    loadFlowImageItems(companyId),
+    loadFlowAudioItems(companyId)
+  ]);
+
+  const merged: CompanyMediaListItem[] = [];
+  settled.forEach((result) => {
+    if (result.status === "fulfilled") {
+      merged.push(...result.value);
+    }
+  });
+
+  const seen = new Set<string>();
+  const bySource: Record<string, { count: number; bytes: number }> = {};
+  const byType: Record<CompanyMediaBucket, number> = {
+    image: 0,
+    video: 0,
+    audio: 0,
+    document: 0,
+    other: 0
+  };
+  let totalBytes = 0;
+  let fileCount = 0;
+
+  for (const item of merged) {
+    const key =
+      item.storageRel ||
+      `${item.source}:${item.fileName}:${item.sizeBytes}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const sz = Number(item.sizeBytes) || 0;
+    if (sz <= 0) continue;
+    fileCount += 1;
+    totalBytes += sz;
+    byType[item.type] = (byType[item.type] || 0) + sz;
+    if (!bySource[item.source]) {
+      bySource[item.source] = { count: 0, bytes: 0 };
+    }
+    bySource[item.source].count += 1;
+    bySource[item.source].bytes += sz;
+  }
+
+  for (const [source, stat] of Object.entries(bySource)) {
+    logger.info(
+      {
+        companyId,
+        source,
+        count: stat.count,
+        bytes: Math.round(stat.bytes)
+      },
+      "[CompanyStorage] source total"
+    );
+  }
+
+  const result: CompanyMediaTotalResult = {
+    totalBytes: Math.round(totalBytes),
+    imageBytes: Math.round(byType.image),
+    videoBytes: Math.round(byType.video),
+    audioBytes: Math.round(byType.audio),
+    documentBytes: Math.round(byType.document),
+    otherBytes: Math.round(byType.other),
+    bySource,
+    fileCount
+  };
+
+  logger.info(
+    {
+      companyId,
+      totalBytes: result.totalBytes,
+      fileCount: result.fileCount,
+      sources: Object.keys(bySource)
+    },
+    "[CompanyStorage] calculate success (inventory)"
+  );
+
+  return result;
 }
 
 const ListCompanyMediaService = async (
@@ -685,7 +771,7 @@ const ListCompanyMediaService = async (
       loadChatMessageItems(companyId),
       loadFlowImageItems(companyId),
       loadFlowAudioItems(companyId),
-      SummarizeCompanyMediaBucketsService(companyId)
+      calculateCompanyMediaTotalBytes(companyId)
     ]);
 
     const loaderNames = [
@@ -698,7 +784,7 @@ const ListCompanyMediaService = async (
       "chatMessage",
       "flowImage",
       "flowAudio",
-      "summarize"
+      "inventoryTotal"
     ] as const;
 
     settled.forEach((result, i) => {
@@ -735,10 +821,18 @@ const ListCompanyMediaService = async (
       settled[7].status === "fulfilled" ? settled[7].value : [];
     const faItems =
       settled[8].status === "fulfilled" ? settled[8].value : [];
-    const summary =
-      settled[9].status === "fulfilled"
-        ? settled[9].value
-        : { ...EMPTY_COMPANY_MEDIA_SUMMARY };
+    const inventoryTotal =
+      settled[9].status === "fulfilled" ? settled[9].value : null;
+    const summary = inventoryTotal
+      ? {
+          totalBytes: inventoryTotal.totalBytes,
+          imageBytes: inventoryTotal.imageBytes,
+          videoBytes: inventoryTotal.videoBytes,
+          audioBytes: inventoryTotal.audioBytes,
+          documentBytes: inventoryTotal.documentBytes,
+          otherBytes: inventoryTotal.otherBytes
+        }
+      : { ...EMPTY_COMPANY_MEDIA_SUMMARY };
 
     const merged = [
       ...messageItems,

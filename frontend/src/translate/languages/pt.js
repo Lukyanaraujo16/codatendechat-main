@@ -688,6 +688,8 @@ const messages = {
           "Sua empresa atingiu ou ultrapassou o limite de armazenamento (informativo; o envio continua permitido nesta fase).",
         alertExceeded:
           "Sua empresa atingiu ou ultrapassou o limite de armazenamento (informativo; o envio continua permitido nesta fase).",
+        syncPending:
+          "Valor estimado a partir dos ficheiros listados; a sincronização com o contador oficial está em curso.",
         toasts: {
           recalculated: "Armazenamento recalculado com base nos ficheiros no servidor.",
         },

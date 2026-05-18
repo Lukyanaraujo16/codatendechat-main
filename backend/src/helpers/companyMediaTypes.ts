@@ -63,11 +63,20 @@ export function classifyMediaBucket(
 export function normalizePublicRelPath(raw: string | null | undefined): string | null {
   if (raw == null) return null;
   let s = String(raw).trim();
-  if (!s || s.startsWith("http://") || s.startsWith("https://")) return null;
-  s = s.replace(/\\/g, "/").replace(/^\/+/, "");
-  const idx = s.toLowerCase().indexOf("/public/");
-  if (idx >= 0) {
-    s = s.slice(idx + "/public/".length);
+  if (!s) return null;
+  s = s.replace(/\\/g, "/");
+  const publicIdx = s.toLowerCase().indexOf("/public/");
+  if (publicIdx >= 0) {
+    s = s.slice(publicIdx + "/public/".length);
+  } else if (/^https?:\/\//i.test(s)) {
+    try {
+      const u = new URL(s);
+      const p = u.pathname.replace(/^\/+/, "");
+      s = p.startsWith("public/") ? p.slice("public/".length) : p;
+    } catch {
+      return null;
+    }
   }
+  s = s.replace(/^\/+/, "");
   return s || null;
 }

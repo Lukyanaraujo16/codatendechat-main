@@ -61,7 +61,14 @@ export default function CompanyStorageUsageCard({ data, loading }) {
   const normalized = normalizeCompanyStorageForCard(data);
   if (!normalized) return null;
 
-  const { usedFormatted, limitFormatted, remainingFormatted, percent, calculatedAt } = normalized;
+  const {
+    usedFormatted,
+    limitFormatted,
+    remainingFormatted,
+    percent,
+    calculatedAt,
+    usedFromLiveSummary,
+  } = normalized;
 
   let alertSeverity = "info";
   let alertMsg = null;
@@ -115,6 +122,13 @@ export default function CompanyStorageUsageCard({ data, loading }) {
               transition: "width 0.25s ease",
             }}
           />
+        </Box>
+      ) : null}
+      {usedFromLiveSummary ? (
+        <Box mt={1.5}>
+          <Alert severity="info">
+            {i18n.t("companyStorage.syncPending")}
+          </Alert>
         </Box>
       ) : null}
       {alertMsg ? (
