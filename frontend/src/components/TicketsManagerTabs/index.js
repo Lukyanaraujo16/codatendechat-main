@@ -67,6 +67,7 @@ import {
   useTicketsInboxChatbotColumn,
 } from "../../context/TicketsInboxContext";
 import { PANEL_RADIUS, LIST_SIDE_PADDING_PX } from "../../theme/ticketPanelStyles";
+import { canSeeChatbotInboxTab } from "../../utils/canSeeChatbotInboxTab";
 
 /**
  * Atendimentos (desktop): abas, busca, filtros e lista.
@@ -436,7 +437,12 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const InboxSubTabsPills = memo(function InboxSubTabsPills({ tabOpen, setTabOpen, classes }) {
+const InboxSubTabsPills = memo(function InboxSubTabsPills({
+  tabOpen,
+  setTabOpen,
+  classes,
+  showChatbotTab,
+}) {
   const { openCount, pendingCount, chatbotCount } = useTicketsInboxMetrics();
   return (
     <div className={classes.statusPillsRow}>
@@ -474,22 +480,24 @@ const InboxSubTabsPills = memo(function InboxSubTabsPills({ tabOpen, setTabOpen,
         </span>
       </ButtonBase>
 
-      <ButtonBase
-        className={`${classes.statusPill} ${classes.statusPillBtn} ${classes.statusPillGreen} ${
-          tabOpen === "chatbot" ? classes.statusPillGreenActive : ""
-        }`}
-        onClick={() => setTabOpen("chatbot")}
-      >
-        <span className={classes.statusCountGreen}>{chatbotCount}</span>
-        <AndroidIcon className={clsx(classes.statusPillIcon, classes.statusIconGreen)} />
-        <span
-          className={
-            tabOpen === "chatbot" ? classes.statusPillTextActive : classes.statusPillText
-          }
+      {showChatbotTab ? (
+        <ButtonBase
+          className={`${classes.statusPill} ${classes.statusPillBtn} ${classes.statusPillGreen} ${
+            tabOpen === "chatbot" ? classes.statusPillGreenActive : ""
+          }`}
+          onClick={() => setTabOpen("chatbot")}
         >
-          CHATBOT
-        </span>
-      </ButtonBase>
+          <span className={classes.statusCountGreen}>{chatbotCount}</span>
+          <AndroidIcon className={clsx(classes.statusPillIcon, classes.statusIconGreen)} />
+          <span
+            className={
+              tabOpen === "chatbot" ? classes.statusPillTextActive : classes.statusPillText
+            }
+          >
+            CHATBOT
+          </span>
+        </ButtonBase>
+      ) : null}
     </div>
   );
 });
@@ -560,7 +568,13 @@ const InboxChatbotListPanel = memo(function InboxChatbotListPanel({
   );
 });
 
-function OpenInboxTicketLists({ tabOpen, compactList, selectedQueueIds, showAllTickets }) {
+function OpenInboxTicketLists({
+  tabOpen,
+  compactList,
+  selectedQueueIds,
+  showAllTickets,
+  showChatbotTab,
+}) {
   const styleOpen = useMemo(
     () => ({ display: tabOpen === "open" ? "flex" : "none" }),
     [tabOpen]
@@ -587,11 +601,13 @@ function OpenInboxTicketLists({ tabOpen, compactList, selectedQueueIds, showAllT
         style={stylePending}
         selectedQueueIds={selectedQueueIds}
       />
-      <InboxChatbotListPanel
-        compactList={compactList}
-        style={styleChatbot}
-        selectedQueueIds={selectedQueueIds}
-      />
+      {showChatbotTab ? (
+        <InboxChatbotListPanel
+          compactList={compactList}
+          style={styleChatbot}
+          selectedQueueIds={selectedQueueIds}
+        />
+      ) : null}
     </>
   );
 }
@@ -621,6 +637,7 @@ const TicketsManagerTabs = () => {
   const { user } = useContext(AuthContext);
   const { whatsApps } = useContext(WhatsAppsContext);
   const { profile } = user;
+  const showChatbotTab = useMemo(() => canSeeChatbotInboxTab(user), [user]);
 
   const userQueueIds = Array.isArray(user?.queues) ? user.queues.map((q) => q.id) : [];
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
@@ -656,6 +673,12 @@ const TicketsManagerTabs = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!showChatbotTab && tabOpen === "chatbot") {
+      setTabOpen("open");
+    }
+  }, [showChatbotTab, tabOpen, setTabOpen]);
 
   useEffect(() => {
     if (tab === "search") {
@@ -868,7 +891,12 @@ const TicketsManagerTabs = () => {
       </Paper>
 
       {tab === "open" && (
-        <InboxSubTabsPills tabOpen={tabOpen} setTabOpen={setTabOpen} classes={classes} />
+        <InboxSubTabsPills
+          tabOpen={tabOpen}
+          setTabOpen={setTabOpen}
+          classes={classes}
+          showChatbotTab={showChatbotTab}
+        />
       )}
 
       <div className={classes.searchRow}>
@@ -964,6 +992,7 @@ const TicketsManagerTabs = () => {
             compactList={compactList}
             selectedQueueIds={selectedQueueIds}
             showAllTickets={showAllTickets}
+            showChatbotTab={showChatbotTab}
           />
         </Paper>
       </TabPanel>
