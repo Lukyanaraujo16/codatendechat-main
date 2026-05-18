@@ -196,6 +196,17 @@ export default function MediaManager() {
       setCount(Number(data.count) || 0);
       setHasMore(Boolean(data.hasMore));
       setSummary(data.summary || null);
+      if (data.summary?.totalBytes > 0) {
+        setStorage((prev) => {
+          const used = Number(prev?.usedBytes ?? 0);
+          if (used > 0) return prev;
+          return {
+            ...(prev || {}),
+            usedBytes: data.summary.totalBytes,
+            summaryTotalBytes: data.summary.totalBytes,
+          };
+        });
+      }
     } catch (e) {
       toastError(e);
       setItems([]);
@@ -207,9 +218,9 @@ export default function MediaManager() {
   const handleRecalculateStorage = useCallback(async () => {
     setRecalculateLoading(true);
     try {
-      await api.post("/companies/storage/recalculate");
+      const { data } = await api.post("/companies/storage/recalculate");
+      setStorage(data);
       showSuccessToast("companyStorage.toasts.recalculated");
-      await loadStorage();
       await loadList();
     } catch (e) {
       toastError(e);
@@ -371,7 +382,10 @@ export default function MediaManager() {
         style={{ gap: 12 }}
       >
         <Box flex="1" minWidth={280}>
-          <CompanyStorageUsageCard data={storage} loading={storageLoading} />
+          <CompanyStorageUsageCard
+            data={storage ? { ...storage, summary } : null}
+            loading={storageLoading}
+          />
         </Box>
         <Box display="flex" flexDirection="column" alignItems="flex-start" style={{ gap: 8 }}>
           <Button

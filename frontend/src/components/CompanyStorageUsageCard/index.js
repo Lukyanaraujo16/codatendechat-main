@@ -7,6 +7,7 @@ import { makeStyles, useTheme } from "@material-ui/core/styles";
 import Alert from "@material-ui/lab/Alert";
 import { i18n } from "../../translate/i18n";
 import { normalizeCompanyStorageForCard } from "../../utils/normalizeCompanyStorageForCard";
+import { formatStorageCalculatedAt } from "../../utils/formatStorageCalculatedAt";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -100,9 +101,8 @@ export default function CompanyStorageUsageCard({ data, loading }) {
       ) : null}
       {calculatedAt ? (
         <Typography className={classes.caption} component="div" style={{ marginTop: 4 }}>
-          {i18n.t("companyStorage.updatedAt", {
-            date: new Date(calculatedAt).toLocaleString(),
-          })}
+          {i18n.t("companyStorage.updatedAtLabel")}{" "}
+          {formatStorageCalculatedAt(calculatedAt)}
         </Typography>
       ) : null}
       {pct != null ? (

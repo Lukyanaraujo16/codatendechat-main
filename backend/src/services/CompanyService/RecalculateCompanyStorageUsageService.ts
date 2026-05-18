@@ -19,6 +19,7 @@ const RecalculateCompanyStorageUsageService = async (
     throw new AppError("ERR_NO_COMPANY_FOUND", 404);
   }
 
+  logger.info({ companyId }, "[CompanyStorage] recalculate start");
   const usedBytes = await CalculateCompanyStorageUsageService(companyId);
   try {
     await setCompanyStorageUsage(companyId, usedBytes);

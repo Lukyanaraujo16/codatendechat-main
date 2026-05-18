@@ -681,6 +681,7 @@ const messages = {
         usedUnlimited: "{{used}} usados (sem limite definido)",
         remaining: "{{value}} restantes",
         updatedAt: "Última atualização: {{date}}",
+        updatedAtLabel: "Última atualização:",
         alertAttention: "Sua empresa atingiu 80% do armazenamento disponível.",
         alertAlmostFull: "Sua empresa atingiu 90% do armazenamento disponível.",
         alertCritical:

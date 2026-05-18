@@ -9,6 +9,7 @@ import {
 export type CompanyStorageSnapshotReason =
   | "manual_recalculate"
   | "scheduled_recalculate"
+  | "auto_on_read"
   | "media_increment"
   | "media_decrement"
   | "threshold_80"

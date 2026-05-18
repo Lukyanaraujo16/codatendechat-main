@@ -12,6 +12,19 @@ export function normalizeCompanyStorageForCard(data) {
     usedBytes = 0;
   }
 
+  const summaryTotalBytes = Number(
+    data.summaryTotalBytes ?? data.summary?.totalBytes ?? 0
+  );
+  let usedFromSummaryFallback = false;
+  if (
+    usedBytes === 0 &&
+    Number.isFinite(summaryTotalBytes) &&
+    summaryTotalBytes > 0
+  ) {
+    usedBytes = summaryTotalBytes;
+    usedFromSummaryFallback = true;
+  }
+
   const limitBytesRaw =
     data.limitBytes != null
       ? Number(data.limitBytes)
@@ -22,9 +35,11 @@ export function normalizeCompanyStorageForCard(data) {
     limitBytesRaw != null && Number.isFinite(limitBytesRaw) ? limitBytesRaw : null;
 
   const usedFormatted =
-    data.usedFormatted ??
-    data.storageUsedFormatted ??
-    formatBytesPtBr(usedBytes);
+    usedFromSummaryFallback
+      ? formatBytesPtBr(usedBytes)
+      : data.usedFormatted ??
+        data.storageUsedFormatted ??
+        formatBytesPtBr(usedBytes);
 
   let limitFormatted = data.limitFormatted ?? data.storageLimitFormatted ?? null;
   if (limitFormatted == null && limitBytes != null) {
