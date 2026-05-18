@@ -37,7 +37,7 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: "100%",
     marginLeft: "auto",
     marginRight: theme.spacing(0.5),
-    gap: theme.spacing(1),
+    gap: theme.spacing(0.5),
     minWidth: 0,
     [theme.breakpoints.down("xs")]: {
       overflowX: "auto",
@@ -49,13 +49,32 @@ const useStyles = makeStyles((theme) => ({
   actionGroup: {
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(1),
+    gap: theme.spacing(0.25),
     flexShrink: 0,
+    "& .MuiIconButton-root": {
+      transition: `all ${MICRO_MS}ms ease`,
+    },
+    "& .MuiIconButton-root:hover:not($deleteIconBtn)": {
+      backgroundColor: alpha(theme.palette.success.main, 0.12),
+    },
+  },
+  iconActionBtn: {
+    transition: `all ${MICRO_MS}ms ease`,
+    "&:hover": {
+      backgroundColor: alpha(theme.palette.success.main, 0.12),
+    },
+  },
+  deleteIconBtn: {
+    color: theme.palette.error.main,
+    transition: `all ${MICRO_MS}ms ease`,
+    "&:hover": {
+      backgroundColor: alpha(theme.palette.error.main, 0.12),
+    },
   },
   moreMenuBtn: {
     transition: `all ${MICRO_MS}ms ease`,
     "&:hover": {
-      backgroundColor: theme.palette.action.hover,
+      backgroundColor: alpha(theme.palette.success.main, 0.12),
     },
   },
   resolveContained: {
@@ -90,7 +109,7 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.primary.main,
     transition: `all ${MICRO_MS}ms ease`,
     "&:hover": {
-      backgroundColor: theme.palette.action.hover,
+      backgroundColor: alpha(theme.palette.success.main, 0.12),
     },
   },
   menuDelete: {
@@ -104,8 +123,31 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const ActionIconButton = ({
+  title,
+  onClick,
+  disabled,
+  className,
+  children,
+}) => (
+  <Tooltip title={title}>
+    <span>
+      <IconButton
+        size="small"
+        onClick={onClick}
+        disabled={disabled}
+        className={className}
+        aria-label={title}
+      >
+        {children}
+      </IconButton>
+    </span>
+  </Tooltip>
+);
+
 /**
- * Barra de ações do ticket (status open) — Transferir + Resolver visíveis; demais no menu ⋮.
+ * Barra de ações do ticket (status open).
+ * Desktop: ações principais visíveis; mobile: Transferir + Resolver + menu ⋮.
  */
 const TicketConversationActionBar = ({
   loading,
@@ -135,8 +177,128 @@ const TicketConversationActionBar = ({
     }
   };
 
+  const deleteVisible =
+    showDelete === true ? (
+      <ActionIconButton
+        title={i18n.t("ticketOptionsMenu.delete")}
+        onClick={onDeleteClick}
+        disabled={loading}
+        className={clsx(classes.iconActionBtn, classes.deleteIconBtn)}
+      >
+        <DeleteOutlineIcon fontSize="small" />
+      </ActionIconButton>
+    ) : showDelete === false ? null : (
+      <Can
+        role={userProfile}
+        perform="ticket-options:deleteTicket"
+        yes={() => (
+          <ActionIconButton
+            title={i18n.t("ticketOptionsMenu.delete")}
+            onClick={onDeleteClick}
+            disabled={loading}
+            className={clsx(classes.iconActionBtn, classes.deleteIconBtn)}
+          >
+            <DeleteOutlineIcon fontSize="small" />
+          </ActionIconButton>
+        )}
+      />
+    );
+
+  const renderReturnIcon = () => (
+    <ActionIconButton
+      title={i18n.t("messagesList.header.buttons.return")}
+      onClick={onReturn}
+      disabled={loading}
+      className={classes.iconActionBtn}
+    >
+      {loading ? (
+        <CircularProgress size={18} />
+      ) : (
+        <UndoRoundedIcon fontSize="small" />
+      )}
+    </ActionIconButton>
+  );
+
+  const renderFlowIcon = () =>
+    ticketId ? (
+      <TicketFlowExecutionLogModal
+        ticketId={ticketId}
+        renderTrigger={(open) => (
+          <ActionIconButton
+            title={i18n.t("messagesList.header.buttons.flowHistory")}
+            onClick={open}
+            disabled={loading}
+            className={classes.iconActionBtn}
+          >
+            <AccountTreeIcon fontSize="small" />
+          </ActionIconButton>
+        )}
+      />
+    ) : null;
+
+  const renderQuickRepliesIcon = () =>
+    typeof onQuickRepliesClick === "function" ? (
+      <ActionIconButton
+        title={i18n.t("messagesList.header.buttons.quickReplies")}
+        onClick={onQuickRepliesClick}
+        disabled={loading}
+        className={classes.iconActionBtn}
+      >
+        <FlashOnIcon fontSize="small" />
+      </ActionIconButton>
+    ) : null;
+
+  const renderScheduleIcon = () => (
+    <ActionIconButton
+      title={i18n.t("ticketOptionsMenu.schedule")}
+      onClick={onScheduleClick}
+      disabled={loading}
+      className={classes.iconActionBtn}
+    >
+      <EventIcon fontSize="small" />
+    </ActionIconButton>
+  );
+
+  const renderMenuDeleteItem = () =>
+    showDelete === true ? (
+      <MenuItem onClick={runMenuAction(onDeleteClick)} className={classes.menuDelete}>
+        <ListItemIcon className={classes.menuDelete}>
+          <DeleteOutlineIcon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary={i18n.t("ticketOptionsMenu.delete")} />
+      </MenuItem>
+    ) : showDelete === false ? null : (
+      <Can
+        role={userProfile}
+        perform="ticket-options:deleteTicket"
+        yes={() => (
+          <MenuItem
+            onClick={runMenuAction(onDeleteClick)}
+            className={classes.menuDelete}
+          >
+            <ListItemIcon className={classes.menuDelete}>
+              <DeleteOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary={i18n.t("ticketOptionsMenu.delete")} />
+          </MenuItem>
+        )}
+      />
+    );
+
   return (
     <div className={classes.root} data-ticket-action-bar>
+      {!compact ? (
+        <div className={classes.actionGroup}>
+          {renderReturnIcon()}
+          {renderFlowIcon()}
+          {renderQuickRepliesIcon()}
+          {renderScheduleIcon()}
+          {extraIconActions ? (
+            <div className={classes.actionGroup}>{extraIconActions}</div>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className={classes.actionGroup}>
         <Tooltip title={i18n.t("ticketOptionsMenu.transfer")}>
           {compact ? (
@@ -190,105 +352,88 @@ const TicketConversationActionBar = ({
           </span>
         </Tooltip>
 
-        <Tooltip title={i18n.t("ticketOptionsMenu.moreActions")}>
-          <IconButton
-            size="small"
-            className={classes.moreMenuBtn}
-            onClick={openMenu}
-            aria-label={i18n.t("ticketOptionsMenu.moreActions")}
-            aria-haspopup="true"
-            aria-controls="ticket-action-menu"
-          >
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {!compact ? deleteVisible : null}
+
+        {compact ? (
+          <Tooltip title={i18n.t("ticketOptionsMenu.moreActions")}>
+            <IconButton
+              size="small"
+              className={classes.moreMenuBtn}
+              onClick={openMenu}
+              aria-label={i18n.t("ticketOptionsMenu.moreActions")}
+              aria-haspopup="true"
+              aria-controls="ticket-action-menu"
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        ) : null}
       </div>
 
-      <Menu
-        id="ticket-action-menu"
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={closeMenu}
-        getContentAnchorEl={null}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <MenuItem onClick={runMenuAction(onReturn)} disabled={loading}>
-          <ListItemIcon>
-            {loading ? (
-              <CircularProgress size={18} />
-            ) : (
-              <UndoRoundedIcon fontSize="small" />
-            )}
-          </ListItemIcon>
-          <ListItemText primary={i18n.t("messagesList.header.buttons.return")} />
-        </MenuItem>
-
-        {ticketId ? (
-          <TicketFlowExecutionLogModal
-            ticketId={ticketId}
-            renderTrigger={(open) => (
-              <MenuItem onClick={runMenuAction(open)}>
-                <ListItemIcon>
-                  <AccountTreeIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText
-                  primary={i18n.t("messagesList.header.buttons.flowHistory")}
-                />
-              </MenuItem>
-            )}
-          />
-        ) : null}
-
-        {typeof onQuickRepliesClick === "function" ? (
-          <MenuItem onClick={runMenuAction(onQuickRepliesClick)} disabled={loading}>
+      {compact ? (
+        <Menu
+          id="ticket-action-menu"
+          anchorEl={menuAnchor}
+          open={Boolean(menuAnchor)}
+          onClose={closeMenu}
+          getContentAnchorEl={null}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <MenuItem onClick={runMenuAction(onReturn)} disabled={loading}>
             <ListItemIcon>
-              <FlashOnIcon fontSize="small" />
+              {loading ? (
+                <CircularProgress size={18} />
+              ) : (
+                <UndoRoundedIcon fontSize="small" />
+              )}
             </ListItemIcon>
-            <ListItemText
-              primary={i18n.t("messagesList.header.buttons.quickReplies")}
+            <ListItemText primary={i18n.t("messagesList.header.buttons.return")} />
+          </MenuItem>
+
+          {ticketId ? (
+            <TicketFlowExecutionLogModal
+              ticketId={ticketId}
+              renderTrigger={(open) => (
+                <MenuItem onClick={runMenuAction(open)}>
+                  <ListItemIcon>
+                    <AccountTreeIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={i18n.t("messagesList.header.buttons.flowHistory")}
+                  />
+                </MenuItem>
+              )}
             />
-          </MenuItem>
-        ) : null}
+          ) : null}
 
-        <MenuItem onClick={runMenuAction(onScheduleClick)}>
-          <ListItemIcon>
-            <EventIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={i18n.t("ticketOptionsMenu.schedule")} />
-        </MenuItem>
+          {typeof onQuickRepliesClick === "function" ? (
+            <MenuItem onClick={runMenuAction(onQuickRepliesClick)} disabled={loading}>
+              <ListItemIcon>
+                <FlashOnIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText
+                primary={i18n.t("messagesList.header.buttons.quickReplies")}
+              />
+            </MenuItem>
+          ) : null}
 
-        {extraIconActions ? (
-          <MenuItem disabled style={{ opacity: 1 }}>
-            <div className={classes.menuExtras}>{extraIconActions}</div>
-          </MenuItem>
-        ) : null}
-
-        {showDelete === true ? (
-          <MenuItem onClick={runMenuAction(onDeleteClick)} className={classes.menuDelete}>
-            <ListItemIcon className={classes.menuDelete}>
-              <DeleteOutlineIcon fontSize="small" />
+          <MenuItem onClick={runMenuAction(onScheduleClick)}>
+            <ListItemIcon>
+              <EventIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText primary={i18n.t("ticketOptionsMenu.delete")} />
+            <ListItemText primary={i18n.t("ticketOptionsMenu.schedule")} />
           </MenuItem>
-        ) : showDelete === false ? null : (
-          <Can
-            role={userProfile}
-            perform="ticket-options:deleteTicket"
-            yes={() => (
-              <MenuItem
-                onClick={runMenuAction(onDeleteClick)}
-                className={classes.menuDelete}
-              >
-                <ListItemIcon className={classes.menuDelete}>
-                  <DeleteOutlineIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={i18n.t("ticketOptionsMenu.delete")} />
-              </MenuItem>
-            )}
-          />
-        )}
-      </Menu>
+
+          {extraIconActions ? (
+            <MenuItem disabled style={{ opacity: 1 }}>
+              <div className={classes.menuExtras}>{extraIconActions}</div>
+            </MenuItem>
+          ) : null}
+
+          {renderMenuDeleteItem()}
+        </Menu>
+      ) : null}
     </div>
   );
 };
