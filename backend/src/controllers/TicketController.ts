@@ -12,6 +12,7 @@ import { userCanDeleteTicket } from "../helpers/canDeleteTicket";
 import { assertTicketAccess } from "../helpers/ticketAccess";
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import attachContactLabelsToTickets from "../helpers/attachContactLabelsToTickets";
+import { parseArrayQueryParam } from "../utils/parseArrayQueryParam";
 import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUIDService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
@@ -69,48 +70,55 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const userId = req.user.id;
   const { companyId, profile, supportMode } = req.user;
 
-  let queueIds: number[] = [];
-  let tagsIds: number[] = [];
-  let contactLabelIds: number[] = [];
-  let usersIds: number[] = [];
+  const queueIds = parseArrayQueryParam(queueIdsStringified);
+  const tagsIds = parseArrayQueryParam(tagIdsStringified);
+  const contactLabelIds = parseArrayQueryParam(contactLabelIdsStringified);
+  const usersIds = parseArrayQueryParam(userIdsStringified);
 
-  if (queueIdsStringified) {
-    queueIds = JSON.parse(queueIdsStringified);
+  const normalizedSearch =
+    searchParam != null && String(searchParam).trim() !== ""
+      ? String(searchParam).trim()
+      : undefined;
+
+  try {
+    const { tickets, count, hasMore } = await ListTicketsService({
+      searchParam: normalizedSearch,
+      tags: tagsIds,
+      contactLabels: contactLabelIds,
+      users: usersIds,
+      pageNumber,
+      status,
+      date,
+      updatedAt,
+      showAll,
+      userId,
+      queueIds,
+      withUnreadMessages,
+      companyId,
+      isGroup,
+      userProfile: profile,
+      supportMode
+    });
+    await attachContactLabelsToTickets(tickets, companyId);
+
+    return res.status(200).json({ tickets, count, hasMore });
+  } catch (error) {
+    logger.error(
+      {
+        companyId,
+        userId,
+        status,
+        searchParam: normalizedSearch ?? "",
+        contactLabels: contactLabelIdsStringified ?? "",
+        queueIds: queueIdsStringified ?? "",
+        isGroup: isGroup ?? "",
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      "[ListTicketsService] failed"
+    );
+    throw error;
   }
-
-  if (tagIdsStringified) {
-    tagsIds = JSON.parse(tagIdsStringified);
-  }
-
-  if (contactLabelIdsStringified) {
-    contactLabelIds = JSON.parse(contactLabelIdsStringified);
-  }
-
-  if (userIdsStringified) {
-    usersIds = JSON.parse(userIdsStringified);
-  }
-
-  const { tickets, count, hasMore } = await ListTicketsService({
-    searchParam,
-    tags: tagsIds,
-    contactLabels: contactLabelIds,
-    users: usersIds,
-    pageNumber,
-    status,
-    date,
-    updatedAt,
-    showAll,
-    userId,
-    queueIds,
-    withUnreadMessages,
-    companyId,
-    isGroup,
-    userProfile: profile,
-    supportMode
-  });
-  await attachContactLabelsToTickets(tickets, companyId);
-
-  return res.status(200).json({ tickets, count, hasMore });
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
@@ -157,21 +165,9 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
   const userId = req.user.id;
   const { companyId, profile, supportMode } = req.user;
 
-  let queueIds: number[] = [];
-  let tagsIds: number[] = [];
-  let usersIds: number[] = [];
-
-  if (queueIdsStringified) {
-    queueIds = JSON.parse(queueIdsStringified);
-  }
-
-  if (tagIdsStringified) {
-    tagsIds = JSON.parse(tagIdsStringified);
-  }
-
-  if (userIdsStringified) {
-    usersIds = JSON.parse(userIdsStringified);
-  }
+  const queueIds = parseArrayQueryParam(queueIdsStringified);
+  const tagsIds = parseArrayQueryParam(tagIdsStringified);
+  const usersIds = parseArrayQueryParam(userIdsStringified);
 
   const { tickets, count, hasMore } = await ListTicketsServiceKanban({
     searchParam,

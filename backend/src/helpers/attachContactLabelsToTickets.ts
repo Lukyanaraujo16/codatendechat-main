@@ -1,4 +1,5 @@
 import Ticket from "../models/Ticket";
+import { logger } from "../utils/logger";
 import getLabelsForContactIds from "./getLabelsForContactIds";
 
 const attachContactLabelsToTickets = async (
@@ -15,14 +16,25 @@ const attachContactLabelsToTickets = async (
 
   if (!contactIds.length) return;
 
-  const labelsMap = await getLabelsForContactIds(contactIds, companyId);
+  try {
+    const labelsMap = await getLabelsForContactIds(contactIds, companyId);
 
-  for (const ticket of tickets) {
-    const contact = ticket.contact;
-    if (!contact) continue;
-    const labels = labelsMap.get(contact.id) ?? [];
-    (contact as any).setDataValue?.("labels", labels);
-    (contact as any).labels = labels;
+    for (const ticket of tickets) {
+      const contact = ticket.contact;
+      if (!contact) continue;
+      const labels = labelsMap.get(contact.id) ?? [];
+      (contact as any).setDataValue?.("labels", labels);
+      (contact as any).labels = labels;
+    }
+  } catch (error) {
+    logger.warn(
+      {
+        companyId,
+        contactIdsCount: contactIds.length,
+        error: error instanceof Error ? error.message : String(error)
+      },
+      "[attachContactLabelsToTickets] failed — tickets returned without labels"
+    );
   }
 };
 

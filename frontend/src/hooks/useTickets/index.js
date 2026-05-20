@@ -40,22 +40,30 @@ const useTickets = ({
 
     const fetchTickets = async () => {
       try {
-        const { data } = await api.get("/tickets", {
-          params: {
-            searchParam,
-            pageNumber,
-            tags,
-            contactLabels,
-            users,
-            status,
-            date,
-            updatedAt,
-            showAll,
-            queueIds,
-            withUnreadMessages,
-            isGroup,
-          },
-        });
+        const params = { pageNumber };
+        const trimmedSearch =
+          searchParam != null && String(searchParam).trim() !== ""
+            ? String(searchParam).trim()
+            : "";
+        if (trimmedSearch) params.searchParam = trimmedSearch;
+        if (status) params.status = status;
+        if (date) params.date = date;
+        if (updatedAt) params.updatedAt = updatedAt;
+        if (showAll != null && showAll !== "") params.showAll = showAll;
+        if (withUnreadMessages) params.withUnreadMessages = withUnreadMessages;
+        if (isGroup) params.isGroup = isGroup;
+        if (queueIds != null && queueIds !== "") params.queueIds = queueIds;
+        if (tags != null && tags !== "" && tags !== "[]") params.tags = tags;
+        if (
+          contactLabels != null &&
+          contactLabels !== "" &&
+          contactLabels !== "[]"
+        ) {
+          params.contactLabels = contactLabels;
+        }
+        if (users != null && users !== "" && users !== "[]") params.users = users;
+
+        const { data } = await api.get("/tickets", { params });
         if (cancelled) return;
         setTickets(Array.isArray(data.tickets) ? data.tickets : []);
         setHasMore(data.hasMore);

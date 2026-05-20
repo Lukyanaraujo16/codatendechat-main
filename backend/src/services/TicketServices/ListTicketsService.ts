@@ -171,8 +171,8 @@ const ListTicketsService = async ({
         },
         { "$contact.number$": { [Op.like]: `%${sanitizedSearchParam}%` } },
         {
-          "$message.body$": where(
-            fn("LOWER", col("body")),
+          "$messages.body$": where(
+            fn("LOWER", col("messages.body")),
             "LIKE",
             `%${sanitizedSearchParam}%`
           )
