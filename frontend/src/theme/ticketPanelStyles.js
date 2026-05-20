@@ -1,8 +1,8 @@
 import { alpha } from "@material-ui/core/styles";
 
 export const PANEL_RADIUS = 14;
-/** Radius do painel esquerdo da lista (topo/esquerda arredondados; junção com chat reta). */
-export const INBOX_LIST_PANEL_RADIUS = `${PANEL_RADIUS}px 0 0 ${PANEL_RADIUS}px`;
+/** Radius do painel esquerdo: ambos os cantos superiores arredondados; base reta à direita. */
+export const INBOX_LIST_PANEL_RADIUS = `${PANEL_RADIUS}px ${PANEL_RADIUS}px 0 ${PANEL_RADIUS}px`;
 export const PANEL_GAP_PX = 12;
 /** Padding lateral padrão da coluna de lista (busca, bulk, cards). */
 export const LIST_SIDE_PADDING_PX = 12;

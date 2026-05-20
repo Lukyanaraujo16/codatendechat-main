@@ -18,7 +18,6 @@ const useAppTabsStyles = makeStyles((theme) => ({
       paddingLeft: theme.spacing(2),
       paddingRight: theme.spacing(2),
       backgroundColor: "transparent",
-      borderRadius: 0,
       boxShadow: "none",
       transition: theme.transitions.create(["color"], {
         duration: 200,

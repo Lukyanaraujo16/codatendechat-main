@@ -125,6 +125,9 @@ const Ticket = () => {
 
   useEffect(() => {
     setPartialEnrichWarning(false);
+  }, [ticketId]);
+
+  useEffect(() => {
     setLoading(true);
     const delayDebounceFn = setTimeout(() => {
       const fetchTicket = async () => {

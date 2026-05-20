@@ -1,7 +1,7 @@
 import { logger } from "../utils/logger";
 import {
-  markOpenTicketFallback,
-  type OpenTicketFallbackFlag
+  markOpenTicketTechnicalFallback,
+  type OpenTicketTechnicalFallback
 } from "./openTicketRequestContext";
 
 export type EnrichmentKind = "contactLabels" | "groupParticipantDisplay";
@@ -47,7 +47,7 @@ export function isTolerableEnrichmentError(err: unknown): boolean {
   return false;
 }
 
-function fallbackFlagForKind(kind: EnrichmentKind): OpenTicketFallbackFlag {
+function technicalFlagForKind(kind: EnrichmentKind): OpenTicketTechnicalFallback {
   return kind === "contactLabels" ? "labels" : "groupEnrich";
 }
 
@@ -63,7 +63,7 @@ function logTagForKind(kind: EnrichmentKind, tolerable: boolean): string {
 }
 
 /**
- * Regista falha de enriquecimento e marca fallback no contexto da request.
+ * Regista falha de enriquecimento opcional (só logs; não expõe banner ao operador).
  * @returns true se tolerável (schema/migration); false se inesperado.
  */
 export function logEnrichmentFailure(
@@ -81,13 +81,14 @@ export function logEnrichmentFailure(
 
   if (tolerable) {
     logger.warn(payload, logTagForKind(kind, true));
-    markOpenTicketFallback(fallbackFlagForKind(kind));
   } else {
     logger.error(
       { ...payload, stack: getErrorStack(err) },
       logTagForKind(kind, false)
     );
   }
+
+  markOpenTicketTechnicalFallback(technicalFlagForKind(kind));
 
   return tolerable;
 }

@@ -50,8 +50,11 @@ const useStyles = makeStyles((theme) => ({
 
   bulkToolbarHost: {
     flexShrink: 0,
-    padding: theme.spacing(1, LIST_SIDE_PADDING_PX, 0),
+    width: "100%",
+    maxWidth: "none",
+    padding: 0,
     backgroundColor: theme.palette.background.default,
+    boxSizing: "border-box",
   },
 
   ticketsList: {
@@ -91,12 +94,14 @@ const useStyles = makeStyles((theme) => ({
   bulkToolbar: {
     display: "flex",
     alignItems: "center",
+    width: "100%",
+    maxWidth: "none",
     gap: theme.spacing(1),
-    borderRadius: 12,
+    borderRadius: PANEL_RADIUS,
     backgroundColor: theme.palette.background.paper,
-    padding: "8px 12px",
-    margin: 0,
-    marginBottom: theme.spacing(1.5),
+    padding: "10px 14px",
+    margin: theme.spacing(1, 1.5, 1.5),
+    minHeight: 52,
     overflow: "hidden",
     flexShrink: 0,
     boxSizing: "border-box",

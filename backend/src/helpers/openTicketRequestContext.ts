@@ -1,11 +1,18 @@
 import { AsyncLocalStorage } from "async_hooks";
 import type { ContactLabelDto } from "./getLabelsForContactIds";
 
-export type OpenTicketFallbackFlag = "labels" | "groupEnrich";
+/** Falhas técnicas de enriquecimento opcional — só logs, nunca banner. */
+export type OpenTicketTechnicalFallback = "labels" | "groupEnrich";
+
+/** Avisos visíveis ao operador (banner no painel). */
+export type OpenTicketUserWarning =
+  | "messagesPartial"
+  | "ticketIncomplete";
 
 type OpenTicketStore = {
   contactLabelsCache: Map<number, ContactLabelDto[]>;
-  fallbacks: Set<OpenTicketFallbackFlag>;
+  technicalFallbacks: Set<OpenTicketTechnicalFallback>;
+  userWarnings: Set<OpenTicketUserWarning>;
   startedAt: number;
 };
 
@@ -15,7 +22,8 @@ export function runOpenTicketContext<T>(fn: () => T): T {
   return openTicketStorage.run(
     {
       contactLabelsCache: new Map(),
-      fallbacks: new Set(),
+      technicalFallbacks: new Set(),
+      userWarnings: new Set(),
       startedAt: Date.now()
     },
     fn
@@ -26,12 +34,22 @@ export function getOpenTicketStore(): OpenTicketStore | undefined {
   return openTicketStorage.getStore();
 }
 
-export function markOpenTicketFallback(flag: OpenTicketFallbackFlag): void {
-  getOpenTicketStore()?.fallbacks.add(flag);
+/** Marca fallback técnico (etiquetas/grupo) — não vai para o frontend. */
+export function markOpenTicketTechnicalFallback(
+  flag: OpenTicketTechnicalFallback
+): void {
+  getOpenTicketStore()?.technicalFallbacks.add(flag);
 }
 
-export function getOpenTicketFallbacks(): OpenTicketFallbackFlag[] {
-  return [...(getOpenTicketStore()?.fallbacks ?? [])];
+/** Marca aviso relevante para o operador (banner). */
+export function markOpenTicketUserWarning(
+  code: OpenTicketUserWarning
+): void {
+  getOpenTicketStore()?.userWarnings.add(code);
+}
+
+export function getOpenTicketTechnicalFallbacks(): OpenTicketTechnicalFallback[] {
+  return [...(getOpenTicketStore()?.technicalFallbacks ?? [])];
 }
 
 export function getOpenTicketElapsedMs(): number {
@@ -40,17 +58,22 @@ export function getOpenTicketElapsedMs(): number {
   return Date.now() - store.startedAt;
 }
 
-/** Flags de fallback expostas ao cliente (painel parcial). */
+/** Apenas avisos que devem gerar banner no painel. */
 export function getOpenTicketEnrichWarnings(): string[] {
-  const warnings: string[] = [];
-  const fallbacks = getOpenTicketFallbacks();
-  if (fallbacks.includes("labels")) {
-    warnings.push("labels");
+  return [...(getOpenTicketStore()?.userWarnings ?? [])];
+}
+
+/** Detalhe técnico para logs/API em dev — nunca banner. */
+export function getOpenTicketEnrichDebug(): string[] {
+  const debug: string[] = [];
+  const technical = getOpenTicketTechnicalFallbacks();
+  if (technical.includes("labels")) {
+    debug.push("labels");
   }
-  if (fallbacks.includes("groupEnrich")) {
-    warnings.push("groupParticipantDisplay");
+  if (technical.includes("groupEnrich")) {
+    debug.push("groupParticipantDisplay");
   }
-  return warnings;
+  return debug;
 }
 
 export function getCachedContactLabels(

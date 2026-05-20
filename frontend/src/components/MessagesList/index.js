@@ -33,6 +33,7 @@ import whatsBackgroundDark from "../../assets/wa-background-dark.png"; //DARK MO
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { hasUserVisibleEnrichWarnings } from "../../utils/openTicketEnrichWarnings";
 import { i18n } from "../../translate/i18n";
 import { getTicketPanelScrollbarStyles } from "../../theme/ticketPanelStyles";
 
@@ -388,9 +389,8 @@ const MessagesList = ({
             setLoading(false);
             if (
               pageNumber === 1 &&
-              Array.isArray(data?.enrichWarnings) &&
-              data.enrichWarnings.length > 0 &&
-              typeof onPartialEnrichWarning === "function"
+              typeof onPartialEnrichWarning === "function" &&
+              hasUserVisibleEnrichWarnings(data?.enrichWarnings)
             ) {
               onPartialEnrichWarning(data.enrichWarnings);
             }
@@ -400,6 +400,9 @@ const MessagesList = ({
             scrollToBottom();
           }
         } catch (err) {
+          if (currentTicketId.current !== ticketId) {
+            return;
+          }
           setLoading(false);
           if (typeof onLoadError === "function") {
             onLoadError(err);

@@ -24,6 +24,7 @@ import { assertTicketAccess } from "../helpers/ticketAccess";
 import { logger } from "../utils/logger";
 import {
   getOpenTicketElapsedMs,
+  getOpenTicketEnrichDebug,
   getOpenTicketEnrichWarnings
 } from "../helpers/openTicketRequestContext";
 import { incrementCompanyStorageUsage } from "../services/CompanyService/adjustCompanyStorageUsage";
@@ -87,11 +88,15 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     await SetTicketMessagesAsRead(ticket, HUMAN_PANEL_LIST_MESSAGES);
 
     const enrichWarnings = getOpenTicketEnrichWarnings();
+    const enrichDebug = getOpenTicketEnrichDebug();
+    const isDev = process.env.NODE_ENV !== "production";
+
     logger.info(
       {
         ...logBase,
         elapsedMs: getOpenTicketElapsedMs(),
-        enrichWarnings: enrichWarnings.length ? enrichWarnings : undefined
+        enrichWarnings: enrichWarnings.length ? enrichWarnings : undefined,
+        enrichDebug: enrichDebug.length ? enrichDebug : undefined
       },
       "[OpenTicket] show-ticket success"
     );
@@ -101,7 +106,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
       messages,
       ticket,
       hasMore,
-      enrichWarnings
+      ...(enrichWarnings.length ? { enrichWarnings } : {}),
+      ...(isDev && enrichDebug.length ? { enrichDebug } : {})
     });
   } catch (error) {
     logger.error(

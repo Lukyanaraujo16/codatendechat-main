@@ -15,6 +15,7 @@ import attachContactLabelsToTickets from "../helpers/attachContactLabelsToTicket
 import { parseArrayQueryParam } from "../utils/parseArrayQueryParam";
 import {
   getOpenTicketElapsedMs,
+  getOpenTicketEnrichDebug,
   getOpenTicketEnrichWarnings
 } from "../helpers/openTicketRequestContext";
 import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUIDService";
@@ -231,12 +232,14 @@ export const showFromUUID = async (
   try {
     ticket = await ShowTicketUUIDService(uuid);
     const enrichWarnings = getOpenTicketEnrichWarnings();
+    const enrichDebug = getOpenTicketEnrichDebug();
     logger.info(
       {
         ...logBase,
         ticketId: ticket.id,
         elapsedMs: getOpenTicketElapsedMs(),
-        enrichWarnings: enrichWarnings.length ? enrichWarnings : undefined
+        enrichWarnings: enrichWarnings.length ? enrichWarnings : undefined,
+        enrichDebug: enrichDebug.length ? enrichDebug : undefined
       },
       "[OpenTicket] show-ticket success"
     );
