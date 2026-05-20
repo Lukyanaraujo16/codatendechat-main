@@ -9,6 +9,7 @@ import Ticket from "../../components/Ticket/";
 import { i18n } from "../../translate/i18n";
 import {
 	PANEL_RADIUS,
+	INBOX_LIST_PANEL_RADIUS,
 	PANEL_GAP_PX,
 	getPanelElevation,
 	getPanelDividerBorder,
@@ -49,10 +50,7 @@ const useStyles = makeStyles(theme => ({
 		height: "100%",
 		flexDirection: "column",
 		overflow: "hidden",
-		borderTopLeftRadius: PANEL_RADIUS,
-		borderBottomLeftRadius: PANEL_RADIUS,
-		borderTopRightRadius: 0,
-		borderBottomRightRadius: 0,
+		borderRadius: INBOX_LIST_PANEL_RADIUS,
 		border: "none",
 		borderRight: getPanelDividerBorder(theme),
 		backgroundColor: theme.palette.background.paper,

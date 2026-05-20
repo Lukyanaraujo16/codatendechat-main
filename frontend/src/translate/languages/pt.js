@@ -1543,6 +1543,8 @@ const messages = {
           "Foco em histórico de conversas — não substitui um CRM ou um funil de vendas.",
         tagsColumnHint:
           "Tags mostradas a partir dos atendimentos (tickets) deste contato.",
+        labelsColumnHint:
+          "Etiquetas visuais do contato (independente das tags de automação).",
         tagFilterHelp:
           "Filtra contatos que tenham pelo menos um ticket com a tag escolhida.",
         searchHelper: "Pesquise por nome, número, email ou notas.",
@@ -1584,6 +1586,7 @@ const messages = {
           whatsapp: "WhatsApp",
           email: "Email",
           tags: "Tags",
+          labels: "Etiquetas",
           lastInteraction: "Última interação",
           createdAt: "Criado em",
           actions: "Ações",
@@ -1595,6 +1598,8 @@ const messages = {
           dateHint: "Filtrar por período de atualização",
           tag: "Tag",
           allTags: "Todas",
+          label: "Etiqueta",
+          allLabels: "Todas",
           dateFrom: "Atualizado de",
           dateTo: "Atualizado até",
         },
@@ -1604,6 +1609,94 @@ const messages = {
             "Ajuste a pesquisa ou os filtros, importe uma lista ou adicione um contato para começar.",
         },
         loading: "Carregando contatos…",
+      },
+      contactLabelsManage: {
+        title: "Etiquetas de contato",
+        subtitle: "Organize etiquetas utilizadas nos atendimentos.",
+        newLabel: "Nova etiqueta",
+        search: "Pesquisar por nome ou descrição",
+        stats: {
+          total: "Total de etiquetas",
+          used: "Etiquetas utilizadas",
+          contactsTagged: "Contatos etiquetados",
+          unused: "Etiquetas sem uso",
+        },
+        filter: {
+          label: "Filtro",
+          all: "Todas",
+          used: "Em uso",
+          unused: "Sem uso",
+        },
+        table: {
+          color: "Cor",
+          name: "Nome",
+          description: "Descrição",
+          contacts: "Contatos",
+          createdBy: "Criada por",
+          createdAt: "Criada em",
+          lastUsed: "Última utilização",
+          actions: "Ações",
+        },
+        actions: {
+          edit: "Editar",
+          delete: "Excluir",
+        },
+        form: {
+          createTitle: "Nova etiqueta",
+          editTitle: "Editar etiqueta",
+          name: "Nome",
+          color: "Cor",
+          customColor: "Cor personalizada",
+          description: "Descrição",
+          preview: "Pré-visualização",
+          cancel: "Cancelar",
+          save: "Salvar",
+        },
+        delete: {
+          title: "Excluir etiqueta",
+          usedBy:
+            "A etiqueta «{{name}}» está aplicada em {{count}} contato(s).",
+          confirmUnused: "Excluir a etiqueta «{{name}}»?",
+          modeRemove: "Remover dos contatos",
+          modeReplace: "Substituir por outra etiqueta",
+          replaceWith: "Substituir por",
+          confirm: "Excluir",
+        },
+        lastUsedNever: "Nunca utilizada",
+        lastUsedAgo: "Usada há {{time}}",
+        empty: {
+          title: "Nenhuma etiqueta",
+          subtitle: "Crie a primeira etiqueta para organizar seus contatos.",
+        },
+        toasts: {
+          created: "Etiqueta criada.",
+          updated: "Etiqueta atualizada.",
+          deleted: "Etiqueta removida.",
+        },
+      },
+      contactLabels: {
+        addLabel: "Adicionar etiqueta",
+        filter: {
+          placeholder: "Filtrar por etiquetas",
+        },
+        modal: {
+          title: "Etiquetas do contato",
+          search: "Pesquisar etiquetas",
+          empty: "Nenhuma etiqueta encontrada",
+          newLabel: "Nova etiqueta",
+          createTitle: "Criar etiqueta",
+          name: "Nome",
+          color: "Cor",
+          description: "Descrição (opcional)",
+          preview: "Pré-visualização",
+          cancel: "Cancelar",
+          saveLabel: "Salvar etiqueta",
+          apply: "Aplicar",
+        },
+        toasts: {
+          created: "Etiqueta criada",
+          saved: "Etiquetas do contato salvas",
+        },
       },
       contactImportModal: {
         title: "Planílha de contatos",
@@ -2082,6 +2175,15 @@ const messages = {
         },
         search: {
           placeholder: "Buscar por contato, número ou texto da mensagem…",
+          clear: "Limpar busca",
+          placeholders: {
+            open: "Buscar conversas em atendimento",
+            pending: "Buscar conversas aguardando",
+            chatbot: "Buscar conversas do chatbot",
+            closed: "Buscar conversas resolvidas",
+            groups: "Buscar grupos",
+            filters: "Pesquisar usando filtros",
+          },
         },
         buttons: {
           showAll: "Todos",
@@ -2224,6 +2326,7 @@ const messages = {
           agenda: "Agenda",
           crm: "CRM",
           contacts: "Contatos",
+          contactLabels: "Etiquetas",
           queues: "Setores & Chatbot",
           sectors: "Setores",
           tags: "Tags",
@@ -3301,6 +3404,19 @@ const messages = {
         title: "Notificações",
         noTickets: "Nenhuma notificação.",
       },
+      notificationSound: {
+        ariaLabel: "Volume das notificações",
+        popoverTitle: "Volume dos alertas de atendimento",
+        openSettings: "Abrir configurações de volume",
+        mute: "Silenciar alertas",
+        unmute: "Ativar sons",
+        testSound: "Testar som",
+        toastMuted: "Notificações silenciadas",
+        toastUnmuted: "Notificações ativadas",
+        openConversation: "Som da conversa aberta",
+        openConversationHint:
+          "Reproduz um som discreto quando chegam mensagens na conversa que você já está visualizando.",
+      },
       userNotificationCenter: {
         title: "Central de notificações",
         pageTitle: "Notificações",
@@ -4207,7 +4323,8 @@ const messages = {
           batchDeleted: "{{count}} mídias excluídas • {{size}} libertados",
           batchDeletedPartial:
             "{{deleted}} mídia(s) excluída(s) • {{size}} libertados. {{failed}} item(ns) não foram processados.",
-          batchNoneProcessed: "Nenhum item foi excluído. Verifique permissões ou se as mídias já foram removidas.",
+          batchNoneProcessed:
+            "Nenhuma mídia foi excluída. Os arquivos podem já não existir, não ter permissão ou o identificador não foi reconhecido.{{reason}}",
         },
         bulk: {
           selectedCount: "{{count}} itens selecionados",
@@ -4384,6 +4501,18 @@ const messages = {
             "APIs e serviços externos (superadmin).",
           asaasTitle: "Asaas",
           asaasTokenLabel: "Token Asaas",
+        },
+        whatsappBehavior: {
+          sectionTitle: "Configurar conexões",
+          applyToConnections: "Aplicar às conexões",
+          allConnections: "Todas as conexões",
+          selectConnections: "Selecione uma ou mais conexões",
+          mixedValuesHint:
+            "Configurações diferentes entre as conexões selecionadas. Ao salvar, o mesmo valor será aplicado a todas.",
+          saveAppliesHint:
+            "Ao salvar, essas regras serão aplicadas às conexões escolhidas.",
+          callsSaved: "Configurações de chamadas salvas",
+          groupsSaved: "Configurações de grupos salvas",
         },
         status: {
           ratingsOn: "Avaliações ativas",

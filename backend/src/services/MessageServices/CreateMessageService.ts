@@ -3,6 +3,7 @@ import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
 import notifyTicketInboundMessage from "../OneSignalPush/notifyTicketInboundMessage";
+import { enrichSingleGroupMessage } from "../../helpers/enrichGroupMessagesDisplay";
 
 export interface MessageData {
   id: string;
@@ -60,6 +61,11 @@ const CreateMessageService = async ({
   }
 
   const io = getIO();
+  const outboundMessage =
+    message.ticket?.isGroup === true
+      ? enrichSingleGroupMessage(message)
+      : message;
+
   // mainchannel: todos os usuários da empresa já estão na sala (libs/socket.ts).
   // Sem isso, tickets com queueId null ou fora das filas do usuário não recebiam o evento em tempo real.
   io.to(message.ticketId.toString())
@@ -70,7 +76,7 @@ const CreateMessageService = async ({
     .to(`queue-${message.ticket.queueId}-notification`)
     .emit(`company-${companyId}-appMessage`, {
       action: "create",
-      message,
+      message: outboundMessage,
       ticket: message.ticket,
       contact: message.ticket.contact
     });

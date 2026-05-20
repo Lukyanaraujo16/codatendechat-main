@@ -9,6 +9,7 @@ import User from "../../models/User";
 import ShowUserService from "../UserServices/ShowUserService";
 import Tag from "../../models/Tag";
 import TicketTag from "../../models/TicketTag";
+import ContactLabelRelation from "../../models/ContactLabelRelation";
 import { intersection } from "lodash";
 import Whatsapp from "../../models/Whatsapp";
 import { parseTruthyQuery } from "../../utils/parseQueryBoolean";
@@ -30,6 +31,7 @@ interface Request {
   withUnreadMessages?: string;
   queueIds: number[];
   tags: number[];
+  contactLabels?: number[];
   users: number[];
   companyId: number;
   /** "true" = só tickets de grupo; omitido/"false" = exclui grupos das listas normais */
@@ -49,6 +51,7 @@ const ListTicketsService = async ({
   pageNumber = "1",
   queueIds,
   tags,
+  contactLabels,
   users,
   status,
   date,
@@ -85,7 +88,15 @@ const ListTicketsService = async ({
     {
       model: Contact,
       as: "contact",
-      attributes: ["id", "name", "number", "email", "profilePicUrl", "isGroup", "groupVisible"],
+      attributes: [
+        "id",
+        "name",
+        "number",
+        "email",
+        "profilePicUrl",
+        "isGroup",
+        "groupVisible"
+      ],
       ...(privileged
         ? {}
         : {
@@ -220,6 +231,30 @@ const ListTicketsService = async ({
       ...whereCondition,
       id: {
         [Op.in]: ticketsIntersection
+      }
+    };
+  }
+
+  if (Array.isArray(contactLabels) && contactLabels.length > 0) {
+    const labelContactSets: number[][] = [];
+    for (const labelId of contactLabels) {
+      const rows = await ContactLabelRelation.findAll({
+        where: { labelId, companyId },
+        attributes: ["contactId"]
+      });
+      labelContactSets.push(rows.map((r) => r.contactId));
+    }
+
+    const unionContactIds = [...new Set(labelContactSets.flat())];
+
+    if (!unionContactIds.length) {
+      return { tickets: [], count: 0, hasMore: false };
+    }
+
+    whereCondition = {
+      ...whereCondition,
+      contactId: {
+        [Op.in]: unionContactIds
       }
     };
   }

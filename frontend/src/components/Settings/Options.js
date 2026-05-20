@@ -18,12 +18,16 @@ import InfoOutlined from "@material-ui/icons/InfoOutlined";
 import CheckCircleOutline from "@material-ui/icons/CheckCircleOutline";
 import Divider from "@material-ui/core/Divider";
 import useSettings from "../../hooks/useSettings";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, alpha } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
 import Switch from "@material-ui/core/Switch";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import { i18n } from "../../translate/i18n";
 import { useHistory } from "react-router-dom";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { canManageWhatsappBehavior } from "../../utils/canManageWhatsappBehavior";
+import useWhatsappBehaviorSettings from "../../hooks/useWhatsappBehaviorSettings";
+import WhatsappBehaviorConnectionBar from "./WhatsappBehaviorConnectionBar";
 
 //import 'react-toastify/dist/ReactToastify.css';
  
@@ -114,6 +118,63 @@ const useStyles = makeStyles((theme) => ({
         ? "rgba(255,255,255,0.04)"
         : theme.palette.grey[50],
   },
+  chatbotStateStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
+    overflow: "visible",
+  },
+  chatbotToggleCard: {
+    padding: theme.spacing(2),
+    borderRadius: 14,
+    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+    backgroundColor: theme.palette.background.paper,
+    overflow: "visible",
+  },
+  chatbotScheduleGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(180px, 280px))",
+    gap: theme.spacing(2),
+    alignItems: "end",
+    marginTop: theme.spacing(2),
+    overflow: "visible",
+    width: "100%",
+    [theme.breakpoints.down("sm")]: {
+      gridTemplateColumns: "1fr",
+    },
+  },
+  chatbotTimeField: {
+    width: "100%",
+    minWidth: 180,
+    overflow: "visible",
+    "& .MuiOutlinedInput-root": {
+      width: "100%",
+      minWidth: 180,
+      height: 52,
+      borderRadius: 12,
+      boxSizing: "border-box",
+    },
+    "& .MuiOutlinedInput-input": {
+      boxSizing: "border-box",
+    },
+    "& .MuiInputLabel-root": {
+      color: theme.palette.text.secondary,
+    },
+    "& .MuiFormHelperText-root": {
+      color: theme.palette.text.secondary,
+    },
+  },
+  chatbotSaveRow: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: theme.spacing(1.5),
+    marginTop: theme.spacing(2.5),
+  },
+  chatbotSaveHint: {
+    marginTop: theme.spacing(1),
+    display: "block",
+  },
   autoSaveFooter: {
     marginTop: theme.spacing(2),
     display: "block",
@@ -181,6 +242,9 @@ export default function Options(props) {
   } = props;
   const classes = useStyles();
   const history = useHistory();
+  const { user } = React.useContext(AuthContext);
+  const canManageBehavior = canManageWhatsappBehavior(user);
+  const behavior = useWhatsappBehaviorSettings(canManageBehavior);
   const [userRating, setUserRating] = useState("disabled");
   const [scheduleType, setScheduleType] = useState("disabled");
   const [callType, setCallType] = useState("enabled");
@@ -261,7 +325,39 @@ export default function Options(props) {
   }, [chatbotSaveTick]);
 
   useEffect(() => {
+    if (!canManageBehavior || behavior.loading || !behavior.selectedRows.length) {
+      return;
+    }
+    const ch = behavior.pickCommonForSelected("callHandlingMode");
+    if (ch) {
+      setCallType(ch === "accept" ? "enabled" : "disabled");
+    }
+    const sms = behavior.pickCommonForSelected("sendMessageOnCallReject");
+    if (sms !== undefined) {
+      setCallRejectSendMessage(sms ? "enabled" : "disabled");
+    }
+    const msg = behavior.pickCommonForSelected("callRejectMessage");
+    if (msg !== undefined) {
+      setCallRejectMessage(msg || "");
+    }
+    const gm = behavior.pickCommonForSelected("groupMessagesMode");
+    if (gm) {
+      setCheckMsgIsGroupType(gm === "ignore" ? "enabled" : "disabled");
+    }
+  }, [
+    canManageBehavior,
+    behavior.loading,
+    behavior.selectedIds,
+    behavior.rows,
+    behavior.selectedRows,
+    behavior.pickCommonForSelected,
+  ]);
+
+  useEffect(() => {
     if (Array.isArray(settings) && settings.length) {
+      if (canManageBehavior && behavior.rows.length > 0) {
+        return;
+      }
       const userRating = settings.find((s) => s.key === "userRating");
       if (userRating) {
         setUserRating(userRating.value);
@@ -382,35 +478,47 @@ export default function Options(props) {
   async function handleCallType(value) {
     setCallType(value);
     setLoadingCallType(true);
-    await update({
-      key: "call",
-      value,
-    });
+    if (canManageBehavior && behavior.rows.length > 0) {
+      await behavior.bulkUpdate(
+        { callHandlingMode: value === "enabled" ? "accept" : "reject" },
+        "settings.whatsappBehavior.callsSaved"
+      );
+    } else {
+      await update({ key: "call", value });
+      notifyCommitted("call", value);
+    }
     markAutoSaved("calls");
-    notifyCommitted("call", value);
     setLoadingCallType(false);
   }
 
   async function handleCallRejectSendMessage(value) {
     setCallRejectSendMessage(value);
     setLoadingCallRejectSendMessage(true);
-    await update({
-      key: "callRejectSendMessage",
-      value,
-    });
+    if (canManageBehavior && behavior.rows.length > 0) {
+      await behavior.bulkUpdate(
+        { sendMessageOnCallReject: value !== "disabled" },
+        "settings.whatsappBehavior.callsSaved"
+      );
+    } else {
+      await update({ key: "callRejectSendMessage", value });
+      notifyCommitted("callRejectSendMessage", value);
+    }
     markAutoSaved("calls");
-    notifyCommitted("callRejectSendMessage", value);
     setLoadingCallRejectSendMessage(false);
   }
 
   async function handleCallRejectMessageSave() {
     setLoadingCallRejectMessage(true);
-    await update({
-      key: "callRejectMessage",
-      value: callRejectMessage,
-    });
+    if (canManageBehavior && behavior.rows.length > 0) {
+      await behavior.bulkUpdate(
+        { callRejectMessage },
+        "settings.whatsappBehavior.callsSaved"
+      );
+    } else {
+      await update({ key: "callRejectMessage", value: callRejectMessage });
+      notifyCommitted("callRejectMessage", callRejectMessage);
+    }
     markAutoSaved("calls");
-    notifyCommitted("callRejectMessage", callRejectMessage);
     setLoadingCallRejectMessage(false);
   }
 
@@ -429,12 +537,16 @@ export default function Options(props) {
   async function handleGroupType(value) {
     setCheckMsgIsGroupType(value);
     setCheckMsgIsGroup(true);
-    await update({
-      key: "CheckMsgIsGroup",
-      value,
-    });
+    if (canManageBehavior && behavior.rows.length > 0) {
+      await behavior.bulkUpdate(
+        { groupMessagesMode: value === "enabled" ? "ignore" : "receive" },
+        "settings.whatsappBehavior.groupsSaved"
+      );
+    } else {
+      await update({ key: "CheckMsgIsGroup", value });
+      notifyCommitted("CheckMsgIsGroup", value);
+    }
     markAutoSaved("groups");
-    notifyCommitted("CheckMsgIsGroup", value);
     setCheckMsgIsGroup(false);
     /*     if (typeof scheduleTypeChanged === "function") {
           scheduleTypeChanged(value);
@@ -752,6 +864,21 @@ export default function Options(props) {
         {renderAutoSaveRow("ratings")}
       </Paper>
 
+      {canManageBehavior && behavior.rows.length > 0 ? (
+        <Paper elevation={1} className={classes.sectionPaper}>
+          <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
+            {i18n.t("settings.whatsappBehavior.sectionTitle")}
+          </Typography>
+          <WhatsappBehaviorConnectionBar
+            rows={behavior.rows}
+            selectedIds={behavior.selectedIds}
+            onChange={behavior.applySelection}
+            loading={behavior.loading || behavior.saving}
+            mixedValues={behavior.mixedValues}
+          />
+        </Paper>
+      ) : null}
+
       <Paper elevation={1} className={classes.sectionPaper}>
         {renderCardHeader({
           iconEmojiKey: "settings.ux.cardIconCalls",
@@ -960,104 +1087,115 @@ export default function Options(props) {
 
         {showChatbotControl ? (
           <>
-            <Typography variant="subtitle2" className={classes.subSectionLabelFirst}>
+            <Typography
+              variant="subtitle2"
+              className={classes.subSectionLabelFirst}
+              color="textSecondary"
+            >
               {i18n.t("settings.sections.chatbotSectionStateTitle")}
             </Typography>
-            <Box className={classes.toggleHighlight}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    color="primary"
-                    size="medium"
-                    checked={Boolean(chatbotControl?.chatbotDisabled)}
-                    onChange={(e) =>
-                      setChatbotControl((prev) => ({
-                        ...(prev || {}),
-                        chatbotDisabled: e.target.checked,
-                      }))
-                    }
-                    disabled={chatbotControlLoading}
-                  />
-                }
-                label={
-                  <Box>
+            <Box className={classes.chatbotStateStack}>
+              <Box className={classes.chatbotToggleCard}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      color="primary"
+                      size="medium"
+                      checked={Boolean(chatbotControl?.chatbotDisabled)}
+                      onChange={(e) =>
+                        setChatbotControl((prev) => ({
+                          ...(prev || {}),
+                          chatbotDisabled: e.target.checked,
+                        }))
+                      }
+                      disabled={chatbotControlLoading}
+                    />
+                  }
+                  label={
                     <Typography variant="body1" component="span" style={{ fontWeight: 600 }}>
                       {i18n.t("settings.chatbotControl.disableCompany")}
                     </Typography>
+                  }
+                />
+              </Box>
+              <Box className={classes.chatbotToggleCard}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      color="primary"
+                      size="medium"
+                      checked={Boolean(chatbotControl?.chatbotScheduleEnabled)}
+                      onChange={(e) =>
+                        setChatbotControl((prev) => ({
+                          ...(prev || {}),
+                          chatbotScheduleEnabled: e.target.checked,
+                        }))
+                      }
+                      disabled={chatbotControlLoading}
+                    />
+                  }
+                  label={
+                    <Typography variant="body1" component="span" style={{ fontWeight: 600 }}>
+                      {i18n.t("settings.chatbotControl.enableSchedule")}
+                    </Typography>
+                  }
+                />
+                {Boolean(chatbotControl?.chatbotScheduleEnabled) && (
+                  <Box className={classes.chatbotScheduleGrid}>
+                    <TextField
+                      className={classes.chatbotTimeField}
+                      label={i18n.t("settings.chatbotControl.weekdayStart")}
+                      type="time"
+                      value={chatbotWeekdayStart}
+                      onChange={(e) => setChatbotWeekdayStart(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ step: 300 }}
+                      variant="outlined"
+                      fullWidth
+                      helperText={i18n.t("settings.chatbotControl.weekdaysHint")}
+                    />
+                    <TextField
+                      className={classes.chatbotTimeField}
+                      label={i18n.t("settings.chatbotControl.weekdayEnd")}
+                      type="time"
+                      value={chatbotWeekdayEnd}
+                      onChange={(e) => setChatbotWeekdayEnd(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ step: 300 }}
+                      variant="outlined"
+                      fullWidth
+                    />
                   </Box>
-                }
-              />
-            </Box>
-            <Box className={classes.toggleHighlight}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    color="primary"
-                    size="medium"
-                    checked={Boolean(chatbotControl?.chatbotScheduleEnabled)}
-                    onChange={(e) =>
-                      setChatbotControl((prev) => ({
-                        ...(prev || {}),
-                        chatbotScheduleEnabled: e.target.checked,
-                      }))
-                    }
-                    disabled={chatbotControlLoading}
-                  />
-                }
-                label={
-                  <Typography variant="body1" component="span" style={{ fontWeight: 600 }}>
-                    {i18n.t("settings.chatbotControl.enableSchedule")}
-                  </Typography>
-                }
-              />
-              {Boolean(chatbotControl?.chatbotScheduleEnabled) && (
-                <Box mt={2} display="flex" flexWrap="wrap" alignItems="flex-end" style={{ gap: 12 }}>
-                  <TextField
-                    label={i18n.t("settings.chatbotControl.weekdayStart")}
-                    type="time"
-                    value={chatbotWeekdayStart}
-                    onChange={(e) => setChatbotWeekdayStart(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
-                    variant="outlined"
-                    size="small"
-                    helperText={i18n.t("settings.chatbotControl.weekdaysHint")}
-                  />
-                  <TextField
-                    label={i18n.t("settings.chatbotControl.weekdayEnd")}
-                    type="time"
-                    value={chatbotWeekdayEnd}
-                    onChange={(e) => setChatbotWeekdayEnd(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    inputProps={{ step: 300 }}
-                    variant="outlined"
-                    size="small"
-                  />
-                </Box>
-              )}
-            </Box>
-            <Box mt={2} display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 12 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                size="medium"
-                onClick={onSaveChatbotControl}
-                disabled={chatbotControlSaving || chatbotControlLoading}
+                )}
+              </Box>
+              <Box className={classes.chatbotSaveRow}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="medium"
+                  onClick={onSaveChatbotControl}
+                  disabled={chatbotControlSaving || chatbotControlLoading}
+                >
+                  {chatbotControlSaving
+                    ? i18n.t("settings.chatbotControl.buttons.saving")
+                    : i18n.t("settings.chatbotControl.buttons.save")}
+                </Button>
+                {chatbotManualSaved ? (
+                  <Box className={classes.autoSavedBadge}>
+                    <CheckCircleOutline style={{ fontSize: 18 }} />
+                    <Typography variant="caption">{i18n.t("settings.ux.autoSaved")}</Typography>
+                  </Box>
+                ) : null}
+              </Box>
+              <Typography
+                variant="caption"
+                color="textSecondary"
+                display="block"
+                className={classes.chatbotSaveHint}
               >
-                {chatbotControlSaving
-                  ? i18n.t("settings.chatbotControl.buttons.saving")
-                  : i18n.t("settings.chatbotControl.buttons.save")}
-              </Button>
-              {chatbotManualSaved ? (
-                <Box className={classes.autoSavedBadge}>
-                  <CheckCircleOutline style={{ fontSize: 18 }} />
-                  <Typography variant="caption">{i18n.t("settings.ux.autoSaved")}</Typography>
-                </Box>
-              ) : null}
+                {i18n.t("settings.ux.saveCardHint")}
+              </Typography>
             </Box>
-            <Typography variant="caption" color="textSecondary" display="block" className={classes.saveHintFooter}>
-              {i18n.t("settings.ux.saveCardHint")}
-            </Typography>
           </>
         ) : null}
 

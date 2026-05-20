@@ -46,12 +46,14 @@ import { v4 as uuidv4 } from "uuid";
 import { useAcceptTicket } from "../../hooks/useAcceptTicket";
 
 import ContactTag from "../ContactTag";
+import ContactLabelChip from "../ContactLabelChip";
 import { canDeleteTickets } from "../../utils/canDeleteTickets";
 import { formatTicketLastMessagePreview } from "../../utils/formatTicketLastMessagePreview";
 import { getCardListHoverBackground } from "../../theme/ticketPanelStyles";
 import { toast } from "react-toastify";
 
 const MAX_TAGS_VISIBLE = 3;
+const MAX_CONTACT_LABELS_VISIBLE = 2;
 
 /** Tempo relativo legível estilo lista de conversas (sem alterar dados do ticket). */
 function formatWhatsAppListTime(date) {
@@ -608,6 +610,19 @@ const TicketListItemCustom = ({
   const visibleTags = tagList.slice(0, MAX_TAGS_VISIBLE);
   const extraTagCount = Math.max(0, tagList.length - visibleTags.length);
 
+  const contactLabelList = Array.isArray(ticket?.contact?.labels)
+    ? ticket.contact.labels
+    : [];
+  const visibleContactLabels = contactLabelList.slice(0, MAX_CONTACT_LABELS_VISIBLE);
+  const extraContactLabelCount = Math.max(
+    0,
+    contactLabelList.length - visibleContactLabels.length
+  );
+  const hiddenContactLabelNames = contactLabelList
+    .slice(MAX_CONTACT_LABELS_VISIBLE)
+    .map((l) => l.name)
+    .join(", ");
+
   return (
     <React.Fragment key={ticket.id}>
       <TicketMessagesDialog
@@ -697,6 +712,23 @@ const TicketListItemCustom = ({
               >
                 {ticket.contact.name}
               </Typography>
+              {visibleContactLabels.length > 0 ? (
+                <Box display="flex" flexWrap="wrap" alignItems="center" mt={0.25} gridGap={4}>
+                  {visibleContactLabels.map((label) => (
+                    <ContactLabelChip key={`cl-${ticket.id}-${label.id}`} label={label} />
+                  ))}
+                  {extraContactLabelCount > 0 ? (
+                    <Tooltip title={hiddenContactLabelNames}>
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={`+${extraContactLabelCount}`}
+                        style={{ height: 20, fontSize: "0.65rem" }}
+                      />
+                    </Tooltip>
+                  ) : null}
+                </Box>
+              ) : null}
               {profile === "admin" && (
                 <Tooltip title={i18n.t("ticketsListItem.tooltip.peek")}>
                   <VisibilityIcon

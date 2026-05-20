@@ -11,6 +11,7 @@ import BatchDeleteTicketsService from "../services/TicketServices/BatchDeleteTic
 import { userCanDeleteTicket } from "../helpers/canDeleteTicket";
 import { assertTicketAccess } from "../helpers/ticketAccess";
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
+import attachContactLabelsToTickets from "../helpers/attachContactLabelsToTickets";
 import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUIDService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
@@ -33,6 +34,7 @@ type IndexQuery = {
   withUnreadMessages: string;
   queueIds: string;
   tags: string;
+  contactLabels: string;
   users: string;
   isGroup: string;
 };
@@ -58,6 +60,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     showAll,
     queueIds: queueIdsStringified,
     tags: tagIdsStringified,
+    contactLabels: contactLabelIdsStringified,
     users: userIdsStringified,
     withUnreadMessages,
     isGroup
@@ -68,6 +71,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
   let queueIds: number[] = [];
   let tagsIds: number[] = [];
+  let contactLabelIds: number[] = [];
   let usersIds: number[] = [];
 
   if (queueIdsStringified) {
@@ -78,6 +82,10 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     tagsIds = JSON.parse(tagIdsStringified);
   }
 
+  if (contactLabelIdsStringified) {
+    contactLabelIds = JSON.parse(contactLabelIdsStringified);
+  }
+
   if (userIdsStringified) {
     usersIds = JSON.parse(userIdsStringified);
   }
@@ -85,6 +93,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { tickets, count, hasMore } = await ListTicketsService({
     searchParam,
     tags: tagsIds,
+    contactLabels: contactLabelIds,
     users: usersIds,
     pageNumber,
     status,
@@ -99,6 +108,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     userProfile: profile,
     supportMode
   });
+  await attachContactLabelsToTickets(tickets, companyId);
+
   return res.status(200).json({ tickets, count, hasMore });
 };
 

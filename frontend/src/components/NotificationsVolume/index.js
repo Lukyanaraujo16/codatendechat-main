@@ -1,110 +1,299 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 import Popover from "@material-ui/core/Popover";
 import IconButton from "@material-ui/core/IconButton";
 import List from "@material-ui/core/List";
+import Button from "@material-ui/core/Button";
+import Typography from "@material-ui/core/Typography";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Switch from "@material-ui/core/Switch";
 import { makeStyles } from "@material-ui/core/styles";
 import VolumeUpIcon from "@material-ui/icons/VolumeUp";
 import VolumeDownIcon from "@material-ui/icons/VolumeDown";
+import VolumeOffIcon from "@material-ui/icons/VolumeOff";
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 
 import { Grid, Slider } from "@material-ui/core";
+import { toast } from "react-toastify";
+
+import { useNotificationSound } from "../../context/NotificationSound/NotificationSoundContext";
+import { playNotificationSoundThrottled } from "../../utils/notificationSoundPlayback";
+import { i18n } from "../../translate/i18n";
+
+const SLIDER_DEBOUNCE_MS = 150;
 
 const useStyles = makeStyles((theme) => ({
-    tabContainer: {
-        padding: theme.spacing(2),
+  controlRoot: {
+    display: "inline-flex",
+    alignItems: "center",
+    verticalAlign: "middle",
+  },
+  tabContainer: {
+    padding: theme.spacing(2),
+    minWidth: 260,
+  },
+  popoverPaper: {
+    width: "100%",
+    maxWidth: 350,
+    marginLeft: theme.spacing(2),
+    marginRight: theme.spacing(1),
+    [theme.breakpoints.down("sm")]: {
+      maxWidth: 270,
     },
-    popoverPaper: {
-        width: "100%",
-        maxWidth: 350,
-        marginLeft: theme.spacing(2),
-        marginRight: theme.spacing(1),
-        [theme.breakpoints.down("sm")]: {
-            maxWidth: 270,
-        },
-    },
-    noShadow: {
-        boxShadow: "none !important",
-    },
-    icons: {
-        color: "#fff",
-    },
-    customBadge: {
-        backgroundColor: "#f44336",
-        color: "#fff",
-    },
+  },
+  icons: {
+    color: "#fff",
+  },
+  expandBtn: {
+    color: "#fff",
+    padding: 4,
+    marginLeft: -4,
+  },
+  testBtn: {
+    marginTop: theme.spacing(1.5),
+  },
+  openConversationRow: {
+    marginTop: theme.spacing(1),
+    marginLeft: 0,
+    alignItems: "flex-start",
+  },
+  openConversationHint: {
+    display: "block",
+    marginTop: theme.spacing(0.5),
+    paddingLeft: theme.spacing(5),
+  },
 }));
 
-const NotificationsVolume = ({ volume, setVolume }) => {
-    const classes = useStyles();
+const NotificationsVolume = () => {
+  const classes = useStyles();
+  const {
+    volume,
+    muted,
+    setVolume,
+    setMuted,
+    openConversationEnabled,
+    setOpenConversationEnabled,
+    playNotificationSound,
+  } = useNotificationSound();
 
-    const anchorEl = useRef();
-    const [isOpen, setIsOpen] = useState(false);
+  const anchorEl = useRef();
+  const volumeDebounceRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [sliderValue, setSliderValue] = useState(() =>
+    muted || volume === 0 ? 0 : volume
+  );
+  const isSilent = muted || volume === 0;
 
-    const handleClick = () => {
-        setIsOpen((prevState) => !prevState);
-    };
+  const playThrottled = useCallback(
+    (soundType) =>
+      playNotificationSoundThrottled(playNotificationSound, soundType),
+    [playNotificationSound]
+  );
 
-    const handleClickAway = () => {
-        setIsOpen(false);
-    };
+  useEffect(() => {
+    setSliderValue(isSilent ? 0 : volume);
+  }, [volume, isSilent]);
 
-    const handleVolumeChange = (value) => {
-        setVolume(value);
-        localStorage.setItem("volume", value);
-    };
+  useEffect(
+    () => () => {
+      if (volumeDebounceRef.current) {
+        clearTimeout(volumeDebounceRef.current);
+      }
+    },
+    []
+  );
 
-    return (
-        <>
-            <IconButton
-                className={classes.icons}
-                onClick={handleClick}
-                ref={anchorEl}
-                aria-label="Open Notifications"
-                // color="inherit"
-                // color="secondary"
-            >
-                <VolumeUpIcon color="inherit" />
-            </IconButton>
-            <Popover
-                disableScrollLock
-                open={isOpen}
-                anchorEl={anchorEl.current}
-                anchorOrigin={{
-                    vertical: "bottom",
-                    horizontal: "right",
-                }}
-                transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                }}
-                classes={{ paper: classes.popoverPaper }}
-                onClose={handleClickAway}
-            >
-                <List dense className={classes.tabContainer}>
-                    <Grid container spacing={2}>
-                        <Grid item>
-                            <VolumeDownIcon />
-                        </Grid>
-                        <Grid item xs>
-                            <Slider
-                                value={volume}
-                                aria-labelledby="continuous-slider"
-                                step={0.1}
-                                min={0}
-                                max={1}
-                                onChange={(e, value) =>
-                                    handleVolumeChange(value)
-                                }
-                            />
-                        </Grid>
-                        <Grid item>
-                            <VolumeUpIcon />
-                        </Grid>
-                    </Grid>
-                </List>
-            </Popover>
-        </>
-    );
+  const handleOpenPopover = (event) => {
+    event.stopPropagation();
+    setIsOpen(true);
+  };
+
+  const handleClosePopover = () => {
+    setIsOpen(false);
+  };
+
+  const unmuteNotifications = useCallback(() => {
+    if (volume === 0) {
+      setVolume(0.5);
+    } else {
+      setMuted(false);
+    }
+    toast.success(i18n.t("notificationSound.toastUnmuted"));
+    playThrottled("default");
+  }, [volume, setVolume, setMuted, playThrottled]);
+
+  const muteNotifications = useCallback(() => {
+    setMuted(true);
+    toast.success(i18n.t("notificationSound.toastMuted"));
+  }, [setMuted]);
+
+  const handleIconMuteToggle = (event) => {
+    event.stopPropagation();
+    if (isSilent) {
+      unmuteNotifications();
+    } else {
+      muteNotifications();
+    }
+  };
+
+  const applyVolume = useCallback(
+    (value) => {
+      setVolume(value);
+    },
+    [setVolume]
+  );
+
+  const handleVolumeChange = (_, value) => {
+    setSliderValue(value);
+    if (volumeDebounceRef.current) {
+      clearTimeout(volumeDebounceRef.current);
+    }
+    volumeDebounceRef.current = setTimeout(() => {
+      applyVolume(value);
+    }, SLIDER_DEBOUNCE_MS);
+  };
+
+  const handleVolumeCommitted = (_, value) => {
+    if (volumeDebounceRef.current) {
+      clearTimeout(volumeDebounceRef.current);
+      volumeDebounceRef.current = null;
+    }
+    setSliderValue(value);
+    applyVolume(value);
+    if (Number(value) > 0) {
+      playThrottled("default");
+    }
+  };
+
+  const handleToggleMuteInPopover = () => {
+    if (isSilent) {
+      unmuteNotifications();
+    } else {
+      muteNotifications();
+    }
+  };
+
+  const handleTestSound = () => {
+    playThrottled("default");
+  };
+
+  const handleOpenConversationChange = (event) => {
+    setOpenConversationEnabled(event.target.checked);
+  };
+
+  return (
+    <div className={classes.controlRoot} ref={anchorEl}>
+      <IconButton
+        className={classes.icons}
+        onClick={handleIconMuteToggle}
+        aria-label={
+          isSilent
+            ? i18n.t("notificationSound.unmute")
+            : i18n.t("notificationSound.mute")
+        }
+      >
+        {isSilent ? (
+          <VolumeOffIcon color="inherit" />
+        ) : (
+          <VolumeUpIcon color="inherit" />
+        )}
+      </IconButton>
+      <IconButton
+        className={classes.expandBtn}
+        size="small"
+        onClick={handleOpenPopover}
+        aria-label={i18n.t("notificationSound.openSettings")}
+        aria-expanded={isOpen}
+      >
+        <ExpandMoreIcon fontSize="small" color="inherit" />
+      </IconButton>
+      <Popover
+        disableScrollLock
+        open={isOpen}
+        anchorEl={anchorEl.current}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+        classes={{ paper: classes.popoverPaper }}
+        onClose={handleClosePopover}
+      >
+        <List dense className={classes.tabContainer}>
+          <Typography variant="caption" color="textSecondary" gutterBottom>
+            {i18n.t("notificationSound.popoverTitle")}
+          </Typography>
+          <Button
+            size="small"
+            startIcon={isSilent ? <VolumeUpIcon /> : <VolumeOffIcon />}
+            onClick={handleToggleMuteInPopover}
+            style={{ marginBottom: 8 }}
+          >
+            {isSilent
+              ? i18n.t("notificationSound.unmute")
+              : i18n.t("notificationSound.mute")}
+          </Button>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item>
+              <VolumeDownIcon />
+            </Grid>
+            <Grid item xs>
+              <Slider
+                value={sliderValue}
+                aria-labelledby="notification-volume-slider"
+                step={0.05}
+                min={0}
+                max={1}
+                onChange={handleVolumeChange}
+                onChangeCommitted={handleVolumeCommitted}
+              />
+            </Grid>
+            <Grid item>
+              <VolumeUpIcon />
+            </Grid>
+          </Grid>
+          <FormControlLabel
+            className={classes.openConversationRow}
+            control={
+              <Switch
+                color="primary"
+                size="small"
+                checked={openConversationEnabled}
+                onChange={handleOpenConversationChange}
+                disabled={isSilent}
+              />
+            }
+            label={
+              <Typography variant="body2">
+                {i18n.t("notificationSound.openConversation")}
+              </Typography>
+            }
+          />
+          <Typography
+            variant="caption"
+            color="textSecondary"
+            className={classes.openConversationHint}
+          >
+            {i18n.t("notificationSound.openConversationHint")}
+          </Typography>
+          <Button
+            size="small"
+            color="primary"
+            variant="outlined"
+            fullWidth
+            className={classes.testBtn}
+            onClick={handleTestSound}
+            disabled={isSilent}
+          >
+            {i18n.t("notificationSound.testSound")}
+          </Button>
+        </List>
+      </Popover>
+    </div>
+  );
 };
 
 export default NotificationsVolume;

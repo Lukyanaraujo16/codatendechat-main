@@ -261,8 +261,10 @@ export default function MediaManager() {
       if (next[row.id]) delete next[row.id];
       else {
         next[row.id] = {
+          id: row.id,
           source: row.source,
           sourceId: row.sourceId,
+          storageRel: row.storageRel,
           sizeBytes: Number(row.sizeBytes) || 0,
         };
       }
@@ -277,8 +279,10 @@ export default function MediaManager() {
       if (checked) {
         items.forEach((row) => {
           next[row.id] = {
+            id: row.id,
             source: row.source,
             sourceId: row.sourceId,
+            storageRel: row.storageRel,
             sizeBytes: Number(row.sizeBytes) || 0,
           };
         });
@@ -315,8 +319,11 @@ export default function MediaManager() {
 
   const handleBatchDelete = async () => {
     const payloadItems = selectedEntries.map((x) => ({
+      id: x.id,
       source: x.source,
       sourceId: x.sourceId,
+      storageRel: x.storageRel,
+      sizeBytes: x.sizeBytes,
     }));
     if (!payloadItems.length) return;
     try {
@@ -324,13 +331,26 @@ export default function MediaManager() {
         items: payloadItems,
       });
       setBatchDialogOpen(false);
+      const deletedIds = new Set(
+        (Array.isArray(data.deleted) ? data.deleted : []).map((d) => d.id)
+      );
       setSelectedMap({});
       const deleted = Number(data.deletedCount) || 0;
       const failed = Number(data.failedCount) || 0;
       const freedFmt = data.freedFormatted || formatBytesEst(data.freedBytes || 0);
 
+      if (deleted > 0) {
+        setItems((prev) =>
+          prev.filter((row) => !deletedIds.has(row.id))
+        );
+        setCount((c) => Math.max(0, c - deleted));
+      }
+
       if (deleted === 0 && failed > 0) {
-        showWarningToast("mediaManager.toasts.batchNoneProcessed");
+        const firstReason = data.failed?.[0]?.reason;
+        showWarningToast("mediaManager.toasts.batchNoneProcessed", {
+          reason: firstReason ? ` Motivo: ${firstReason}` : "",
+        });
       } else if (failed > 0) {
         showWarningToast("mediaManager.toasts.batchDeletedPartial", {
           deleted,
@@ -338,7 +358,10 @@ export default function MediaManager() {
           size: freedFmt,
         });
       } else if (deleted > 0) {
-        showSuccessToast("mediaManager.toasts.batchDeleted", { count: deleted, size: freedFmt });
+        showSuccessToast("mediaManager.toasts.batchDeleted", {
+          count: deleted,
+          size: freedFmt,
+        });
       }
       await loadList();
       await loadStorage();

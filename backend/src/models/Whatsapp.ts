@@ -164,7 +164,21 @@ class Whatsapp extends Model<Whatsapp> {
   flowIdWelcome: number;
 
   @BelongsTo(() => FlowBuilderModel)
-  flowBuilder: FlowBuilderModel
+  flowBuilder: FlowBuilderModel;
+
+  /** accept | reject — null usa Settings globais da empresa */
+  @Column(DataType.STRING(16))
+  callHandlingMode: string | null;
+
+  @Column
+  sendMessageOnCallReject: boolean | null;
+
+  @Column(DataType.TEXT)
+  callRejectMessage: string | null;
+
+  /** ignore | receive — null usa Settings globais */
+  @Column(DataType.STRING(16))
+  groupMessagesMode: string | null;
 }
 
 export default Whatsapp;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useReducer, useContext, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 
-import { makeStyles } from "@material-ui/core/styles";
+import { alpha, makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
 import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
@@ -32,6 +32,7 @@ import {
   LIST_SIDE_PADDING_PX,
   getTicketPanelScrollbarStyles,
 } from "../../theme/ticketPanelStyles";
+import { filterTicketsBySearchParam } from "../../utils/ticketSearchState";
 
 const useStyles = makeStyles((theme) => ({
   ticketsListWrapper: {
@@ -44,6 +45,13 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     overflow: "hidden",
     borderBottomLeftRadius: PANEL_RADIUS,
+    backgroundColor: theme.palette.background.default,
+  },
+
+  bulkToolbarHost: {
+    flexShrink: 0,
+    padding: theme.spacing(1, LIST_SIDE_PADDING_PX, 0),
+    backgroundColor: theme.palette.background.default,
   },
 
   ticketsList: {
@@ -84,14 +92,16 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: theme.palette.background.paper,
     padding: "8px 12px",
-    margin: `8px ${LIST_SIDE_PADDING_PX}px 12px ${LIST_SIDE_PADDING_PX}px`,
+    margin: 0,
+    marginBottom: theme.spacing(1.5),
     overflow: "hidden",
     flexShrink: 0,
     boxSizing: "border-box",
-    border: `1px solid ${theme.palette.divider}`,
+    border: `1px solid ${alpha(theme.palette.divider, 0.6)}`,
+    boxShadow: "none",
   },
   bulkToolbarLabel: {
     flex: 1,
@@ -195,6 +205,7 @@ const TicketsListCustom = (props) => {
     status,
     searchParam,
     tags,
+    contactLabels,
     users,
     showAll,
     selectedQueueIds,
@@ -234,7 +245,7 @@ const TicketsListCustom = (props) => {
     if (isControlled) return;
     dispatch({ type: "RESET" });
     setPageNumber(1);
-  }, [isControlled, status, searchParam, dispatch, showAll, tags, users, selectedQueueIds, groupsOnly]);
+  }, [isControlled, status, searchParam, dispatch, showAll, tags, contactLabels, users, selectedQueueIds, groupsOnly]);
 
   const { tickets, hasMore, loading } = useTickets({
     enabled: !isControlled,
@@ -243,6 +254,7 @@ const TicketsListCustom = (props) => {
     status: groupsOnly ? undefined : status,
     showAll: groupsOnly ? true : showAll,
     tags: JSON.stringify(tags),
+    contactLabels: contactLabels ? JSON.stringify(contactLabels) : undefined,
     users: JSON.stringify(users),
     queueIds: JSON.stringify(selectedQueueIds),
     isGroup: groupsOnly ? "true" : undefined,
@@ -293,7 +305,13 @@ const TicketsListCustom = (props) => {
     });
   }, [isControlled, tickets, status, searchParam, safeQueues, profile, chatbotOnly, groupsOnly, user?.id, user?.allTicket]);
 
-  const displayTickets = isControlled ? controlledTickets : ticketsList;
+  const rawDisplayTickets = isControlled ? controlledTickets : ticketsList;
+  const displayTickets = useMemo(() => {
+    if (isControlled && searchParam) {
+      return filterTicketsBySearchParam(rawDisplayTickets, searchParam);
+    }
+    return rawDisplayTickets;
+  }, [isControlled, rawDisplayTickets, searchParam]);
   const displayLoading = isControlled ? controlledLoading : loading;
   const displayHasMore = isControlled ? controlledHasMore : hasMore;
 
@@ -549,6 +567,10 @@ const TicketsListCustom = (props) => {
           : ids;
       if (typeof inbox?.removeTickets === "function") {
         inbox.removeTickets(removedIds);
+      } else if (!isControlled) {
+        removedIds.forEach((ticketId) => {
+          dispatch({ type: "DELETE_TICKET", payload: ticketId });
+        });
       }
       if (deleted === 0 && failed > 0) {
         toast.error(i18n.t("ticket.delete.bulkNoneFailed"));
@@ -571,7 +593,8 @@ const TicketsListCustom = (props) => {
   return (
     <Paper className={classes.ticketsListWrapper} style={style} data-tickets-list-panel>
       {bulkEnabled ? (
-        <Box className={classes.bulkToolbar} data-tickets-bulk-toolbar>
+        <Box className={classes.bulkToolbarHost}>
+          <Box className={classes.bulkToolbar} data-tickets-bulk-toolbar>
           <Checkbox
             color="primary"
             checked={allVisibleSelected}
@@ -595,6 +618,7 @@ const TicketsListCustom = (props) => {
               {i18n.t("ticket.delete.bulkDeleteButton")}
             </Button>
           ) : null}
+          </Box>
         </Box>
       ) : null}
       <ConfirmationModal

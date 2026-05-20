@@ -26,6 +26,8 @@ import Schedule from "../models/Schedule";
 import ScheduleContact from "../models/ScheduleContact";
 import Tag from "../models/Tag";
 import TicketTag from "../models/TicketTag";
+import ContactLabel from "../models/ContactLabel";
+import ContactLabelRelation from "../models/ContactLabelRelation";
 import ContactList from "../models/ContactList";
 import ContactListItem from "../models/ContactListItem";
 import Campaign from "../models/Campaign";
@@ -101,6 +103,8 @@ const models = [
   ScheduleContact,
   Tag,
   TicketTag,
+  ContactLabel,
+  ContactLabelRelation,
   ContactList,
   ContactListItem,
   Campaign,

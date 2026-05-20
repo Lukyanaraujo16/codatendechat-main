@@ -5,6 +5,10 @@ import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import Queue from "../../models/Queue";
+import {
+  enrichMessagesWithGroupParticipantDisplay,
+  MessageWithParticipantDisplay
+} from "../../helpers/enrichGroupMessagesDisplay";
 
 interface Request {
   ticketId: string;
@@ -16,7 +20,7 @@ interface Request {
 }
 
 interface Response {
-  messages: Message[];
+  messages: Message[] | MessageWithParticipantDisplay[];
   ticket: Ticket;
   count: number;
   hasMore: boolean;
@@ -81,8 +85,13 @@ const ListMessagesService = async ({
 
   const hasMore = count > offset + messages.length;
 
+  const ordered = messages.reverse();
+  const enrichedMessages = ticket.isGroup
+    ? await enrichMessagesWithGroupParticipantDisplay(ordered, companyId)
+    : ordered;
+
   return {
-    messages: messages.reverse(),
+    messages: enrichedMessages,
     ticket,
     count,
     hasMore

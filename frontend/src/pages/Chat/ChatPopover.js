@@ -24,8 +24,11 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { useDate } from "../../hooks/useDate";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-import notifySound from "../../assets/chat_notify.mp3";
-import useSound from "use-sound";
+import {
+  useNotificationSound,
+  NOTIFICATION_SOUND_TYPES,
+} from "../../context/NotificationSound/NotificationSoundContext";
+import { playNotificationSoundThrottled } from "../../utils/notificationSoundPlayback";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
@@ -125,20 +128,24 @@ export default function ChatPopover() {
   const [chats, dispatch] = useReducer(reducer, []);
   const [invisible, setInvisible] = useState(true);
   const { datetimeToClient } = useDate();
-  const [play] = useSound(notifySound);
+  const { playNotificationSound } = useNotificationSound();
   const soundAlertRef = useRef();
 
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
-    soundAlertRef.current = play;
+    soundAlertRef.current = () =>
+      playNotificationSoundThrottled(
+        playNotificationSound,
+        NOTIFICATION_SOUND_TYPES.internalChat
+      );
 
     if (!("Notification" in window)) {
       console.log("This browser doesn't support notifications");
     } else {
       Notification.requestPermission();
     }
-  }, [play]);
+  }, [playNotificationSound]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });

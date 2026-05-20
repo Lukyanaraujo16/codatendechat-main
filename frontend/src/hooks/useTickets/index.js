@@ -11,6 +11,7 @@ import api from "../../services/api";
 const useTickets = ({
   searchParam,
   tags,
+  contactLabels,
   users,
   pageNumber,
   status,
@@ -44,6 +45,7 @@ const useTickets = ({
             searchParam,
             pageNumber,
             tags,
+            contactLabels,
             users,
             status,
             date,
@@ -74,6 +76,7 @@ const useTickets = ({
     enabled,
     searchParam,
     tags,
+    contactLabels,
     users,
     pageNumber,
     status,

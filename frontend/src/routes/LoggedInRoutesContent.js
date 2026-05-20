@@ -9,6 +9,7 @@ import usePlanFlags from "../hooks/usePlanFlags";
 import ModuleTabsLayout from "../layout/ModuleTabsLayout";
 import PlanFeatureBlocked from "../components/PlanFeatureBlocked";
 import { i18n } from "../translate/i18n";
+import { canManageContactLabels } from "../utils/canManageContactLabels";
 
 import Dashboard from "../pages/Dashboard/";
 import TicketResponsiveContainer from "../pages/TicketResponsiveContainer";
@@ -17,6 +18,7 @@ import SettingsCustom from "../pages/SettingsCustom/";
 import Financeiro from "../pages/Financeiro/";
 import Users from "../pages/Users";
 import Contacts from "../pages/Contacts/";
+import ContactLabels from "../pages/ContactLabels/";
 import Queues from "../pages/Queues/";
 import Setores from "../pages/Setores/";
 import Tags from "../pages/Tags/";
@@ -153,18 +155,24 @@ function DashboardModule({ planFlags }) {
   );
 }
 
-function AtendimentoModule({ planFlags, isAdmin }) {
+function AtendimentoModule({ planFlags, isAdmin, user }) {
   const tabs = useMemo(() => {
     const t = [{ path: "/tickets", label: i18n.t("mainDrawer.listItems.tickets") }];
     if (planFlags.useKanban) {
       t.push({ path: "/kanban", label: i18n.t("mainDrawer.listItems.kanban") });
     }
     t.push({ path: "/contacts", label: i18n.t("mainDrawer.listItems.contacts") });
+    if (canManageContactLabels(user)) {
+      t.push({
+        path: "/contacts/labels",
+        label: i18n.t("mainDrawer.listItems.contactLabels"),
+      });
+    }
     if (isAdmin && planFlags.useGroups) {
       t.push({ path: "/group-manager", label: i18n.t("mainDrawer.listItems.groups") });
     }
     return t;
-  }, [planFlags.useKanban, planFlags.useGroups, isAdmin, i18n.language]);
+  }, [planFlags.useKanban, planFlags.useGroups, isAdmin, user, i18n.language]);
 
   return (
     <ModuleTabsLayout tabs={tabs}>
@@ -185,6 +193,17 @@ function AtendimentoModule({ planFlags, isAdmin }) {
           }}
         />
         <Route exact path="/contacts" component={Contacts} />
+        <Route
+          exact
+          path="/contacts/labels"
+          render={() =>
+            canManageContactLabels(user) ? (
+              <ContactLabels />
+            ) : (
+              <Redirect to="/tickets" />
+            )
+          }
+        />
         <Route
           exact
           path="/group-manager"
@@ -482,7 +501,13 @@ export default function LoggedInRoutesContent() {
   const showMediaManager = isAdmin || user?.supportMode === true;
   const fx = planFlags.effectiveFeatures || {};
 
-  const atendimentoPaths = ["/tickets/:ticketId?", "/kanban", "/contacts", "/group-manager"];
+  const atendimentoPaths = [
+    "/tickets/:ticketId?",
+    "/kanban",
+    "/contacts",
+    "/contacts/labels",
+    "/group-manager",
+  ];
 
   const automacaoPaths = [
     "/flowbuilders",
@@ -517,7 +542,13 @@ export default function LoggedInRoutesContent() {
 
       <Route
         path={atendimentoPaths}
-        render={() => <AtendimentoModule planFlags={planFlags} isAdmin={isTenantManager} />}
+        render={() => (
+          <AtendimentoModule
+            planFlags={planFlags}
+            isAdmin={isTenantManager}
+            user={user}
+          />
+        )}
       />
 
       <Route

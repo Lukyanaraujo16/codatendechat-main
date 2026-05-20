@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import SearchIcon from "@material-ui/icons/Search";
+import CloseIcon from "@material-ui/icons/Close";
 import InputBase from "@material-ui/core/InputBase";
 import Tab from "@material-ui/core/Tab";
 import { AppTabs } from "../../ui";
@@ -51,6 +52,7 @@ import {
   AppDialogActions,
 } from "../../ui";
 import { TagsFilter } from "../TagsFilter";
+import { ContactLabelsFilter } from "../ContactLabelsFilter";
 import { UsersFilter } from "../UsersFilter";
 
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
@@ -66,8 +68,18 @@ import {
   useTicketsInboxPendingColumn,
   useTicketsInboxChatbotColumn,
 } from "../../context/TicketsInboxContext";
-import { PANEL_RADIUS, LIST_SIDE_PADDING_PX } from "../../theme/ticketPanelStyles";
+import {
+	PANEL_RADIUS,
+	INBOX_LIST_PANEL_RADIUS,
+	LIST_SIDE_PADDING_PX,
+} from "../../theme/ticketPanelStyles";
 import { canSeeChatbotInboxTab } from "../../utils/canSeeChatbotInboxTab";
+import {
+  EMPTY_TICKET_SEARCH,
+  getActiveTicketSearchKey,
+  getTicketSearchPlaceholderKey,
+  normalizeTicketSearchTerm,
+} from "../../utils/ticketSearchState";
 
 /**
  * Atendimentos (desktop): abas, busca, filtros e lista.
@@ -84,8 +96,8 @@ const useStyles = makeStyles(theme => ({
 		width: "100%",
 		height: "100%",
 		overflow: "hidden",
-		borderRadius: 0,
-		backgroundColor: "transparent",
+		borderRadius: INBOX_LIST_PANEL_RADIUS,
+		backgroundColor: theme.palette.background.paper,
 		boxShadow: "none",
 	},
 	ticketsWrapper: {
@@ -95,18 +107,37 @@ const useStyles = makeStyles(theme => ({
 		minHeight: 0,
 		flexDirection: "column",
 		overflow: "hidden",
+		backgroundColor: "transparent",
 		borderBottomLeftRadius: PANEL_RADIUS,
+		boxShadow: "none",
 	},
 
 	tabsHeader: {
 		flex: "none",
 		backgroundColor: theme.palette.background.paper,
 		borderTopLeftRadius: PANEL_RADIUS,
-		borderTopRightRadius: PANEL_RADIUS,
+		borderTopRightRadius: 0,
 		overflow: "hidden",
 		borderBottom: `1px solid ${theme.palette.divider}`,
 		paddingTop: theme.spacing(0.5),
 		boxShadow: "none",
+		"& .MuiTabs-root": {
+			backgroundColor: theme.palette.background.paper,
+			minHeight: 48,
+		},
+		"& .MuiTabs-flexContainer": {
+			backgroundColor: theme.palette.background.paper,
+		},
+		"& .MuiTab-root": {
+			backgroundColor: "transparent",
+			borderRadius: 0,
+			boxShadow: "none",
+			minHeight: 48,
+			"&.Mui-selected": {
+				backgroundColor: "transparent",
+				boxShadow: "none",
+			},
+		},
 		"& .MuiTabs-indicator": {
 			height: 3,
 			borderRadius: 2,
@@ -160,12 +191,10 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		flexWrap: "wrap",
 		gap: theme.spacing(1),
-		background:
-			theme.palette.type === "dark"
-				? theme.palette.background.default
-				: theme.palette.grey[50],
+		backgroundColor: theme.palette.background.paper,
 		padding: theme.spacing(1.25, 1.5),
 		borderBottom: `1px solid ${theme.palette.divider}`,
+		boxShadow: "none",
 	},
 
 	ticketSearchLine: {
@@ -237,8 +266,7 @@ const useStyles = makeStyles(theme => ({
 		flexWrap: "wrap",
 		gap: theme.spacing(1),
 		padding: theme.spacing(1.25, LIST_SIDE_PADDING_PX / 8),
-		backgroundColor:
-			theme.palette.type === "dark" ? theme.palette.background.default : theme.palette.grey[50],
+		backgroundColor: theme.palette.background.paper,
 		justifyContent: "center",
 		alignItems: "center",
 		width: "100%",
@@ -335,8 +363,7 @@ const useStyles = makeStyles(theme => ({
 		gap: theme.spacing(1),
 		padding: theme.spacing(1.25, LIST_SIDE_PADDING_PX / 8),
 		borderBottom: `1px solid ${theme.palette.divider}`,
-		backgroundColor:
-			theme.palette.type === "dark" ? theme.palette.background.default : theme.palette.grey[50],
+		backgroundColor: theme.palette.background.paper,
 		[theme.breakpoints.down("xs")]: {
 			padding: theme.spacing(1),
 		},
@@ -507,6 +534,7 @@ const InboxOpenListPanel = memo(function InboxOpenListPanel({
   style,
   showAllTickets,
   selectedQueueIds,
+  searchParam,
 }) {
   const { tickets, loading, hasMore, loadMore } = useTicketsInboxOpenColumn();
   return (
@@ -514,6 +542,7 @@ const InboxOpenListPanel = memo(function InboxOpenListPanel({
       status="open"
       showAll={showAllTickets}
       selectedQueueIds={selectedQueueIds}
+      searchParam={searchParam}
       controlledTickets={tickets}
       controlledLoading={loading}
       controlledHasMore={hasMore}
@@ -529,12 +558,14 @@ const InboxPendingListPanel = memo(function InboxPendingListPanel({
   compactList,
   style,
   selectedQueueIds,
+  searchParam,
 }) {
   const { tickets, loading, hasMore, loadMore } = useTicketsInboxPendingColumn();
   return (
     <TicketsList
       status="pending"
       selectedQueueIds={selectedQueueIds}
+      searchParam={searchParam}
       controlledTickets={tickets}
       controlledLoading={loading}
       controlledHasMore={hasMore}
@@ -550,12 +581,14 @@ const InboxChatbotListPanel = memo(function InboxChatbotListPanel({
   compactList,
   style,
   selectedQueueIds,
+  searchParam,
 }) {
   const { tickets, loading, hasMore, loadMore } = useTicketsInboxChatbotColumn();
   return (
     <TicketsList
       status="pending"
       selectedQueueIds={selectedQueueIds}
+      searchParam={searchParam}
       chatbotOnly
       controlledTickets={tickets}
       controlledLoading={loading}
@@ -574,6 +607,7 @@ function OpenInboxTicketLists({
   selectedQueueIds,
   showAllTickets,
   showChatbotTab,
+  ticketSearch,
 }) {
   const styleOpen = useMemo(
     () => ({ display: tabOpen === "open" ? "flex" : "none" }),
@@ -595,17 +629,20 @@ function OpenInboxTicketLists({
         style={styleOpen}
         showAllTickets={showAllTickets}
         selectedQueueIds={selectedQueueIds}
+        searchParam={ticketSearch.open}
       />
       <InboxPendingListPanel
         compactList={compactList}
         style={stylePending}
         selectedQueueIds={selectedQueueIds}
+        searchParam={ticketSearch.pending}
       />
       {showChatbotTab ? (
         <InboxChatbotListPanel
           compactList={compactList}
           style={styleChatbot}
           selectedQueueIds={selectedQueueIds}
+          searchParam={ticketSearch.chatbot}
         />
       ) : null}
     </>
@@ -617,9 +654,10 @@ const TicketsManagerTabs = () => {
   const history = useHistory();
   const location = useLocation();
 
-  const [searchParam, setSearchParam] = useState("");
-  /** Texto exibido no campo (debounce só atualiza `searchParam` para a API) */
-  const [searchInputDraft, setSearchInputDraft] = useState("");
+  const [ticketSearch, setTicketSearch] = useState(() => ({ ...EMPTY_TICKET_SEARCH }));
+  const [ticketSearchDraft, setTicketSearchDraft] = useState(() => ({
+    ...EMPTY_TICKET_SEARCH,
+  }));
   const [tab, setTab] = useState("open");
   const { inboxSubTab: tabOpen, setInboxSubTab: setTabOpen } =
     useContext(TicketsContext);
@@ -642,6 +680,7 @@ const TicketsManagerTabs = () => {
   const userQueueIds = Array.isArray(user?.queues) ? user.queues.map((q) => q.id) : [];
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedContactLabels, setSelectedContactLabels] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
 
   useEffect(() => {
@@ -680,33 +719,51 @@ const TicketsManagerTabs = () => {
     }
   }, [showChatbotTab, tabOpen, setTabOpen]);
 
-  useEffect(() => {
-    if (tab === "search") {
-      const el = searchInputRef.current;
-      if (el && typeof el.focus === "function") {
-        el.focus();
-      }
-    }
-  }, [tab]);
+  const activeSearchKey = useMemo(
+    () => getActiveTicketSearchKey(tab, tabOpen),
+    [tab, tabOpen]
+  );
 
-  const handleSearch = (e) => {
+  const activeSearchDraft = ticketSearchDraft[activeSearchKey] ?? "";
+
+  const searchPlaceholder = useMemo(() => {
+    const key = getTicketSearchPlaceholderKey(tab, tabOpen);
+    const translated = i18n.t(key);
+    return translated !== key
+      ? translated
+      : i18n.t("tickets.search.placeholder");
+  }, [tab, tabOpen]);
+
+  const handleSearchInput = (e) => {
     const raw = e.target.value;
-    const searchedTerm = raw.toLowerCase();
-    setSearchInputDraft(raw);
+    const key = getActiveTicketSearchKey(tab, tabOpen);
+
+    setTicketSearchDraft((prev) => ({ ...prev, [key]: raw }));
 
     if (searchDebounceRef.current) {
       clearTimeout(searchDebounceRef.current);
     }
 
-    if (searchedTerm === "") {
-      setSearchParam("");
-      setTab("open");
-      return;
-    }
-
     searchDebounceRef.current = setTimeout(() => {
-      setSearchParam(searchedTerm);
+      setTicketSearch((prev) => ({
+        ...prev,
+        [key]: normalizeTicketSearchTerm(raw),
+      }));
     }, 350);
+  };
+
+  const handleClearSearch = () => {
+    const key = getActiveTicketSearchKey(tab, tabOpen);
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+    setTicketSearchDraft((prev) => ({ ...prev, [key]: "" }));
+    setTicketSearch((prev) => ({ ...prev, [key]: "" }));
+    const el = searchInputRef.current;
+    if (el && typeof el.focus === "function") {
+      el.focus();
+    }
   };
 
   const handleChangeTab = (e, newValue) => {
@@ -723,6 +780,13 @@ const TicketsManagerTabs = () => {
   const handleSelectedTags = (selecteds) => {
     const tags = (Array.isArray(selecteds) ? selecteds : []).map((t) => t?.id).filter(Boolean);
     setSelectedTags(tags);
+  };
+
+  const handleSelectedContactLabels = (selecteds) => {
+    const ids = (Array.isArray(selecteds) ? selecteds : [])
+      .map((l) => l?.id)
+      .filter(Boolean);
+    setSelectedContactLabels(ids);
   };
 
   const handleSelectedUsers = (selecteds) => {
@@ -878,7 +942,7 @@ const TicketsManagerTabs = () => {
             }
           />
           <Tab
-            value={"search"}
+            value={"filters"}
             classes={{ root: classes.tab, label: classes.tabLabel }}
             label={
               <span className={classes.tabLabel}>
@@ -899,26 +963,46 @@ const TicketsManagerTabs = () => {
         />
       )}
 
-      <div className={classes.searchRow}>
-        <div className={classes.searchInputWrap}>
+      <div
+        className={classes.searchRow}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div
+          className={classes.searchInputWrap}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <SearchIcon className={classes.searchIconInField} fontSize="small" aria-hidden />
           <InputBase
             className={classes.searchInput}
             inputRef={searchInputRef}
-            placeholder={i18n.t("tickets.search.placeholder")}
-            type="search"
-            value={searchInputDraft}
-            onChange={(e) => {
-              if (e.target.value.trim()) setTab("search");
-              handleSearch(e);
-            }}
-            onFocus={() => tab !== "search" && setTab("search")}
+            placeholder={searchPlaceholder}
+            type="text"
+            value={activeSearchDraft}
+            onChange={handleSearchInput}
+            onKeyDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             fullWidth
             inputProps={{
               "aria-label": i18n.t("ticketsList.searchInputAria"),
               title: i18n.t("ticketsList.keyboardShortcutsHint"),
             }}
           />
+          {activeSearchDraft ? (
+            <Tooltip title={i18n.t("tickets.search.clear")}>
+              <IconButton
+                size="small"
+                onClick={handleClearSearch}
+                aria-label={i18n.t("tickets.search.clear")}
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : null}
         </div>
         <Tooltip title={i18n.t("ticketsList.keyboardShortcutsHint")}>
           <IconButton
@@ -953,8 +1037,8 @@ const TicketsManagerTabs = () => {
         </Tooltip>
       </div>
 
-      {tab === "search" && (
-        <Paper square elevation={0} className={classes.ticketOptionsBox}>
+      {tab === "filters" && (
+        <Paper elevation={0} className={classes.ticketOptionsBox}>
           <Can
             role={user.profile}
             perform="tickets-manager:showall"
@@ -986,33 +1070,38 @@ const TicketsManagerTabs = () => {
       )}
 
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
-        <Paper className={classes.ticketsWrapper} style={{ position: "relative" }}>
+        <div className={classes.ticketsWrapper}>
           <OpenInboxTicketLists
             tabOpen={tabOpen}
             compactList={compactList}
             selectedQueueIds={selectedQueueIds}
             showAllTickets={showAllTickets}
             showChatbotTab={showChatbotTab}
+            ticketSearch={ticketSearch}
           />
-        </Paper>
+        </div>
       </TabPanel>
       <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
         <TicketsList
           status="closed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          searchParam={ticketSearch.closed}
           compact={compactList}
+          enableBulkDelete
         />
       </TabPanel>
-      <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
+      <TabPanel value={tab} name="filters" className={classes.ticketsWrapper}>
         <TagsFilter onFiltered={handleSelectedTags} />
+        <ContactLabelsFilter onFiltered={handleSelectedContactLabels} />
         {profile === "admin" && (
           <UsersFilter onFiltered={handleSelectedUsers} />
         )}
         <TicketsList
-          searchParam={searchParam}
+          searchParam={ticketSearch.filters}
           showAll={true}
           tags={selectedTags}
+          contactLabels={selectedContactLabels}
           users={selectedUsers}
           selectedQueueIds={selectedQueueIds}
           compact={compactList}
@@ -1020,15 +1109,16 @@ const TicketsManagerTabs = () => {
       </TabPanel>
 
       <TabPanel value={tab} name="groups" className={classes.ticketsWrapper}>
-        <Paper className={classes.ticketsWrapper} style={{ position: "relative" }}>
+        <div className={classes.ticketsWrapper}>
           <TicketsList
             groupsOnly
             showAll
             selectedQueueIds={selectedQueueIds}
+            searchParam={ticketSearch.groups}
             compact={compactList}
             socketActive={tab === "groups"}
           />
-        </Paper>
+        </div>
       </TabPanel>
 
       <div className={classes.fabsWrap}>

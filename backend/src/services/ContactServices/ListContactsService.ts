@@ -4,12 +4,15 @@ import Ticket from "../../models/Ticket";
 import Message from "../../models/Message";
 import TicketTag from "../../models/TicketTag";
 import getTagsForContactIds from "./getTagsForContactIds";
+import getLabelsForContactIds from "../../helpers/getLabelsForContactIds";
+import ContactLabelRelation from "../../models/ContactLabelRelation";
 
 interface Request {
   searchParam?: string;
   pageNumber?: string;
   companyId: number;
   tagId?: string;
+  labelId?: string;
   dateFrom?: string;
   dateTo?: string;
 }
@@ -29,6 +32,7 @@ const enrichContacts = async (
   const contactIds = contacts.map(c => c.id);
 
   const tagsMap = await getTagsForContactIds(contactIds, companyId);
+  const labelsMap = await getLabelsForContactIds(contactIds, companyId);
 
   const latestTickets = await Promise.all(
     contactIds.map(cid =>
@@ -92,6 +96,7 @@ const enrichContacts = async (
     return {
       ...plain,
       tags: tagsMap.get(c.id) ?? [],
+      labels: labelsMap.get(c.id) ?? [],
       lastTicket: lastTicketByContact.get(c.id) ?? null,
       lastInteractionAt: lastInteractionByContact.get(c.id) ?? null
     };
@@ -103,6 +108,7 @@ const ListContactsService = async ({
   pageNumber = "1",
   companyId,
   tagId,
+  labelId,
   dateFrom,
   dateTo
 }: Request): Promise<{
@@ -155,6 +161,18 @@ const ListContactsService = async ({
       end.setHours(23, 59, 59, 999);
       whereClause.updatedAt[Op.lte] = end;
     }
+  }
+
+  if (labelId) {
+    const relRows = await ContactLabelRelation.findAll({
+      where: { labelId: Number(labelId), companyId },
+      attributes: ["contactId"]
+    });
+    const allowedContactIds = [...new Set(relRows.map((r) => r.contactId))];
+    if (!allowedContactIds.length) {
+      return { contacts: [], count: 0, hasMore: false };
+    }
+    whereClause.id = { [Op.in]: allowedContactIds };
   }
 
   if (tagId) {

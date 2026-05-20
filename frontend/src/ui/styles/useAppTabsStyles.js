@@ -17,10 +17,17 @@ const useAppTabsStyles = makeStyles((theme) => ({
       minHeight: 48,
       paddingLeft: theme.spacing(2),
       paddingRight: theme.spacing(2),
-      transition: theme.transitions.create(["color", "background-color"], {
+      backgroundColor: "transparent",
+      borderRadius: 0,
+      boxShadow: "none",
+      transition: theme.transitions.create(["color"], {
         duration: 200,
         easing: theme.transitions.easing.easeInOut,
       }),
+      "&.Mui-selected": {
+        backgroundColor: "transparent",
+        boxShadow: "none",
+      },
     },
   },
   indicator: {

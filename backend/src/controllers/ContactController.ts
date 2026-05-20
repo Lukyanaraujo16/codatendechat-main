@@ -28,6 +28,7 @@ type IndexQuery = {
   searchParam: string;
   pageNumber: string;
   tagId?: string;
+  labelId?: string;
   dateFrom?: string;
   dateTo?: string;
 };
@@ -50,7 +51,7 @@ interface ContactData {
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber, tagId, dateFrom, dateTo } =
+  const { searchParam, pageNumber, tagId, labelId, dateFrom, dateTo } =
     req.query as IndexQuery;
   const { companyId } = req.user;
 
@@ -59,6 +60,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     pageNumber,
     companyId,
     tagId,
+    labelId,
     dateFrom,
     dateTo
   });

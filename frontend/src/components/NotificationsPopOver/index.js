@@ -4,8 +4,6 @@ import { useHistory } from "react-router-dom";
 import { format } from "date-fns";
 import { SocketContext } from "../../context/Socket/SocketContext";
 
-import useSound from "use-sound";
-
 import Popover from "@material-ui/core/Popover";
 import IconButton from "@material-ui/core/IconButton";
 import List from "@material-ui/core/List";
@@ -15,8 +13,8 @@ import ChatIcon from "@material-ui/icons/Chat";
 import TicketListItem from "../TicketListItemCustom";
 import NotificationPopoverLayout, { PulsingNotificationBadge } from "../NotificationPopoverLayout";
 import useTickets from "../../hooks/useTickets";
-import alertSound from "../../assets/sound.mp3";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { useNotificationSound } from "../../context/NotificationSound/NotificationSoundContext";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 
@@ -68,11 +66,12 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const NotificationsPopOver = ({ volume }) => {
+const NotificationsPopOver = () => {
 	const classes = useStyles();
 
 	const history = useHistory();
 	const { user } = useContext(AuthContext);
+	const { playContextualNotificationSound } = useNotificationSound();
 	const lastSoundAtRef = useRef(0);
 	const SOUND_DEBOUNCE_MS = 1000;
 	const anchorEl = useRef();
@@ -88,7 +87,6 @@ const NotificationsPopOver = ({ volume }) => {
 		enabled: Boolean(user?.companyId),
 	});
 
-	const [play] = useSound(alertSound, { volume: volume ?? 1 });
 	const soundAlertRef = useRef();
 
 	const historyRef = useRef(history);
@@ -111,7 +109,11 @@ const NotificationsPopOver = ({ volume }) => {
 	}, [user?.id, user?.allTicket]);
 
 	useEffect(() => {
-		soundAlertRef.current = play;
+		soundAlertRef.current = (ticket) =>
+			playContextualNotificationSound({
+				ticketId: ticket?.id,
+				ticketUuid: ticket?.uuid,
+			});
 
 		if (!("Notification" in window)) {
 			console.log("This browser doesn't support notifications");
@@ -119,7 +121,7 @@ const NotificationsPopOver = ({ volume }) => {
 			/* Pedido imediato ao montar: pode ser agressivo (prompt sem contexto). Fase posterior: UX explícita. */
 			Notification.requestPermission();
 		}
-	}, [play]);
+	}, [playContextualNotificationSound]);
 
 	useEffect(() => {
 		const processNotifications = () => {
@@ -171,7 +173,7 @@ const NotificationsPopOver = ({ volume }) => {
 			return [notification, ...prevState];
 		});
 
-		soundAlertRef.current();
+		soundAlertRef.current(ticket);
 	}, []);
 
 	useEffect(() => {
@@ -233,6 +235,12 @@ const NotificationsPopOver = ({ volume }) => {
 			});
 
 			if (isTicketOpenInRoute(data.ticket, historyRef.current)) {
+				const now = Date.now();
+				if (now - lastSoundAtRef.current < SOUND_DEBOUNCE_MS) {
+					return;
+				}
+				lastSoundAtRef.current = now;
+				soundAlertRef.current(data.ticket);
 				return;
 			}
 

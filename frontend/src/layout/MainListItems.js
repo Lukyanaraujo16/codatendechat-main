@@ -314,6 +314,7 @@ const MainListItems = (props) => {
     path.startsWith("/tickets") ||
     path === "/kanban" ||
     path === "/contacts" ||
+    path === "/contacts/labels" ||
     path === "/group-manager";
   const selAutomacao =
     path.startsWith("/flowbuilder") ||

@@ -62,7 +62,7 @@ export function useTicketsKeyboardShortcuts({ searchInputRef, setTab }) {
           e.preventDefault();
           if (k === "1") setTab("open");
           if (k === "2") setTab("closed");
-          if (k === "3") setTab("search");
+          if (k === "3") setTab("filters");
           if (k === "4") setTab("groups");
           return;
         }

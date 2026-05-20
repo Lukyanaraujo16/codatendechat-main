@@ -48,6 +48,7 @@ import { Op } from "sequelize";
 import { campaignQueue, parseToMilliseconds, randomValue } from "../../queues";
 import User from "../../models/User";
 import Setting from "../../models/Setting";
+import { resolveWhatsappBehavior } from "../../helpers/whatsappBehaviorSettings";
 import { cacheLayer } from "../../libs/cache";
 import { provider } from "./providers";
 import { debounce } from "../../helpers/Debounce";
@@ -530,6 +531,34 @@ const getSenderMessage = (
   return senderId && jidNormalizedUser(senderId);
 };
 
+/** JID do participante em grupos — prioriza número real (senderPn) em vez de @lid interno. */
+const getGroupParticipantContactJid = (
+  msg: proto.IWebMessageInfo,
+  wbot: Session
+): string => {
+  const participant = msg.key.participant || msg.participant;
+  if (!participant) {
+    return getSenderMessage(msg, wbot);
+  }
+  const raw = String(participant);
+  if (raw.endsWith("@lid")) {
+    const key = msg.key as { senderPn?: string };
+    if (key.senderPn) {
+      const phone = String(key.senderPn).replace(/\D/g, "");
+      if (phone.length >= 8 && phone.length <= 15) {
+        return `${phone}@s.whatsapp.net`;
+      }
+    }
+  }
+  const normalized = jidNormalizedUser(raw);
+  const local = normalized.split("@")[0].split(":")[0];
+  const digits = local.replace(/\D/g, "");
+  if (digits.length >= 8 && digits.length <= 15) {
+    return `${digits}@s.whatsapp.net`;
+  }
+  return normalized;
+};
+
 /**
  * Para chat 1:1, retorna sempre o JID no formato @s.whatsapp.net (número real) quando disponível.
  * Quando a mensagem vem com @lid (Linked Identity), tenta obter o número real por:
@@ -612,7 +641,7 @@ const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
   const rawNumber = contactJid.replace(/\D/g, "");
   return isGroup
     ? {
-        id: getSenderMessage(msg, wbot),
+        id: getGroupParticipantContactJid(msg, wbot),
         name: msg.pushName
       }
     : {
@@ -2806,13 +2835,6 @@ const handleMessage = async (
 
     const isGroup = msg.key.remoteJid?.endsWith("@g.us");
 
-    const msgIsGroupBlock = await Setting.findOne({
-      where: {
-        companyId,
-        key: "CheckMsgIsGroup"
-      }
-    });
-
     const bodyMessage = getBodyMessage(msg);
     const msgType = getTypeMessage(msg);
 
@@ -2849,11 +2871,18 @@ const handleMessage = async (
       msgContact = await getContactMessage(msg, wbot);
     }
 
-    if (msgIsGroupBlock?.value === "enabled" && isGroup) {
-      logger.info(
-        `[WhatsAppInbound] ignored reason=group_messages_disabled messageId=${msg.key?.id ?? ""}`
+    const whatsappIdEarly = wbot.id;
+    if (isGroup && whatsappIdEarly) {
+      const groupBehavior = await resolveWhatsappBehavior(
+        whatsappIdEarly,
+        companyId
       );
-      return;
+      if (groupBehavior.groupMessagesMode === "ignore") {
+        logger.info(
+          `[WhatsAppInbound] ignored reason=group_messages_disabled whatsappId=${whatsappIdEarly} messageId=${msg.key?.id ?? ""}`
+        );
+        return;
+      }
     }
 
     // Nunca criar/atualizar ticket para o próprio número (evita resposta ir para "si mesmo")

@@ -331,6 +331,18 @@ const reducer = (state, action) => {
   }
 };
 
+const getGroupSenderDisplayName = (message) => {
+  if (message?.displayParticipantName) {
+    return message.displayParticipantName;
+  }
+  const name = message?.contact?.name?.trim();
+  const number = message?.contact?.number?.trim();
+  if (name && name !== number && !/^\d{14,}$/.test(name.replace(/\D/g, ""))) {
+    return name;
+  }
+  return name || number || "";
+};
+
 const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const classes = useStyles();
 
@@ -645,7 +657,9 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
         <div className={classes.quotedMsg}>
           {!message.quotedMsg?.fromMe && (
             <span className={classes.messageContactName}>
-              {message.quotedMsg?.contact?.name}
+              {isGroup
+                ? getGroupSenderDisplayName(message.quotedMsg)
+                : message.quotedMsg?.contact?.name}
             </span>
           )}
 
@@ -722,7 +736,7 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
                 </IconButton>
                 {isGroup && (
                   <span className={classes.messageContactName}>
-                    {message.contact?.name}
+                    {getGroupSenderDisplayName(message)}
                   </span>
                 )}
                 <div>
@@ -754,7 +768,7 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
                 </IconButton>
                 {isGroup && (
                   <span className={classes.messageContactName}>
-                    {message.contact?.name}
+                    {getGroupSenderDisplayName(message)}
                   </span>
                 )}
 

@@ -55,6 +55,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
 import NewTicketModal from "../../components/NewTicketModal";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import ContactLabelChip from "../../components/ContactLabelChip";
 
 import { CSVLink } from "react-csv";
 import ImportContactsModal from "../../components/ImportContactsModal";
@@ -304,6 +305,7 @@ const Contacts = () => {
 	const [pageNumber, setPageNumber] = useState(1);
 	const [searchParam, setSearchParam] = useState("");
 	const [tagFilter, setTagFilter] = useState("");
+	const [labelFilter, setLabelFilter] = useState("");
 	const [dateFrom, setDateFrom] = useState("");
 	const [dateTo, setDateTo] = useState("");
 	const [contacts, dispatch] = useReducer(reducer, []);
@@ -316,6 +318,7 @@ const Contacts = () => {
 	const [hasMore, setHasMore] = useState(false);
 	const [openModalImport, setOpenModalImport] = useState(false);
 	const [tagOptions, setTagOptions] = useState([]);
+	const [labelOptions, setLabelOptions] = useState([]);
 	const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 	const [scheduleContactId, setScheduleContactId] = useState(null);
 	const [chatbotToggleLoadingId, setChatbotToggleLoadingId] = useState(null);
@@ -329,12 +332,18 @@ const Contacts = () => {
 				setTagOptions(Array.isArray(data) ? data : [])
 			)
 			.catch(() => {});
+		api
+			.get("/contact-labels")
+			.then(({ data }) =>
+				setLabelOptions(Array.isArray(data) ? data : [])
+			)
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [searchParam, tagFilter, dateFrom, dateTo]);
+	}, [searchParam, tagFilter, labelFilter, dateFrom, dateTo]);
 
 	useEffect(() => {
 		setLoading(true);
@@ -346,6 +355,7 @@ const Contacts = () => {
 						pageNumber,
 					};
 					if (tagFilter) params.tagId = tagFilter;
+					if (labelFilter) params.labelId = labelFilter;
 					if (dateFrom) params.dateFrom = dateFrom;
 					if (dateTo) params.dateTo = dateTo;
 
@@ -363,7 +373,7 @@ const Contacts = () => {
 			fetchContacts();
 		}, 300);
 		return () => clearTimeout(delayDebounceFn);
-	}, [searchParam, pageNumber, tagFilter, dateFrom, dateTo]);
+	}, [searchParam, pageNumber, tagFilter, labelFilter, dateFrom, dateTo]);
 
 	useEffect(() => {
 		const companyId = localStorage.getItem("companyId");
@@ -708,7 +718,7 @@ const Contacts = () => {
 								}}
 							/>
 						</Grid>
-						<Grid item xs={12} sm={6} md={3}>
+						<Grid item xs={12} sm={6} md={2}>
 							<FormControl variant="outlined" size="small" fullWidth>
 								<InputLabel id="contacts-tag-filter">
 									{i18n.t("contacts.filters.tag")}
@@ -725,6 +735,28 @@ const Contacts = () => {
 									{tagOptions.map((t) => (
 										<MenuItem key={t.id} value={String(t.id)}>
 											{t.name}
+										</MenuItem>
+									))}
+								</Select>
+							</FormControl>
+						</Grid>
+						<Grid item xs={12} sm={6} md={2}>
+							<FormControl variant="outlined" size="small" fullWidth>
+								<InputLabel id="contacts-label-filter">
+									{i18n.t("contacts.filters.label")}
+								</InputLabel>
+								<Select
+									labelId="contacts-label-filter"
+									value={labelFilter}
+									onChange={(e) => setLabelFilter(e.target.value)}
+									label={i18n.t("contacts.filters.label")}
+								>
+									<MenuItem value="">
+										<em>{i18n.t("contacts.filters.allLabels")}</em>
+									</MenuItem>
+									{labelOptions.map((l) => (
+										<MenuItem key={l.id} value={String(l.id)}>
+											{l.name}
 										</MenuItem>
 									))}
 								</Select>
@@ -807,6 +839,11 @@ const Contacts = () => {
 											<span>{i18n.t("contacts.table.tags")}</span>
 										</Tooltip>
 									</TableCell>
+									<TableCell className={classes.tableHeadCell}>
+										<Tooltip title={i18n.t("contacts.labelsColumnHint")}>
+											<span>{i18n.t("contacts.table.labels")}</span>
+										</Tooltip>
+									</TableCell>
 									<TableCell align="center" className={classes.tableHeadCell}>
 										{i18n.t("contacts.table.lastInteraction")}
 									</TableCell>
@@ -885,6 +922,13 @@ const Contacts = () => {
 																	: undefined
 															}
 														/>
+													))}
+												</div>
+											</TableCell>
+											<TableCell>
+												<div className={classes.chipWrap}>
+													{(contact.labels || []).map((label) => (
+														<ContactLabelChip key={label.id} label={label} />
 													))}
 												</div>
 											</TableCell>

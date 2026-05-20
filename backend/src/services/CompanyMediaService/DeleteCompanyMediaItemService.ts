@@ -1,4 +1,3 @@
-import fs from "fs";
 import path from "path";
 import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
@@ -12,12 +11,8 @@ import ChatMessage from "../../models/ChatMessage";
 import Chat from "../../models/Chat";
 import { FlowImgModel } from "../../models/FlowImg";
 import { FlowAudioModel } from "../../models/FlowAudio";
-import { getBackendPublicFolder } from "../../helpers/publicFolder";
-import { normalizePublicRelPath } from "../../helpers/companyMediaTypes";
-import {
-  decrementCompanyStorageUsage,
-  tryStatFileBytes
-} from "../CompanyService/adjustCompanyStorageUsage";
+import { unlinkPublicMediaFile } from "../../helpers/companyMediaDeletePath";
+import { decrementCompanyStorageUsage } from "../CompanyService/adjustCompanyStorageUsage";
 import { countAllReferencesToRelPath } from "./countAllReferencesToRelPath";
 
 export const MESSAGE_MEDIA_REMOVED_BODY = "[Mídia removida pelo administrador]";
@@ -33,60 +28,89 @@ export type DeleteCompanyMediaSource =
   | "flowImage"
   | "flowAudio";
 
-/** Após remover referências no registo. Devolve bytes libertados do disco (0 se ficheiro não existir / ainda referenciado). */
+export type DeleteCompanyMediaItemResult = {
+  freedBytes: number;
+  fileMissing: boolean;
+};
+
+/** Após remover referências no registo. Devolve bytes libertados do disco. */
 async function unlinkAfterClearedReference(
   companyId: number,
   relRaw: string | null | undefined,
-  deferStorageDecrement = false
-): Promise<number> {
-  const r = normalizePublicRelPath(relRaw);
-  if (!r) return 0;
-  const n = await countAllReferencesToRelPath(companyId, r);
-  if (n !== 0) return 0;
-  const abs = path.join(getBackendPublicFolder(), r);
-  if (fs.existsSync(abs)) {
-    const sz = tryStatFileBytes(abs);
-    fs.unlinkSync(abs);
-    if (!deferStorageDecrement) {
-      void decrementCompanyStorageUsage(companyId, sz);
-    }
-    return sz;
+  joinedRel: string | null | undefined,
+  deferStorageDecrement: boolean,
+  fallbackSizeBytes = 0
+): Promise<DeleteCompanyMediaItemResult> {
+  const remaining = await countAllReferencesToRelPath(companyId, relRaw);
+  if (remaining > 0) {
+    return { freedBytes: 0, fileMissing: false };
   }
-  return 0;
+
+  const diskFreed = unlinkPublicMediaFile(relRaw, joinedRel);
+  const fileMissing = diskFreed === 0;
+  const accounting =
+    diskFreed > 0 ? diskFreed : fileMissing ? Math.max(0, fallbackSizeBytes) : 0;
+
+  if (accounting > 0 && !deferStorageDecrement) {
+    void decrementCompanyStorageUsage(companyId, accounting);
+  }
+
+  return { freedBytes: accounting, fileMissing };
 }
 
 export type DeleteCompanyMediaItemOptions = {
   deferStorageDecrement: boolean;
+  /** Bytes conhecidos da listagem (ajuste de armazenamento se ficheiro já não existir). */
+  knownSizeBytes?: number;
 };
 
-/** Elimina uma mídia com a mesma lógica que o DELETE singular; devolve bytes libertados do disco nesta operação. */
+/** Elimina uma mídia com a mesma lógica que o DELETE singular; devolve bytes contabilizados. */
 export const deleteCompanyMediaItemWithOptions = async (
   companyId: number,
   source: DeleteCompanyMediaSource,
   sourceId: string,
   opts: DeleteCompanyMediaItemOptions
-): Promise<number> => {
+): Promise<DeleteCompanyMediaItemResult> => {
   const defer = opts.deferStorageDecrement;
+  const fallbackSize = Math.max(0, Number(opts.knownSizeBytes) || 0);
+
+  const finishPhysicalDelete = async (
+    relRaw: string,
+    joinedRel: string | null,
+    refCount: number
+  ): Promise<DeleteCompanyMediaItemResult> => {
+    let n = refCount;
+    if (n < 1) n = 1;
+    if (n === 1) {
+      return unlinkAfterClearedReference(
+        companyId,
+        relRaw,
+        joinedRel,
+        defer,
+        fallbackSize
+      );
+    }
+    return { freedBytes: 0, fileMissing: false };
+  };
+
   switch (source) {
     case "message": {
+      const msgId = Number(sourceId);
       const msg = await Message.findOne({
-        where: { id: sourceId, companyId }
+        where: Number.isFinite(msgId)
+          ? { id: msgId, companyId }
+          : { id: sourceId, companyId }
       });
       if (!msg) throw new AppError("ERR_NO_PERMISSION", 404);
       const rel = msg.getDataValue("mediaUrl") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      if (n < 1) throw new AppError("ERR_VALIDATION", 400);
-      const shouldUnlink = n === 1;
       await msg.update({
         mediaUrl: null as unknown as string,
         mediaType: null as unknown as string,
         body: MESSAGE_MEDIA_REMOVED_BODY
       });
-      if (shouldUnlink) {
-        return unlinkAfterClearedReference(companyId, rel, defer);
-      }
-      return 0;
+      return finishPhysicalDelete(rel, null, n);
     }
     case "quickMessage": {
       const id = Number(sourceId);
@@ -97,10 +121,8 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!inner) throw new AppError("ERR_VALIDATION", 400);
       const rel = path.join("quickMessage", inner);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      const shouldUnlink = n === 1;
       await row.update({ mediaPath: null as unknown as string, mediaName: null as unknown as string });
-      if (shouldUnlink) return unlinkAfterClearedReference(companyId, rel, defer);
-      return 0;
+      return finishPhysicalDelete(rel, path.join("quickMessage", inner), n);
     }
     case "schedule": {
       const id = Number(sourceId);
@@ -110,10 +132,8 @@ export const deleteCompanyMediaItemWithOptions = async (
       const rel = row.getDataValue("mediaPath") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      const shouldUnlink = n === 1;
       await row.update({ mediaPath: null as unknown as string, mediaName: null as unknown as string });
-      if (shouldUnlink) return unlinkAfterClearedReference(companyId, rel, defer);
-      return 0;
+      return finishPhysicalDelete(rel, null, n);
     }
     case "campaign": {
       const id = Number(sourceId);
@@ -123,10 +143,8 @@ export const deleteCompanyMediaItemWithOptions = async (
       const rel = row.getDataValue("mediaPath") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      const shouldUnlink = n === 1;
       await row.update({ mediaPath: null as unknown as string, mediaName: null as unknown as string });
-      if (shouldUnlink) return unlinkAfterClearedReference(companyId, rel, defer);
-      return 0;
+      return finishPhysicalDelete(rel, null, n);
     }
     case "announcement": {
       const id = Number(sourceId);
@@ -136,13 +154,11 @@ export const deleteCompanyMediaItemWithOptions = async (
       const rel = row.getDataValue("mediaPath") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      const shouldUnlink = n === 1;
       await row.update({
         mediaPath: null as unknown as string,
         mediaName: null as unknown as string
       });
-      if (shouldUnlink) return unlinkAfterClearedReference(companyId, rel, defer);
-      return 0;
+      return finishPhysicalDelete(rel, null, n);
     }
     case "fileListOption": {
       const id = Number(sourceId);
@@ -154,10 +170,8 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!opt) throw new AppError("ERR_NO_FILE_FOUND", 404);
       const rel = path.join("fileList", String(opt.fileId), opt.path);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      const shouldUnlink = n === 1;
       await opt.destroy();
-      if (shouldUnlink) return unlinkAfterClearedReference(companyId, rel, defer);
-      return 0;
+      return finishPhysicalDelete(rel, rel, n);
     }
     case "chatMessage": {
       const id = Number(sourceId);
@@ -170,14 +184,12 @@ export const deleteCompanyMediaItemWithOptions = async (
       const rel = row.getDataValue("mediaPath") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      const shouldUnlink = n === 1;
       await row.update({
         mediaPath: "" as unknown as string,
         mediaName: null as unknown as string,
         message: MESSAGE_MEDIA_REMOVED_BODY
       });
-      if (shouldUnlink) return unlinkAfterClearedReference(companyId, rel, defer);
-      return 0;
+      return finishPhysicalDelete(rel, null, n);
     }
     case "flowImage": {
       const id = Number(sourceId);
@@ -187,10 +199,8 @@ export const deleteCompanyMediaItemWithOptions = async (
       const rel = String(row.name || "");
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      const shouldUnlink = n === 1;
       await row.destroy();
-      if (shouldUnlink) return unlinkAfterClearedReference(companyId, rel, defer);
-      return 0;
+      return finishPhysicalDelete(rel, null, n);
     }
     case "flowAudio": {
       const id = Number(sourceId);
@@ -200,10 +210,8 @@ export const deleteCompanyMediaItemWithOptions = async (
       const rel = String(row.name || "");
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
       const n = await countAllReferencesToRelPath(companyId, rel);
-      const shouldUnlink = n === 1;
       await row.destroy();
-      if (shouldUnlink) return unlinkAfterClearedReference(companyId, rel, defer);
-      return 0;
+      return finishPhysicalDelete(rel, null, n);
     }
     default:
       throw new AppError("ERR_VALIDATION", 400);

@@ -4,6 +4,7 @@ import { Avatar, Button, CardHeader } from "@material-ui/core";
 import { makeStyles, useTheme, alpha } from "@material-ui/core/styles";
 
 import { i18n } from "../../translate/i18n";
+import ContactLabelsBar from "../ContactLabelsBar";
 
 const useStyles = makeStyles((theme) => ({
 	root: {
@@ -46,7 +47,13 @@ const useStyles = makeStyles((theme) => ({
 	},
 }));
 
-const TicketInfo = ({ contact, ticket, onClick, onReassignConnection }) => {
+const TicketInfo = ({
+	contact,
+	ticket,
+	onClick,
+	onReassignConnection,
+	onLabelsChange,
+}) => {
 	const classes = useStyles();
 	const theme = useTheme();
 	const { user } = ticket;
@@ -85,7 +92,25 @@ const TicketInfo = ({ contact, ticket, onClick, onReassignConnection }) => {
 			titleTypographyProps={{ noWrap: true, variant: "subtitle1", component: "span" }}
 			subheaderTypographyProps={{ noWrap: true, component: "span" }}
 			avatar={<Avatar src={contact.profilePicUrl} alt="contact_image" />}
-			title={`${contactName} #${ticket.id}`}
+			title={
+				<span>
+					<span style={{ display: "block" }}>{`${contactName} #${ticket.id}`}</span>
+					{contact?.id && onLabelsChange ? (
+						<span
+							onClick={(e) => e.stopPropagation()}
+							onKeyDown={(e) => e.stopPropagation()}
+							role="presentation"
+						>
+							<ContactLabelsBar
+								contactId={contact.id}
+								labels={contact.labels}
+								onLabelsChange={onLabelsChange}
+								compact
+							/>
+						</span>
+					) : null}
+				</span>
+			}
 			subheader={
 				<span>
 					{ticket.user && `${userName}`}

@@ -184,6 +184,8 @@ export const deleteCompanyMediaBatch = async (
   if (items.length > MAX_BATCH_DELETE) {
     throw new AppError("ERR_VALIDATION", 400);
   }
-  const result = await BatchDeleteCompanyMediaService(companyId, items);
+  const result = await BatchDeleteCompanyMediaService(companyId, items, {
+    userId: req.user?.id != null ? Number(req.user.id) : undefined
+  });
   return res.json(result);
 };

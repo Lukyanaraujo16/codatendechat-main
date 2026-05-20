@@ -336,7 +336,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const { colorMode } = useContext(ColorModeContext);
   const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
 
-  const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
   const [attendancePaused, setAttendancePaused] = useState(
     () => localStorage.getItem("attendancePaused") === "true"
   );
@@ -590,12 +589,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             {theme.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
 
-          <NotificationsVolume
-            setVolume={setVolume}
-            volume={volume}
-          />
+          <NotificationsVolume />
 
-          {user.id && <NotificationsPopOver volume={volume} />}
+          {user.id && <NotificationsPopOver />}
 
           {user.id && <UserNotificationCenter />}
 

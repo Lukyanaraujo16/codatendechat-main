@@ -209,7 +209,11 @@ const Ticket = () => {
       if (data.action === "update") {
         setContact((prevState) => {
           if (prevState.id === data.contact?.id) {
-            return { ...prevState, ...data.contact };
+            const next = { ...prevState, ...data.contact };
+            if (data.contact?.labels) {
+              next.labels = data.contact.labels;
+            }
+            return next;
           }
           return prevState;
         });
@@ -246,6 +250,9 @@ const Ticket = () => {
           onClick={handleDrawerOpen}
           onReassignConnection={
             ticket.isOrphan ? () => setReassignModalOpen(true) : undefined
+          }
+          onLabelsChange={(labels) =>
+            setContact((prev) => ({ ...prev, labels }))
           }
         />
       );
