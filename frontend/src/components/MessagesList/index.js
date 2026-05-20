@@ -343,7 +343,13 @@ const getGroupSenderDisplayName = (message) => {
   return name || number || "";
 };
 
-const MessagesList = ({ ticket, ticketId, isGroup }) => {
+const MessagesList = ({
+  ticket,
+  ticketId,
+  isGroup,
+  onPartialEnrichWarning,
+  onLoadError,
+}) => {
   const classes = useStyles();
 
   const [messagesList, dispatch] = useReducer(reducer, []);
@@ -380,6 +386,14 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
             dispatch({ type: "LOAD_MESSAGES", payload: Array.isArray(data?.messages) ? data.messages : [] });
             setHasMore(data.hasMore);
             setLoading(false);
+            if (
+              pageNumber === 1 &&
+              Array.isArray(data?.enrichWarnings) &&
+              data.enrichWarnings.length > 0 &&
+              typeof onPartialEnrichWarning === "function"
+            ) {
+              onPartialEnrichWarning(data.enrichWarnings);
+            }
           }
 
           if (pageNumber === 1 && Array.isArray(data?.messages) && data.messages.length > 1) {
@@ -387,7 +401,11 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
           }
         } catch (err) {
           setLoading(false);
-          toastError(err);
+          if (typeof onLoadError === "function") {
+            onLoadError(err);
+          } else {
+            toastError(err);
+          }
         }
       };
       fetchMessages();

@@ -5,6 +5,7 @@ import requireAnyPlanFeature from "../middleware/requirePlanFeature";
 
 import * as TicketController from "../controllers/TicketController";
 import * as FlowExecutionLogController from "../controllers/FlowExecutionLogController";
+import openTicketContextMiddleware from "../middleware/openTicketContext";
 
 const ticketRoutes = express.Router();
 
@@ -32,7 +33,11 @@ ticketRoutes.get(
   FlowExecutionLogController.indexByTicket
 );
 
-ticketRoutes.get("/tickets/u/:uuid", TicketController.showFromUUID);
+ticketRoutes.get(
+  "/tickets/u/:uuid",
+  openTicketContextMiddleware,
+  TicketController.showFromUUID
+);
 
 ticketRoutes.post("/tickets", TicketController.store);
 

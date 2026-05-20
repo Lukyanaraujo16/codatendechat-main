@@ -13,6 +13,10 @@ import { assertTicketAccess } from "../helpers/ticketAccess";
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import attachContactLabelsToTickets from "../helpers/attachContactLabelsToTickets";
 import { parseArrayQueryParam } from "../utils/parseArrayQueryParam";
+import {
+  getOpenTicketElapsedMs,
+  getOpenTicketEnrichWarnings
+} from "../helpers/openTicketRequestContext";
 import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUIDService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
@@ -218,10 +222,36 @@ export const showFromUUID = async (
   res: Response
 ): Promise<Response> => {
   const { uuid } = req.params;
-
-  const ticket: Ticket = await ShowTicketUUIDService(uuid);
-
   const { profile, supportMode, companyId, id } = req.user;
+
+  const logBase = { ticketUuid: uuid, companyId, userId: id };
+  logger.info(logBase, "[OpenTicket] show-ticket start");
+
+  let ticket: Ticket;
+  try {
+    ticket = await ShowTicketUUIDService(uuid);
+    const enrichWarnings = getOpenTicketEnrichWarnings();
+    logger.info(
+      {
+        ...logBase,
+        ticketId: ticket.id,
+        elapsedMs: getOpenTicketElapsedMs(),
+        enrichWarnings: enrichWarnings.length ? enrichWarnings : undefined
+      },
+      "[OpenTicket] show-ticket success"
+    );
+  } catch (error) {
+    logger.error(
+      {
+        ...logBase,
+        elapsedMs: getOpenTicketElapsedMs(),
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      "[OpenTicket] show-ticket failed"
+    );
+    throw error;
+  }
 
   if (ticket.companyId !== companyId) {
     throw new AppError("ERR_NO_PERMISSION", 403);

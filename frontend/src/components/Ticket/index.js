@@ -117,12 +117,14 @@ const Ticket = () => {
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
+  const [partialEnrichWarning, setPartialEnrichWarning] = useState(false);
 
   const socketManager = useContext(SocketContext);
   const ticketRef = useRef(ticket);
   ticketRef.current = ticket;
 
   useEffect(() => {
+    setPartialEnrichWarning(false);
     setLoading(true);
     const delayDebounceFn = setTimeout(() => {
       const fetchTicket = async () => {
@@ -266,6 +268,8 @@ const Ticket = () => {
           ticket={ticket}
           ticketId={ticket.id}
           isGroup={ticket.isGroup}
+          onPartialEnrichWarning={() => setPartialEnrichWarning(true)}
+          onLoadError={() => setPartialEnrichWarning(true)}
         />
         <div className={classes.messageInputFooter}>
           <MessageInput
@@ -302,6 +306,11 @@ const Ticket = () => {
         {ticket?.status === "pending" && (
           <Alert severity="info" data-ticket-pending-banner className={classes.pendingBanner}>
             {i18n.t("ticket.pendingPreview.banner")}
+          </Alert>
+        )}
+        {partialEnrichWarning && (
+          <Alert severity="warning" className={classes.pendingBanner}>
+            {i18n.t("ticket.partialEnrichWarning")}
           </Alert>
         )}
         {ticket?.id && (

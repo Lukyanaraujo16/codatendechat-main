@@ -10,7 +10,7 @@ import {
   setIsOrphanOnTicket,
   setStartedOutsideSystemOnTicket
 } from "../../helpers/ticketOrphan";
-import getLabelsForContactIds from "../../helpers/getLabelsForContactIds";
+import attachContactLabelsToContact from "../../helpers/attachContactLabelsToContact";
 
 const ShowTicketService = async (
   id: string | number,
@@ -60,15 +60,7 @@ const ShowTicketService = async (
   setIsOrphanOnTicket(ticket);
   setStartedOutsideSystemOnTicket(ticket);
 
-  if (ticket.contact?.id) {
-    const labelsMap = await getLabelsForContactIds(
-      [ticket.contact.id],
-      companyId
-    );
-    const labels = labelsMap.get(ticket.contact.id) ?? [];
-    (ticket.contact as any).setDataValue?.("labels", labels);
-    (ticket.contact as any).labels = labels;
-  }
+  await attachContactLabelsToContact(ticket.contact, companyId);
 
   return ticket;
 };

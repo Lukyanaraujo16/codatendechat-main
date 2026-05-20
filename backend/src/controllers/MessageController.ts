@@ -21,6 +21,11 @@ import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 import { assertTicketAccess } from "../helpers/ticketAccess";
+import { logger } from "../utils/logger";
+import {
+  getOpenTicketElapsedMs,
+  getOpenTicketEnrichWarnings
+} from "../helpers/openTicketRequestContext";
 import { incrementCompanyStorageUsage } from "../services/CompanyService/adjustCompanyStorageUsage";
 import CheckContactNumber from "../services/WbotServices/CheckNumber";
 import CheckIsValidContact from "../services/WbotServices/CheckIsValidContact";
@@ -45,33 +50,71 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { pageNumber } = req.query as IndexQuery;
   const { companyId, profile, supportMode, id } = req.user;
   const queues: number[] = [];
-
-  const ticketForAccess = await ShowTicketService(ticketId, companyId);
-  await assertTicketAccess(
-    { id, profile, supportMode },
-    { userId: ticketForAccess.userId, queueId: ticketForAccess.queueId }
-  );
-
-  if (profile !== "admin" && supportMode !== true) {
-    const user = await User.findByPk(req.user.id, {
-      include: [{ model: Queue, as: "queues" }]
-    });
-    user.queues.forEach(queue => {
-      queues.push(queue.id);
-    });
-  }
-
-  const { count, messages, ticket, hasMore } = await ListMessagesService({
-    pageNumber,
+  const logBase = {
     ticketId,
     companyId,
-    queues,
-    actorUserId: id
-  });
+    userId: id,
+    pageNumber: pageNumber ?? "1"
+  };
 
-  await SetTicketMessagesAsRead(ticket, HUMAN_PANEL_LIST_MESSAGES);
+  logger.info(logBase, "[OpenTicket] show-ticket start");
 
-  return res.json({ count, messages, ticket, hasMore });
+  try {
+    const ticketForAccess = await ShowTicketService(ticketId, companyId);
+    await assertTicketAccess(
+      { id, profile, supportMode },
+      { userId: ticketForAccess.userId, queueId: ticketForAccess.queueId }
+    );
+
+    if (profile !== "admin" && supportMode !== true) {
+      const user = await User.findByPk(req.user.id, {
+        include: [{ model: Queue, as: "queues" }]
+      });
+      user?.queues?.forEach(queue => {
+        queues.push(queue.id);
+      });
+    }
+
+    const { count, messages, ticket, hasMore } = await ListMessagesService({
+      pageNumber,
+      ticketId,
+      companyId,
+      queues,
+      actorUserId: id,
+      ticket: ticketForAccess
+    });
+
+    await SetTicketMessagesAsRead(ticket, HUMAN_PANEL_LIST_MESSAGES);
+
+    const enrichWarnings = getOpenTicketEnrichWarnings();
+    logger.info(
+      {
+        ...logBase,
+        elapsedMs: getOpenTicketElapsedMs(),
+        enrichWarnings: enrichWarnings.length ? enrichWarnings : undefined
+      },
+      "[OpenTicket] show-ticket success"
+    );
+
+    return res.json({
+      count,
+      messages,
+      ticket,
+      hasMore,
+      enrichWarnings
+    });
+  } catch (error) {
+    logger.error(
+      {
+        ...logBase,
+        elapsedMs: getOpenTicketElapsedMs(),
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      "[OpenTicket] show-ticket failed"
+    );
+    throw error;
+  }
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {

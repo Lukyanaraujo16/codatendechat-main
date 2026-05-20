@@ -1,6 +1,6 @@
 import Ticket from "../models/Ticket";
-import { logger } from "../utils/logger";
 import getLabelsForContactIds from "./getLabelsForContactIds";
+import { setCachedContactLabels } from "./openTicketRequestContext";
 
 const attachContactLabelsToTickets = async (
   tickets: Ticket[],
@@ -16,25 +16,15 @@ const attachContactLabelsToTickets = async (
 
   if (!contactIds.length) return;
 
-  try {
-    const labelsMap = await getLabelsForContactIds(contactIds, companyId);
+  const labelsMap = await getLabelsForContactIds(contactIds, companyId);
 
-    for (const ticket of tickets) {
-      const contact = ticket.contact;
-      if (!contact) continue;
-      const labels = labelsMap.get(contact.id) ?? [];
-      (contact as any).setDataValue?.("labels", labels);
-      (contact as any).labels = labels;
-    }
-  } catch (error) {
-    logger.warn(
-      {
-        companyId,
-        contactIdsCount: contactIds.length,
-        error: error instanceof Error ? error.message : String(error)
-      },
-      "[attachContactLabelsToTickets] failed — tickets returned without labels"
-    );
+  for (const ticket of tickets) {
+    const contact = ticket.contact;
+    if (!contact) continue;
+    const labels = labelsMap.get(contact.id) ?? [];
+    setCachedContactLabels(contact.id, labels);
+    (contact as any).setDataValue?.("labels", labels);
+    (contact as any).labels = labels;
   }
 };
 

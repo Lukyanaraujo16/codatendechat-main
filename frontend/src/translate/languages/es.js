@@ -2128,6 +2128,8 @@ const messages = {
           inputHint:
             "Esta atención está en espera. Acepte para responder.",
         },
+        partialEnrichWarning:
+          "No fue posible cargar algunas informaciones de la conversación.",
         delete: {
           confirmTitle: "Eliminar conversación",
           confirmMessage:

@@ -5,10 +5,8 @@ import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 import Queue from "../../models/Queue";
-import {
-  enrichMessagesWithGroupParticipantDisplay,
-  MessageWithParticipantDisplay
-} from "../../helpers/enrichGroupMessagesDisplay";
+import { MessageWithParticipantDisplay } from "../../helpers/enrichGroupMessagesDisplay";
+import { enrichGroupMessagesSafe } from "../../helpers/enrichGroupMessagesSafe";
 
 interface Request {
   ticketId: string;
@@ -17,6 +15,8 @@ interface Request {
   queues?: number[];
   /** Quando o ticket está atribuído a este utilizador, não filtra mensagens por fila. */
   actorUserId?: string | number;
+  /** Ticket já carregado (evita ShowTicketService + etiquetas duplicados na mesma request). */
+  ticket?: Ticket;
 }
 
 interface Response {
@@ -31,15 +31,16 @@ const ListMessagesService = async ({
   ticketId,
   companyId,
   queues = [],
-  actorUserId
+  actorUserId,
+  ticket: preloadedTicket
 }: Request): Promise<Response> => {
-  const ticket = await ShowTicketService(ticketId, companyId);
+  const ticket =
+    preloadedTicket ?? (await ShowTicketService(ticketId, companyId));
 
   if (!ticket) {
     throw new AppError("ERR_NO_TICKET_FOUND", 404);
   }
 
-  // await setMessagesAsRead(ticket);
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
@@ -86,9 +87,11 @@ const ListMessagesService = async ({
   const hasMore = count > offset + messages.length;
 
   const ordered = messages.reverse();
-  const enrichedMessages = ticket.isGroup
-    ? await enrichMessagesWithGroupParticipantDisplay(ordered, companyId)
-    : ordered;
+
+  const enrichedMessages =
+    ticket.isGroup === true
+      ? await enrichGroupMessagesSafe(ordered, companyId, { ticketId })
+      : ordered;
 
   return {
     messages: enrichedMessages,

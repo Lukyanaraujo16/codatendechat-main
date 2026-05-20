@@ -8,12 +8,18 @@ import requireCompanyNotDelinquent from "../middleware/requireCompanyNotDelinque
 import apiSendRateLimit from "../middleware/apiSendRateLimit";
 
 import * as MessageController from "../controllers/MessageController";
+import openTicketContextMiddleware from "../middleware/openTicketContext";
 
 const messageRoutes = Router();
 
 const upload = multer(uploadConfig);
 
-messageRoutes.get("/messages/:ticketId", isAuth, MessageController.index);
+messageRoutes.get(
+  "/messages/:ticketId",
+  isAuth,
+  openTicketContextMiddleware,
+  MessageController.index
+);
 messageRoutes.post("/messages/:ticketId", isAuth, upload.array("medias"), MessageController.store);
 messageRoutes.delete("/messages/:messageId", isAuth, MessageController.remove);
 messageRoutes.post(

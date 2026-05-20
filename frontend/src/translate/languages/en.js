@@ -2124,6 +2124,8 @@ const messages = {
 						"This conversation is waiting to be accepted. You can review the history, close or delete it. Accept to reply.",
 					inputHint: "This conversation is waiting. Accept to reply.",
 				},
+				partialEnrichWarning:
+					"Some conversation details could not be loaded.",
 				delete: {
 					confirmTitle: "Delete conversation",
 					confirmMessage:
