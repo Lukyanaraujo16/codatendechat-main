@@ -7,6 +7,7 @@ import sequelize from "../../database";
 import {
   assertContactLabelRelationsTable,
   CONTACT_LABEL_RELATIONS_TABLE,
+  getContactLabelRelationsTableName,
   isContactLabelRelationsTableAvailable,
   logContactLabelRelationsDbError
 } from "../../helpers/contactLabelRelationsTable";
@@ -62,9 +63,16 @@ const SetContactLabelsService = async ({
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
-  const relationsTableReady = await isContactLabelRelationsTableAvailable();
-  if (!relationsTableReady) {
-    assertContactLabelRelationsTable();
+  if (!(await isContactLabelRelationsTableAvailable({ refresh: true }))) {
+    const resolved = await getContactLabelRelationsTableName({ refresh: true });
+    if (!resolved) {
+      assertContactLabelRelationsTable();
+    }
+    throw new AppError(
+      "ERR_CONTACT_LABEL_RELATIONS_TABLE_MISSING",
+      503,
+      `Tabela encontrada como "${resolved}" mas o sistema espera "${CONTACT_LABEL_RELATIONS_TABLE}". Execute: npm run build && npm run db:migrate`
+    );
   }
 
   const uniqueIds = normalizeLabelIds(labelIds);

@@ -24,8 +24,7 @@ const GetContactLabelsService = async ({
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
-  const relationsTableReady = await isContactLabelRelationsTableAvailable();
-  if (!relationsTableReady) {
+  if (!(await isContactLabelRelationsTableAvailable({ refresh: true }))) {
     return [];
   }
 
