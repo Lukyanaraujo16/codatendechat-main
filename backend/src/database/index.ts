@@ -68,6 +68,8 @@ import CrmAutomationRule from "../models/CrmAutomationRule";
 import CrmDealActivity from "../models/CrmDealActivity";
 import CrmDealStageHistory from "../models/CrmDealStageHistory";
 import CrmSavedView from "../models/CrmSavedView";
+import { logDbConnectionAtStartup } from "../helpers/dbConnectionInfo";
+import { warmupContactLabelRelationsTable } from "../helpers/contactLabelRelationsTable";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -148,5 +150,8 @@ const models = [
 ];
 
 sequelize.addModels(models);
+
+void logDbConnectionAtStartup();
+void warmupContactLabelRelationsTable();
 
 export default sequelize;

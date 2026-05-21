@@ -8,13 +8,13 @@ function normalizeKey(name: string): string {
 
 type TableRow = { table_schema: string; table_name: string };
 
-async function listTablesFromInformationSchema(
+async function listRelationTables(
   queryInterface: QueryInterface
 ): Promise<TableRow[]> {
   const dialect = queryInterface.sequelize.getDialect();
 
   if (dialect === "postgres") {
-    const rows = (await queryInterface.sequelize.query<TableRow>(
+    return (await queryInterface.sequelize.query<TableRow>(
       `SELECT table_schema, table_name
        FROM information_schema.tables
        WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
@@ -23,11 +23,10 @@ async function listTablesFromInformationSchema(
        ORDER BY table_schema, table_name`,
       { type: QueryTypes.SELECT }
     )) as TableRow[];
-    return rows;
   }
 
   if (dialect === "mysql" || dialect === "mariadb") {
-    const rows = (await queryInterface.sequelize.query<TableRow>(
+    return (await queryInterface.sequelize.query<TableRow>(
       `SELECT table_schema, table_name
        FROM information_schema.tables
        WHERE table_schema = DATABASE()
@@ -35,7 +34,6 @@ async function listTablesFromInformationSchema(
        ORDER BY table_name`,
       { type: QueryTypes.SELECT }
     )) as TableRow[];
-    return rows;
   }
 
   const tables = await queryInterface.showAllTables();
@@ -47,18 +45,17 @@ async function listTablesFromInformationSchema(
 
 module.exports = {
   up: async (queryInterface: QueryInterface) => {
-    const rows = await listTablesFromInformationSchema(queryInterface);
+    const rows = await listRelationTables(queryInterface);
     const byKey = new Map(rows.map((r) => [normalizeKey(r.table_name), r]));
-
     const canonicalKey = normalizeKey(CANONICAL);
+
     if (byKey.has(canonicalKey)) {
       return;
     }
 
     const snakeKey = normalizeKey("contact_label_relations");
     if (byKey.has(snakeKey)) {
-      const from = byKey.get(snakeKey)!.table_name;
-      await queryInterface.renameTable(from, CANONICAL);
+      await queryInterface.renameTable(byKey.get(snakeKey)!.table_name, CANONICAL);
       return;
     }
 

@@ -1,15 +1,18 @@
+import ContactLabelRelation from "../models/ContactLabelRelation";
 import { logger } from "../utils/logger";
+import { getDbConnectionSnapshot } from "./dbConnectionInfo";
 import {
   clearTableExistsCache,
-  findTablesMatching,
-  tableExists,
-  tableExistsAny
+  findTablesWithSchemas,
+  tableExists
 } from "./tableExists";
 import { isMissingRelationError } from "./optionalTableQuery";
 import AppError from "../errors/AppError";
 
-/** Nome canónico — alinhado com model e migration. */
 export const CONTACT_LABEL_RELATIONS_TABLE = "ContactLabelRelations";
+
+const RELATION_TABLE_PATTERN = "%contact%label%rel%";
+const LABEL_TABLE_PATTERN = "%label%";
 
 const CONTACT_LABEL_RELATIONS_ALIASES = [
   CONTACT_LABEL_RELATIONS_TABLE,
@@ -19,14 +22,63 @@ const CONTACT_LABEL_RELATIONS_ALIASES = [
 ];
 
 let resolvedTableName: string | null | undefined;
+let warmupPromise: Promise<string | null> | null = null;
 
 function normalizeTableKey(name: string): string {
   return name.replace(/[^a-z0-9]/gi, "").toLowerCase();
 }
 
-/**
- * Resolve o nome real da tabela no banco (cache por processo).
- */
+/** Alinha o model Sequelize ao nome físico da tabela no banco. */
+export function bindContactLabelRelationsTableName(physicalName: string): void {
+  const model = ContactLabelRelation as typeof ContactLabelRelation & {
+    tableName?: string;
+    options?: { tableName?: string };
+  };
+  if (model.options) {
+    model.options.tableName = physicalName;
+  }
+  model.tableName = physicalName;
+}
+
+function pickBestRelationTable(rows: { table_schema: string; table_name: string }[]): string | null {
+  if (!rows.length) return null;
+
+  const canonicalKey = normalizeTableKey(CONTACT_LABEL_RELATIONS_TABLE);
+  const exact = rows.find((r) => normalizeTableKey(r.table_name) === canonicalKey);
+  if (exact) return exact.table_name;
+
+  if (rows.length === 1) return rows[0].table_name;
+
+  const preferPublic = rows.find((r) => r.table_schema === "public");
+  return preferPublic?.table_name || rows[0].table_name;
+}
+
+export async function logContactLabelRelationsDiagnostics(
+  reason: string,
+  extra: Record<string, unknown> = {}
+): Promise<void> {
+  const db = await getDbConnectionSnapshot();
+  const relationTables = await findTablesWithSchemas(RELATION_TABLE_PATTERN);
+  const labelTables = await findTablesWithSchemas(LABEL_TABLE_PATTERN);
+  const resolved = await getContactLabelRelationsTableName({ refresh: true });
+  const existsCanonical = await tableExists(CONTACT_LABEL_RELATIONS_TABLE, {
+    skipCache: true
+  });
+
+  logger.error({
+    msg: `[ContactLabels] ${reason}`,
+    ...extra,
+    db,
+    resolvedTableName: resolved,
+    existsCanonical,
+    relationTables,
+    labelTables,
+    modelTableName:
+      (ContactLabelRelation as { tableName?: string }).tableName ||
+      CONTACT_LABEL_RELATIONS_TABLE
+  });
+}
+
 export async function getContactLabelRelationsTableName(
   options: { refresh?: boolean } = {}
 ): Promise<string | null> {
@@ -39,40 +91,26 @@ export async function getContactLabelRelationsTableName(
     resolvedTableName = undefined;
   }
 
-  const direct = await tableExistsAny(CONTACT_LABEL_RELATIONS_ALIASES, {
-    skipCache: true
-  });
-  if (direct) {
-    resolvedTableName = direct;
-    if (direct !== CONTACT_LABEL_RELATIONS_TABLE) {
+  const relationRows = await findTablesWithSchemas(RELATION_TABLE_PATTERN);
+  const picked = pickBestRelationTable(relationRows);
+  if (picked) {
+    resolvedTableName = picked;
+    bindContactLabelRelationsTableName(picked);
+    if (normalizeTableKey(picked) !== normalizeTableKey(CONTACT_LABEL_RELATIONS_TABLE)) {
       logger.warn(
-        { found: direct, expected: CONTACT_LABEL_RELATIONS_TABLE },
-        "[ContactLabels] relations table name differs from model — run ensure migration"
+        { found: picked, expected: CONTACT_LABEL_RELATIONS_TABLE, schemas: relationRows },
+        "[ContactLabels] using physical table name from database"
       );
     }
     return resolvedTableName;
   }
 
-  const patternMatches = await findTablesMatching("%contact%label%rel%");
-  if (patternMatches.length === 1) {
-    resolvedTableName = patternMatches[0];
-    logger.info(
-      { table: resolvedTableName },
-      "[ContactLabels] relations table resolved via information_schema"
-    );
-    return resolvedTableName;
-  }
-
-  if (patternMatches.length > 1) {
-    const canonical = patternMatches.find(
-      (t) => normalizeTableKey(t) === normalizeTableKey(CONTACT_LABEL_RELATIONS_TABLE)
-    );
-    resolvedTableName = canonical || patternMatches[0];
-    logger.warn(
-      { matches: patternMatches, using: resolvedTableName },
-      "[ContactLabels] multiple contact label relation tables found"
-    );
-    return resolvedTableName;
+  for (const alias of CONTACT_LABEL_RELATIONS_ALIASES) {
+    if (await tableExists(alias, { skipCache: true })) {
+      resolvedTableName = alias;
+      bindContactLabelRelationsTableName(alias);
+      return resolvedTableName;
+    }
   }
 
   resolvedTableName = null;
@@ -83,18 +121,46 @@ export async function isContactLabelRelationsTableAvailable(
   options?: { refresh?: boolean }
 ): Promise<boolean> {
   const name = await getContactLabelRelationsTableName(options);
-  if (!name) return false;
-  return (
-    normalizeTableKey(name) === normalizeTableKey(CONTACT_LABEL_RELATIONS_TABLE)
-  );
+  return Boolean(name);
 }
 
-export function assertContactLabelRelationsTable(): void {
+export async function warmupContactLabelRelationsTable(
+  options: { refresh?: boolean } = {}
+): Promise<string | null> {
+  if (!options.refresh && warmupPromise) {
+    return warmupPromise;
+  }
+
+  warmupPromise = (async () => {
+    const name = await getContactLabelRelationsTableName(options);
+    if (name) {
+      logger.info(
+        { table: name, modelTable: (ContactLabelRelation as { tableName?: string }).tableName },
+        "[ContactLabels] relations table ready"
+      );
+    } else {
+      await logContactLabelRelationsDiagnostics("relations table not found at warmup");
+    }
+    return name;
+  })();
+
+  return warmupPromise;
+}
+
+export function assertContactLabelRelationsTable(): never {
   throw new AppError(
     "ERR_CONTACT_LABEL_RELATIONS_TABLE_MISSING",
     503,
     "Tabela ContactLabelRelations não encontrada. Execute: npm run build && npm run db:migrate"
   );
+}
+
+export async function ensureContactLabelRelationsReady(): Promise<string> {
+  const name = await warmupContactLabelRelationsTable({ refresh: true });
+  if (name) return name;
+
+  await logContactLabelRelationsDiagnostics("TABLE_MISSING on apply");
+  assertContactLabelRelationsTable();
 }
 
 export function logContactLabelRelationsDbError(

@@ -2,7 +2,7 @@ import AppError from "../../errors/AppError";
 import Contact from "../../models/Contact";
 import ContactLabel from "../../models/ContactLabel";
 import ContactLabelRelation from "../../models/ContactLabelRelation";
-import { isContactLabelRelationsTableAvailable } from "../../helpers/contactLabelRelationsTable";
+import { warmupContactLabelRelationsTable } from "../../helpers/contactLabelRelationsTable";
 import { logger } from "../../utils/logger";
 import { isMissingRelationError } from "../../helpers/optionalTableQuery";
 import { CONTACT_LABEL_RELATIONS_TABLE } from "../../helpers/contactLabelRelationsTable";
@@ -24,7 +24,8 @@ const GetContactLabelsService = async ({
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
-  if (!(await isContactLabelRelationsTableAvailable({ refresh: true }))) {
+  const tableName = await warmupContactLabelRelationsTable();
+  if (!tableName) {
     return [];
   }
 

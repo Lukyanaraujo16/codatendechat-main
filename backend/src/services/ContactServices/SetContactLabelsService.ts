@@ -7,9 +7,9 @@ import sequelize from "../../database";
 import {
   assertContactLabelRelationsTable,
   CONTACT_LABEL_RELATIONS_TABLE,
-  getContactLabelRelationsTableName,
-  isContactLabelRelationsTableAvailable,
-  logContactLabelRelationsDbError
+  ensureContactLabelRelationsReady,
+  logContactLabelRelationsDbError,
+  logContactLabelRelationsDiagnostics
 } from "../../helpers/contactLabelRelationsTable";
 import { isMissingRelationError } from "../../helpers/optionalTableQuery";
 
@@ -63,16 +63,15 @@ const SetContactLabelsService = async ({
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
-  if (!(await isContactLabelRelationsTableAvailable({ refresh: true }))) {
-    const resolved = await getContactLabelRelationsTableName({ refresh: true });
-    if (!resolved) {
-      assertContactLabelRelationsTable();
-    }
-    throw new AppError(
-      "ERR_CONTACT_LABEL_RELATIONS_TABLE_MISSING",
-      503,
-      `Tabela encontrada como "${resolved}" mas o sistema espera "${CONTACT_LABEL_RELATIONS_TABLE}". Execute: npm run build && npm run db:migrate`
-    );
+  try {
+    await ensureContactLabelRelationsReady();
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    await logContactLabelRelationsDiagnostics("ensureContactLabelRelationsReady failed", {
+      contactId,
+      companyId
+    });
+    assertContactLabelRelationsTable();
   }
 
   const uniqueIds = normalizeLabelIds(labelIds);
@@ -112,6 +111,11 @@ const SetContactLabelsService = async ({
     });
   } catch (err) {
     if (isMissingRelationError(err, CONTACT_LABEL_RELATIONS_TABLE)) {
+      await logContactLabelRelationsDiagnostics("SQL missing relation on apply", {
+        contactId,
+        companyId,
+        labelIds: uniqueIds
+      });
       logContactLabelRelationsDbError("apply", { contactId, companyId, labelIds: uniqueIds }, err);
       assertContactLabelRelationsTable();
     }
