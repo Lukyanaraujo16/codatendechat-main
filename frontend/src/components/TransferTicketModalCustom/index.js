@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useCallback } from "react";
 import { useHistory } from "react-router-dom";
 
 import Button from "@material-ui/core/Button";
@@ -40,13 +40,16 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   const [options, setOptions] = useState([]);
   const [queues, setQueues] = useState([]);
   const [allQueues, setAllQueues] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchParam, setSearchParam] = useState("");
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [searchDraft, setSearchDraft] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedQueue, setSelectedQueue] = useState("");
   const classes = useStyles();
   const { findAll: findAllQueues } = useQueues();
   const isMounted = useRef(true);
+  const searchInputRef = useRef(null);
   const [whatsapps, setWhatsapps] = useState([]);
   const [selectedWhatsapp, setSelectedWhatsapp] = useState("");
   const { user } = useContext(AuthContext);
@@ -59,27 +62,40 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    const delayDebounceFn = setTimeout(() => {
-      const fetchContacts = async () => {
-        api
-          .get(`/whatsapp`, { params: { companyId, session: 0 } })
-          .then(({ data }) => setWhatsapps(data));
-      };
+    if (!modalOpen) return;
+    const id = requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [modalOpen]);
 
-      if (whatsappId !== null && whatsappId !== undefined) {
-        setSelectedWhatsapp(whatsappId)
-      }
+  useEffect(() => {
+    if (!modalOpen) return undefined;
+    const t = setTimeout(() => setSearchQuery(searchDraft), 300);
+    return () => clearTimeout(t);
+  }, [searchDraft, modalOpen]);
 
-      const userQueues = Array.isArray(user?.queues) ? user.queues : [];
-      if (userQueues.length === 1) {
-        setSelectedQueue(userQueues[0].id)
+  useEffect(() => {
+    if (!modalOpen) return;
+    const fetchContacts = async () => {
+      try {
+        const { data } = await api.get(`/whatsapp`, { params: { companyId, session: 0 } });
+        if (isMounted.current) setWhatsapps(data);
+      } catch (err) {
+        toastError(err);
       }
-      fetchContacts();
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [])
+    };
+
+    if (whatsappId !== null && whatsappId !== undefined) {
+      setSelectedWhatsapp(whatsappId);
+    }
+
+    const userQueues = Array.isArray(user?.queues) ? user.queues : [];
+    if (userQueues.length === 1) {
+      setSelectedQueue(userQueues[0].id);
+    }
+    fetchContacts();
+  }, [modalOpen, companyId, whatsappId, user?.queues]);
 
   useEffect(() => {
     if (isMounted.current) {
@@ -94,43 +110,69 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   }, []);
 
   useEffect(() => {
-    if (!modalOpen || searchParam.length < 3) {
-      setLoading(false);
-      return;
+    if (!modalOpen) {
+      setUsersLoading(false);
+      return undefined;
     }
-    const delayDebounceFn = setTimeout(() => {
-      setLoading(true);
-      const fetchUsers = async () => {
-        try {
-          const { data } = await api.get("/users/", {
-            params: { searchParam },
-          });
-          setOptions(data.users);
-          setLoading(false);
-        } catch (err) {
-          setLoading(false);
-          toastError(err);
-        }
-      };
 
-      fetchUsers();
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchParam, modalOpen]);
+    const trimmed = searchQuery.trim();
+    if (trimmed.length < 3) {
+      setUsersLoading(false);
+      setOptions([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setUsersLoading(true);
+
+    const fetchUsers = async () => {
+      try {
+        const { data } = await api.get("/users/", {
+          params: { searchParam: trimmed },
+        });
+        if (!cancelled && isMounted.current) {
+          setOptions(Array.isArray(data.users) ? data.users : []);
+        }
+      } catch (err) {
+        if (!cancelled) toastError(err);
+      } finally {
+        if (!cancelled && isMounted.current) {
+          setUsersLoading(false);
+        }
+      }
+    };
+
+    fetchUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchQuery, modalOpen]);
 
   const handleClose = () => {
     onClose();
-    setSearchParam("");
+    setSearchDraft("");
+    setSearchQuery("");
     setSelectedUser(null);
   };
+
+  const mergeInputRef = useCallback((params, node) => {
+    searchInputRef.current = node;
+    const ref = params.inputRef;
+    if (typeof ref === "function") {
+      ref(node);
+    } else if (ref && typeof ref === "object") {
+      ref.current = node;
+    }
+  }, []);
 
   const handleSaveTicket = async (e) => {
     e.preventDefault();
     if (!ticketid) return;
     if (!selectedQueue || selectedQueue === "") return;
-    setLoading(true);
+    setSaving(true);
     try {
-      let data = {};
+      const data = {};
 
       if (selectedUser) {
         data.userId = selectedUser.id;
@@ -146,19 +188,27 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
       }
 
       if (selectedWhatsapp) {
-        data.whatsappId = selectedWhatsapp
+        data.whatsappId = selectedWhatsapp;
       }
       await api.put(`/tickets/${ticketid}`, data);
 
       history.push(`/tickets`);
     } catch (err) {
-      setLoading(false);
+      setSaving(false);
       toastError(err);
     }
   };
 
   return (
-    <Dialog open={modalOpen} onClose={handleClose} maxWidth="lg" scroll="paper">
+    <Dialog
+      open={modalOpen}
+      onClose={handleClose}
+      maxWidth="lg"
+      scroll="paper"
+      disableEnforceFocus
+      disableAutoFocus
+      disableRestoreFocus
+    >
       <form onSubmit={handleSaveTicket}>
         <DialogTitle id="form-dialog-title">
           {i18n.t("transferTicketModal.title")}
@@ -166,14 +216,28 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
         <DialogContent dividers>
           <Autocomplete
             style={{ width: 300, marginBottom: 20 }}
-            getOptionLabel={(option) => `${option.name}`}
-            onChange={(e, newValue) => {
-              setSelectedUser(newValue);
-              if (newValue != null && Array.isArray(newValue.queues)) {
-                setQueues(newValue.queues);
+            value={selectedUser}
+            inputValue={searchDraft}
+            onInputChange={(_event, newInputValue, reason) => {
+              if (reason === "reset") return;
+              setSearchDraft(newInputValue);
+            }}
+            getOptionLabel={(option) =>
+              typeof option === "string" ? option : `${option.name || ""}`
+            }
+            onChange={(_e, newValue) => {
+              if (newValue && typeof newValue === "object") {
+                setSelectedUser(newValue);
+                setSearchDraft(newValue.name || "");
+                if (Array.isArray(newValue.queues)) {
+                  setQueues(newValue.queues);
+                } else {
+                  setQueues(allQueues);
+                  setSelectedQueue("");
+                }
               } else {
+                setSelectedUser(null);
                 setQueues(allQueues);
-                setSelectedQueue("");
               }
             }}
             options={options}
@@ -181,19 +245,21 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
             freeSolo
             autoHighlight
             noOptionsText={i18n.t("transferTicketModal.noOptions")}
-            loading={loading}
+            loading={usersLoading}
             renderInput={(params) => (
               <TextField
                 {...params}
                 label={i18n.t("transferTicketModal.fieldLabel")}
                 variant="outlined"
-                autoFocus
-                onChange={(e) => setSearchParam(e.target.value)}
+                inputRef={(node) => mergeInputRef(params, node)}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
                     <React.Fragment>
-                      {loading ? (
+                      {usersLoading ? (
                         <CircularProgress color="inherit" size={20} />
                       ) : null}
                       {params.InputProps.endAdornment}
@@ -219,8 +285,7 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
               ))}
             </Select>
           </FormControl>
-          {/* CONEXAO */}
-          <Grid container spacing={2} style={{marginTop: '15px'}}>
+          <Grid container spacing={2} style={{ marginTop: "15px" }}>
             <Grid xs={12} item>
               <Select
                 required
@@ -229,7 +294,7 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
                 variant="outlined"
                 value={selectedWhatsapp}
                 onChange={(e) => {
-                  setSelectedWhatsapp(e.target.value)
+                  setSelectedWhatsapp(e.target.value);
                 }}
                 MenuProps={{
                   anchorOrigin: {
@@ -244,10 +309,10 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
                 }}
                 renderValue={() => {
                   if (selectedWhatsapp === "") {
-                    return "Selecione uma Conexão"
+                    return "Selecione uma Conexão";
                   }
-                  const whatsapp = whatsapps.find(w => w.id === selectedWhatsapp)
-                  return whatsapp.name
+                  const whatsapp = whatsapps.find((w) => w.id === selectedWhatsapp);
+                  return whatsapp?.name || "";
                 }}
               >
                 {whatsapps?.length > 0 &&
@@ -255,12 +320,18 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
                     <MenuItem dense key={key} value={whatsapp.id}>
                       <ListItemText
                         primary={
-                          <>
-                            {/* {IconChannel(whatsapp.channel)} */}
-                            <Typography component="span" style={{ fontSize: 14, marginLeft: "10px", display: "inline-flex", alignItems: "center", lineHeight: "2" }}>
-                              {whatsapp.name} &nbsp; <p className={(whatsapp.status) === 'CONNECTED' ? classes.online : classes.offline} >({whatsapp.status})</p>
-                            </Typography>
-                          </>
+                          <Typography
+                            component="span"
+                            style={{
+                              fontSize: 14,
+                              marginLeft: "10px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              lineHeight: "2",
+                            }}
+                          >
+                            {whatsapp.name} &nbsp; ({whatsapp.status})
+                          </Typography>
                         }
                       />
                     </MenuItem>
@@ -273,7 +344,7 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
           <Button
             onClick={handleClose}
             color="secondary"
-            disabled={loading}
+            disabled={saving}
             variant="outlined"
           >
             {i18n.t("transferTicketModal.buttons.cancel")}
@@ -282,7 +353,7 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
             variant="contained"
             type="submit"
             color="primary"
-            loading={loading}
+            loading={saving}
           >
             {i18n.t("transferTicketModal.buttons.ok")}
           </ButtonWithSpinner>

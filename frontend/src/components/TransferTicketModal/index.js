@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useHistory } from "react-router-dom";
 
 import Button from "@material-ui/core/Button";
@@ -25,61 +25,110 @@ const filterOptions = createFilterOptions({
 const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 	const history = useHistory();
 	const [options, setOptions] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [searchParam, setSearchParam] = useState("");
+	const [usersLoading, setUsersLoading] = useState(false);
+	const [saving, setSaving] = useState(false);
+	const [searchDraft, setSearchDraft] = useState("");
+	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedUser, setSelectedUser] = useState(null);
+	const searchInputRef = useRef(null);
 
 	useEffect(() => {
-		if (!modalOpen || searchParam.length < 3) {
-			setLoading(false);
-			return;
-		}
-		setLoading(true);
-		const delayDebounceFn = setTimeout(() => {
-			const fetchUsers = async () => {
-				try {
-					const { data } = await api.get("/users/", {
-						params: { searchParam },
-					});
-					setOptions(data.users);
-					setLoading(false);
-				} catch (err) {
-					setLoading(false);
-					toastError(err);
-				}
-			};
+		if (!modalOpen) return;
+		const id = requestAnimationFrame(() => {
+			searchInputRef.current?.focus();
+		});
+		return () => cancelAnimationFrame(id);
+	}, [modalOpen]);
 
-			fetchUsers();
-		}, 500);
-		return () => clearTimeout(delayDebounceFn);
-	}, [searchParam, modalOpen]);
+	useEffect(() => {
+		if (!modalOpen) return undefined;
+		const t = setTimeout(() => setSearchQuery(searchDraft), 300);
+		return () => clearTimeout(t);
+	}, [searchDraft, modalOpen]);
+
+	useEffect(() => {
+		if (!modalOpen) {
+			setUsersLoading(false);
+			return undefined;
+		}
+
+		const trimmed = searchQuery.trim();
+		if (trimmed.length < 3) {
+			setUsersLoading(false);
+			setOptions([]);
+			return undefined;
+		}
+
+		let cancelled = false;
+		setUsersLoading(true);
+
+		const fetchUsers = async () => {
+			try {
+				const { data } = await api.get("/users/", {
+					params: { searchParam: trimmed },
+				});
+				if (!cancelled) {
+					setOptions(Array.isArray(data.users) ? data.users : []);
+				}
+			} catch (err) {
+				if (!cancelled) toastError(err);
+			} finally {
+				if (!cancelled) setUsersLoading(false);
+			}
+		};
+
+		fetchUsers();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [searchQuery, modalOpen]);
 
 	const handleClose = () => {
 		onClose();
-		setSearchParam("");
+		setSearchDraft("");
+		setSearchQuery("");
 		setSelectedUser(null);
 	};
+
+	const mergeInputRef = useCallback((params, node) => {
+		searchInputRef.current = node;
+		const ref = params.inputRef;
+		if (typeof ref === "function") {
+			ref(node);
+		} else if (ref && typeof ref === "object") {
+			ref.current = node;
+		}
+	}, []);
 
 	const handleSaveTicket = async e => {
 		e.preventDefault();
 		if (!ticketid || !selectedUser) return;
-		setLoading(true);
+		setSaving(true);
 		try {
 			await api.put(`/tickets/${ticketid}`, {
 				userId: selectedUser.id,
 				queueId: null,
 				status: "open",
 			});
-			setLoading(false);
+			setSaving(false);
 			history.push(`/tickets`);
 		} catch (err) {
-			setLoading(false);
+			setSaving(false);
 			toastError(err);
 		}
 	};
 
 	return (
-		<Dialog open={modalOpen} onClose={handleClose} maxWidth="lg" scroll="paper">
+		<Dialog
+			open={modalOpen}
+			onClose={handleClose}
+			maxWidth="lg"
+			scroll="paper"
+			disableEnforceFocus
+			disableAutoFocus
+			disableRestoreFocus
+		>
 			<form onSubmit={handleSaveTicket}>
 				<DialogTitle id="form-dialog-title">
 					{i18n.t("transferTicketModal.title")}
@@ -87,29 +136,44 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 				<DialogContent dividers>
 					<Autocomplete
 						style={{ width: 300 }}
-						getOptionLabel={option => `${option.name}`}
-						onChange={(e, newValue) => {
-							setSelectedUser(newValue);
+						value={selectedUser}
+						inputValue={searchDraft}
+						onInputChange={(_event, newInputValue, reason) => {
+							if (reason === "reset") return;
+							setSearchDraft(newInputValue);
+						}}
+						getOptionLabel={option =>
+							typeof option === "string" ? option : `${option.name || ""}`
+						}
+						onChange={(_e, newValue) => {
+							if (newValue && typeof newValue === "object") {
+								setSelectedUser(newValue);
+								setSearchDraft(newValue.name || "");
+							} else {
+								setSelectedUser(null);
+							}
 						}}
 						options={options}
 						filterOptions={filterOptions}
 						freeSolo
 						autoHighlight
 						noOptionsText={i18n.t("transferTicketModal.noOptions")}
-						loading={loading}
+						loading={usersLoading}
 						renderInput={params => (
 							<TextField
 								{...params}
 								label={i18n.t("transferTicketModal.fieldLabel")}
 								variant="outlined"
 								required
-								autoFocus
-								onChange={e => setSearchParam(e.target.value)}
+								inputRef={node => mergeInputRef(params, node)}
+								onClick={e => e.stopPropagation()}
+								onMouseDown={e => e.stopPropagation()}
+								onKeyDown={e => e.stopPropagation()}
 								InputProps={{
 									...params.InputProps,
 									endAdornment: (
 										<React.Fragment>
-											{loading ? (
+											{usersLoading ? (
 												<CircularProgress color="inherit" size={20} />
 											) : null}
 											{params.InputProps.endAdornment}
@@ -124,7 +188,7 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 					<Button
 						onClick={handleClose}
 						color="secondary"
-						disabled={loading}
+						disabled={saving}
 						variant="outlined"
 					>
 						{i18n.t("transferTicketModal.buttons.cancel")}
@@ -133,7 +197,7 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 						variant="contained"
 						type="submit"
 						color="primary"
-						loading={loading}
+						loading={saving}
 					>
 						{i18n.t("transferTicketModal.buttons.ok")}
 					</ButtonWithSpinner>
