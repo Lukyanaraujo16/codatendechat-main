@@ -1836,6 +1836,8 @@ const messages = {
           extraName: "Nombre del campo",
           extraValue: "Valor",
           whatsapp: "Conexión Origen: ",
+          assigneesHint:
+            "Los administradores pueden definir qué usuarios tendrán acceso a este contacto.",
         },
         formErrors: {
           name: {

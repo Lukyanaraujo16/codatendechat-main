@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useContext } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import * as Yup from "yup";
@@ -24,6 +24,8 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { showSuccessToast } from "../../errors/feedbackToasts";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { canManageContactAssignments } from "../../utils/canManageContactAssignments";
 import {
   AppDialog,
   AppDialogTitle,
@@ -112,7 +114,18 @@ const useStyles = makeStyles(theme => ({
 		gap: theme.spacing(0.75),
 		marginTop: theme.spacing(0.5),
 	},
+	assigneesHint: {
+		marginBottom: theme.spacing(1),
+	},
 }));
+
+const normalizeAssigneeIds = users =>
+	[...new Set((users || []).map(u => Number(u.id)).filter(id => id > 0))].sort(
+		(a, b) => a - b
+	);
+
+const sameAssigneeIds = (a, b) =>
+	a.length === b.length && a.every((id, index) => id === b[index]);
 
 const ContactModal = ({
 	open,
@@ -125,6 +138,8 @@ const ContactModal = ({
 }) => {
 	const classes = useStyles();
 	const isMounted = useRef(true);
+	const { user: authUser } = useContext(AuthContext);
+	const canManageAssignees = canManageContactAssignments(authUser);
 
 	const initialState = {
 		name: "",
@@ -140,6 +155,9 @@ const ContactModal = ({
 	const [summary, setSummary] = useState(null);
 	const [summaryLoading, setSummaryLoading] = useState(false);
 	const [campaignLists, setCampaignLists] = useState([]);
+	const [companyUsers, setCompanyUsers] = useState([]);
+	const [selectedAssignees, setSelectedAssignees] = useState([]);
+	const [initialAssigneeIds, setInitialAssigneeIds] = useState([]);
 
 	const validationSchema = useMemo(
 		() =>
@@ -182,6 +200,8 @@ const ContactModal = ({
 				setLocalTags([]);
 				setSummary(null);
 				setCampaignLists([]);
+				setSelectedAssignees([]);
+				setInitialAssigneeIds([]);
 				return;
 			}
 
@@ -197,6 +217,16 @@ const ContactModal = ({
 					setCampaignLists(
 						Array.isArray(data.campaignLists) ? data.campaignLists : []
 					);
+					if (canManageAssignees) {
+						const assigneeUsers = (Array.isArray(data.assignments)
+							? data.assignments
+							: []
+						)
+							.map(a => a.user)
+							.filter(Boolean);
+						setSelectedAssignees(assigneeUsers);
+						setInitialAssigneeIds(normalizeAssigneeIds(assigneeUsers));
+					}
 				}
 			} catch (err) {
 				toastError(err);
@@ -204,7 +234,7 @@ const ContactModal = ({
 		};
 
 		fetchContact();
-	}, [contactId, open, initialValues]);
+	}, [contactId, open, initialValues, authUser]);
 
 	useEffect(() => {
 		if (!open || !contactId) {
@@ -244,12 +274,66 @@ const ContactModal = ({
 		};
 	}, [open, contactId]);
 
+	useEffect(() => {
+		if (!open || !canManageAssignees) return undefined;
+
+		let cancelled = false;
+		(async () => {
+			try {
+				const { data } = await api.get("/users/list");
+				if (cancelled || !isMounted.current) return;
+				const users = Array.isArray(data) ? data : [];
+				setCompanyUsers(
+					users.filter(
+						u =>
+							Number(u.companyId) === Number(authUser?.companyId) ||
+							u.companyId == null
+					)
+				);
+			} catch (err) {
+				toastError(err);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [open, canManageAssignees, authUser?.companyId]);
+
+	const assigneesChanged = () =>
+		!sameAssigneeIds(
+			initialAssigneeIds,
+			normalizeAssigneeIds(selectedAssignees)
+		);
+
 	const handleClose = () => {
 		onClose();
 		setContact(initialState);
 		setLocalTags([]);
 		setSummary(null);
 		setCampaignLists([]);
+		setSelectedAssignees([]);
+		setInitialAssigneeIds([]);
+	};
+
+	const syncAssignmentsAfterSave = async (savedContactId, currentAssignments) => {
+		if (!canManageAssignees) {
+			return currentAssignments;
+		}
+
+		const userIds = normalizeAssigneeIds(selectedAssignees);
+		if (!userIds.length) {
+			return currentAssignments;
+		}
+
+		if (contactId && !assigneesChanged()) {
+			return currentAssignments;
+		}
+
+		const { data } = await api.put(`/contacts/${savedContactId}/assignments`, {
+			userIds,
+		});
+		return data.assignments || currentAssignments;
 	};
 
 	const handleOpenAttendance = () => {
@@ -263,16 +347,44 @@ const ContactModal = ({
 
 	const handleSaveContact = async values => {
 		try {
+			if (
+				canManageAssignees &&
+				contactId &&
+				assigneesChanged() &&
+				!selectedAssignees.length
+			) {
+				toastError(new Error(i18n.t("contacts.assignments.requiresOne")));
+				return;
+			}
+
+			const payload = {
+				name: values.name,
+				number: values.number,
+				email: values.email,
+				notes: values.notes,
+				extraInfo: values.extraInfo,
+			};
+
 			if (contactId) {
-				const { data } = await api.put(`/contacts/${contactId}`, values);
+				const { data } = await api.put(`/contacts/${contactId}`, payload);
+				const assignments = await syncAssignmentsAfterSave(
+					contactId,
+					data.assignments
+				);
+				const enriched = { ...data, tags: localTags, assignments };
 				if (onContactSaved) {
-					onContactSaved({ ...data, tags: localTags });
+					onContactSaved(enriched);
 				}
 				handleClose();
 			} else {
-				const { data } = await api.post("/contacts", values);
+				const { data } = await api.post("/contacts", payload);
+				const assignments = await syncAssignmentsAfterSave(
+					data.id,
+					data.assignments
+				);
+				const enriched = { ...data, tags: localTags, assignments };
 				if (onSave) {
-					onSave(data);
+					onSave(enriched);
 				}
 				handleClose();
 			}
@@ -489,6 +601,62 @@ const ContactModal = ({
 										/>
 									</Grid>
 								</Grid>
+
+								{canManageAssignees && (
+									<>
+										<Divider style={{ margin: "16px 0" }} />
+										<Typography variant="subtitle1" gutterBottom>
+											{i18n.t("contacts.assignments.fieldLabel")}
+										</Typography>
+										<Typography
+											variant="body2"
+											color="textSecondary"
+											className={classes.assigneesHint}
+										>
+											{i18n.t("contactModal.form.assigneesHint")}
+										</Typography>
+										<Autocomplete
+											multiple
+											options={companyUsers}
+											value={selectedAssignees}
+											onChange={(_, value) =>
+												setSelectedAssignees(value || [])
+											}
+											getOptionLabel={option =>
+												option.name
+													? `${option.name}${
+															option.profile
+																? ` (${option.profile})`
+																: ""
+													  }`
+													: option.email || ""
+											}
+											getOptionSelected={(opt, val) => opt.id === val.id}
+											renderTags={(value, getTagProps) =>
+												value.map((option, index) => (
+													<Chip
+														key={option.id}
+														label={option.name || option.email}
+														{...getTagProps({ index })}
+														size="small"
+													/>
+												))
+											}
+											renderInput={params => (
+												<TextField
+													{...params}
+													variant="outlined"
+													margin="dense"
+													fullWidth
+													label={i18n.t("contacts.assignments.fieldLabel")}
+													placeholder={i18n.t(
+														"contacts.assignments.fieldPlaceholder"
+													)}
+												/>
+											)}
+										/>
+									</>
+								)}
 
 								{contactId && (
 									<>
