@@ -23,6 +23,8 @@ import SimpleListService, {
 import ContactCustomField from "../models/ContactCustomField";
 import { logger } from "../utils/logger";
 import ToggleDisableBotContactService from "../services/ContactServices/ToggleDisableBotContactService";
+import AssignCreatorOnContactCreateService from "../services/ContactServices/AssignCreatorOnContactCreateService";
+import { assertUserCanAccessContact } from "../helpers/contactAccess";
 
 type IndexQuery = {
   searchParam: string;
@@ -53,7 +55,7 @@ interface ContactData {
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber, tagId, labelId, dateFrom, dateTo } =
     req.query as IndexQuery;
-  const { companyId } = req.user;
+  const { companyId, id, profile, supportMode } = req.user;
 
   const { contacts, count, hasMore } = await ListContactsService({
     searchParam,
@@ -62,7 +64,13 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     tagId,
     labelId,
     dateFrom,
-    dateTo
+    dateTo,
+    accessUser: {
+      id,
+      profile,
+      supportMode,
+      super: (req.user as { super?: boolean }).super
+    }
   });
 
   return res.json({ contacts, count, hasMore });
@@ -85,9 +93,16 @@ export const getContact = async (
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { companyId } = req.user;
-  const newContact: ContactData = req.body;
-  newContact.number = newContact.number.replace(/\D/g, '');
+  const { companyId, id: creatorUserId } = req.user;
+  const body = req.body as ContactData & { companyId?: number };
+  const newContact: ContactData = {
+    name: body.name,
+    number: body.number,
+    email: body.email,
+    notes: body.notes,
+    extraInfo: body.extraInfo
+  };
+  newContact.number = String(newContact.number || "").replace(/\D/g, "");
 
   const schema = Yup.object().shape({
     name: Yup.string().required(),
@@ -96,14 +111,19 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       .matches(/^\d+$/, "Invalid number format. Only numbers is allowed.")
   });
 
-  const contact = await createNewContact(newContact,companyId,schema);
+  const contact = await createNewContact(
+    newContact,
+    Number(companyId),
+    schema,
+    Number(creatorUserId)
+  );
 
   return res.status(200).json(contact);
 };
 
 export const storeUpload = async (req: Request, res: Response) : Promise<Response> => {
 
-  const {companyId} = req.user;
+  const { companyId, id: creatorUserId } = req.user;
   const contacts = req.body;
 
   let errorBag = [];
@@ -120,7 +140,12 @@ export const storeUpload = async (req: Request, res: Response) : Promise<Respons
 
     try{
 
-      const contact = await createUploadedContact( newContact, companyId, schema )
+      const contact = await createUploadedContact(
+        newContact,
+        companyId,
+        schema,
+        Number(creatorUserId)
+      )
       contactAdded.push( {contactName: contact.name, contactId: contact.id} );
 
     }catch(e){
@@ -135,9 +160,14 @@ export const storeUpload = async (req: Request, res: Response) : Promise<Respons
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { contactId } = req.params;
-  const { companyId } = req.user;
+  const { companyId, id, profile, supportMode } = req.user;
 
-  const contact = await ShowContactService(contactId, companyId);
+  const contact = await ShowContactService(contactId, companyId, {
+    id,
+    profile,
+    supportMode,
+    super: (req.user as { super?: boolean }).super
+  });
 
   return res.status(200).json(contact);
 };
@@ -196,8 +226,15 @@ export const update = async (
   res: Response
 ): Promise<Response> => {
   const contactData: ContactData = req.body;
-  const { companyId } = req.user;
+  const { companyId, id, profile, supportMode } = req.user;
   const { contactId } = req.params;
+
+  await assertUserCanAccessContact(Number(contactId), companyId, {
+    id,
+    profile,
+    supportMode,
+    super: (req.user as { super?: boolean }).super
+  });
 
   const normalizedIncoming = contactData.number
     ? contactData.number.replace(/\D/g, "")
@@ -246,7 +283,7 @@ export const update = async (
     finalNumber = validNumber.jid.replace(/\D/g, "");
   }
 
-  const contact = await UpdateContactService({
+  await UpdateContactService({
     contactData: {
       ...contactData,
       number: finalNumber,
@@ -256,11 +293,11 @@ export const update = async (
     companyId
   });
 
-  const io = getIO();
-  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
-    action: "update",
-    contact
-  });
+  const contact = await emitContactWithAssignments(
+    Number(contactId),
+    companyId,
+    "update"
+  );
 
   return res.status(200).json(contact);
 };
@@ -270,9 +307,14 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { contactId } = req.params;
-  const { companyId } = req.user;
+  const { companyId, id, profile, supportMode } = req.user;
 
-  await ShowContactService(contactId, companyId);
+  await ShowContactService(contactId, companyId, {
+    id,
+    profile,
+    supportMode,
+    super: (req.user as { super?: boolean }).super
+  });
 
   await DeleteContactService(contactId);
 
@@ -287,7 +329,7 @@ export const remove = async (
 
 export const list = async (req: Request, res: Response): Promise<Response> => {
   const { name } = req.query as unknown as SearchContactParams;
-  const { companyId, profile, supportMode } = req.user;
+  const { companyId, profile, supportMode, id } = req.user;
 
   const privileged =
     profile === "admin" || profile === "supervisor" || supportMode === true;
@@ -295,56 +337,138 @@ export const list = async (req: Request, res: Response): Promise<Response> => {
   const contacts = await SimpleListService({
     name,
     companyId,
-    includeHiddenGroups: privileged
+    includeHiddenGroups: privileged,
+    accessUser: {
+      id,
+      profile,
+      supportMode,
+      super: (req.user as { super?: boolean }).super
+    }
   });
 
   return res.json(contacts);
 };
 
-const createNewContact = async ( newContact : ContactData, companyId : number, schema : any ) => {
+const WHATSAPP_SOFT_FAIL_CODES = new Set([
+  "ERR_WAPP_CHECK_CONTACT",
+  "ERR_WAPP_INVALID_CONTACT",
+  "ERR_CHECK_NUMBER",
+  "invalidNumber"
+]);
 
-    try{
-      await schema.validate(newContact);
-    }catch(err:any){
-      throw new AppError(err.message);
-    }
+/** Na criação manual, falha de WhatsApp não deve impedir salvar o contato. */
+const normalizeContactNumberForCreate = async (
+  rawNumber: string,
+  companyId: number
+): Promise<string> => {
+  const number = String(rawNumber || "").replace(/\D/g, "");
+  if (!number) {
+    throw new AppError("Invalid number format. Only numbers is allowed.");
+  }
 
-    logger.info(newContact);
-
-    await CheckIsValidContact(newContact.number, companyId);
-    const number = newContact.number.replace(/\D/g, "");
+  try {
+    await CheckIsValidContact(number, companyId);
     const validNumber = await CheckContactNumber(number, companyId);
-
-    if( !validNumber )
+    if (!validNumber?.jid) {
       throw new AppError("Não foi possível localizar o número informado no Whatsapp");
+    }
+    return validNumber.jid.replace(/\D/g, "");
+  } catch (err: unknown) {
+    const message =
+      err instanceof AppError
+        ? String(err.message)
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    const lower = message.toLowerCase();
+    const softFail =
+      WHATSAPP_SOFT_FAIL_CODES.has(message) ||
+      lower.includes("whatsapp") ||
+      lower.includes("wbot") ||
+      lower.includes("connection") ||
+      lower.includes("socket");
 
-    newContact.number = number;
+    if (softFail) {
+      logger.warn(
+        { companyId, number, message },
+        "[Contact] criando contato sem validação WhatsApp"
+      );
+      return number;
+    }
+    throw err;
+  }
+};
 
-    /**
-     * Código desabilitado por demora no retorno
-     */
-    // const profilePicUrl = await GetProfilePicUrl(validNumber.jid, companyId);
+const emitContactWithAssignments = async (
+  contactId: number,
+  companyId: number,
+  action: "create" | "update"
+) => {
+  const contact = await ShowContactService(contactId, companyId);
+  const io = getIO();
+  io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
+    action,
+    contact
+  });
+  return contact;
+};
 
-    const contact = await CreateContactService({
-      ...newContact,
-      // profilePicUrl,
-      companyId
-    });
+const createNewContact = async (
+  newContact: ContactData,
+  companyId: number,
+  schema: any,
+  creatorUserId: number,
+  _profile?: string
+) => {
+  if (!Number.isFinite(companyId) || companyId <= 0) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+  if (!Number.isFinite(creatorUserId) || creatorUserId <= 0) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
 
-    const io = getIO();
-    io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
-      action: "create",
-      contact
-    });
-
-    return contact;
-}
-
-const createUploadedContact = async ( newContact : ContactData, companyId : number, schema : any) => {
-
-  try{
+  try {
     await schema.validate(newContact);
-  }catch(err:any){
+  } catch (err: any) {
+    throw new AppError(err.message);
+  }
+
+  newContact.number = await normalizeContactNumberForCreate(
+    newContact.number,
+    companyId
+  );
+
+  const contact = await CreateContactService({
+    ...newContact,
+    companyId
+  });
+
+  try {
+    await AssignCreatorOnContactCreateService({
+      contactId: contact.id,
+      companyId,
+      creatorUserId
+    });
+  } catch (assignErr) {
+    logger.error(
+      { assignErr, contactId: contact.id, creatorUserId, companyId },
+      "[Contact] falha ao atribuir criador — contato já criado"
+    );
+    throw assignErr;
+  }
+
+  return emitContactWithAssignments(contact.id, companyId, "create");
+};
+
+const createUploadedContact = async (
+  newContact: ContactData,
+  companyId: number,
+  schema: any,
+  creatorUserId: number
+) => {
+  try {
+    await schema.validate(newContact);
+  } catch (err: any) {
     throw new AppError(err.message);
   }
 
@@ -354,14 +478,14 @@ const createUploadedContact = async ( newContact : ContactData, companyId : numb
     companyId
   });
 
-  const io = getIO();
-    io.to(`company-${companyId}-mainchannel`).emit(`company-${companyId}-contact`, {
-      action: "create",
-      contact
-    });
+  await AssignCreatorOnContactCreateService({
+    contactId: contact.id,
+    companyId,
+    creatorUserId
+  });
 
-  return contact;
-}
+  return emitContactWithAssignments(contact.id, companyId, "create");
+};
 
 export const toggleDisableBot = async (req: Request, res: Response): Promise<Response> => {
   var { contactId } = req.params;

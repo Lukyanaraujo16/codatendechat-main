@@ -3,6 +3,7 @@ import isAuth from "../middleware/isAuth";
 import requireAnyPlanFeature from "../middleware/requirePlanFeature";
 
 import * as ContactController from "../controllers/ContactController";
+import * as ContactAssignmentController from "../controllers/ContactAssignmentController";
 import * as ImportPhoneContactsController from "../controllers/ImportPhoneContactsController";
 
 const contactRoutes = express.Router();
@@ -17,6 +18,23 @@ contactRoutes.get("/contacts", ContactController.index);
 contactRoutes.get("/contacts/list", ContactController.list);
 
 contactRoutes.get("/contacts/:contactId/summary", ContactController.summary);
+
+contactRoutes.get(
+  "/contacts/:contactId/assignments",
+  ContactAssignmentController.index
+);
+contactRoutes.post(
+  "/contacts/:contactId/assignments",
+  ContactAssignmentController.store
+);
+contactRoutes.put(
+  "/contacts/:contactId/assignments",
+  ContactAssignmentController.replace
+);
+contactRoutes.delete(
+  "/contacts/:contactId/assignments/:userId",
+  ContactAssignmentController.remove
+);
 
 contactRoutes.post("/contacts/:contactId/tags", ContactController.addTag);
 

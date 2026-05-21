@@ -5,7 +5,14 @@ import Message from "../../models/Message";
 import TicketTag from "../../models/TicketTag";
 import getTagsForContactIds from "./getTagsForContactIds";
 import getLabelsForContactIds from "../../helpers/getLabelsForContactIds";
+import getAssignmentsForContactIds from "../../helpers/getAssignmentsForContactIds";
 import ContactLabelRelation from "../../models/ContactLabelRelation";
+import {
+  canViewAllCompanyContacts,
+  getAssignedContactIdsForUser,
+  applyAssignedContactFilter,
+  ContactAccessUser
+} from "../../helpers/contactAccess";
 
 interface Request {
   searchParam?: string;
@@ -15,6 +22,7 @@ interface Request {
   labelId?: string;
   dateFrom?: string;
   dateTo?: string;
+  accessUser?: ContactAccessUser;
 }
 
 type LastTicketDto = {
@@ -33,6 +41,7 @@ const enrichContacts = async (
 
   const tagsMap = await getTagsForContactIds(contactIds, companyId);
   const labelsMap = await getLabelsForContactIds(contactIds, companyId);
+  const assignmentsMap = await getAssignmentsForContactIds(contactIds, companyId);
 
   const latestTickets = await Promise.all(
     contactIds.map(cid =>
@@ -97,6 +106,7 @@ const enrichContacts = async (
       ...plain,
       tags: tagsMap.get(c.id) ?? [],
       labels: labelsMap.get(c.id) ?? [],
+      assignments: assignmentsMap.get(c.id) ?? [],
       lastTicket: lastTicketByContact.get(c.id) ?? null,
       lastInteractionAt: lastInteractionByContact.get(c.id) ?? null
     };
@@ -110,7 +120,8 @@ const ListContactsService = async ({
   tagId,
   labelId,
   dateFrom,
-  dateTo
+  dateTo,
+  accessUser
 }: Request): Promise<{
   contacts: any[];
   count: number;
@@ -195,11 +206,20 @@ const ListContactsService = async ({
     whereClause.id = { [Op.in]: allowedContactIds };
   }
 
+  let finalWhere = whereClause;
+  if (accessUser && !canViewAllCompanyContacts(accessUser)) {
+    const assignedIds = await getAssignedContactIdsForUser(
+      Number(accessUser.id),
+      companyId
+    );
+    finalWhere = applyAssignedContactFilter(whereClause, assignedIds);
+  }
+
   const limit = 30;
   const offset = limit * (+pageNumber - 1);
 
   const { count, rows: contactRows } = await Contact.findAndCountAll({
-    where: whereClause,
+    where: finalWhere,
     limit,
     offset,
     order: [["name", "ASC"]]

@@ -15,6 +15,7 @@ import {
   DataType
 } from "sequelize-typescript";
 import ContactCustomField from "./ContactCustomField";
+import ContactAssignment from "./ContactAssignment";
 import Ticket from "./Ticket";
 import Company from "./Company";
 import Schedule from "./Schedule";
@@ -77,6 +78,9 @@ class Contact extends Model<Contact> {
 
   @HasMany(() => ContactCustomField)
   extraInfo: ContactCustomField[];
+
+  @HasMany(() => ContactAssignment, { as: "assignments" })
+  assignments: ContactAssignment[];
 
   @ForeignKey(() => Company)
   @Column

@@ -28,6 +28,7 @@ import Tag from "../models/Tag";
 import TicketTag from "../models/TicketTag";
 import ContactLabel from "../models/ContactLabel";
 import ContactLabelRelation from "../models/ContactLabelRelation";
+import ContactAssignment from "../models/ContactAssignment";
 import ContactList from "../models/ContactList";
 import ContactListItem from "../models/ContactListItem";
 import Campaign from "../models/Campaign";
@@ -110,6 +111,7 @@ const models = [
   TicketTag,
   ContactLabel,
   ContactLabelRelation,
+  ContactAssignment,
   ContactList,
   ContactListItem,
   Campaign,

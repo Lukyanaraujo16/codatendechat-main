@@ -56,6 +56,10 @@ import { Can } from "../../components/Can";
 import NewTicketModal from "../../components/NewTicketModal";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import ContactLabelChip from "../../components/ContactLabelChip";
+import ContactAssigneesChips from "../../components/ContactAssigneesChips";
+import ContactAssignmentsModal from "../../components/ContactAssignmentsModal";
+import { canManageContactAssignments } from "../../utils/canManageContactAssignments";
+import PeopleIcon from "@material-ui/icons/People";
 
 import { CSVLink } from "react-csv";
 import ImportContactsModal from "../../components/ImportContactsModal";
@@ -322,8 +326,11 @@ const Contacts = () => {
 	const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 	const [scheduleContactId, setScheduleContactId] = useState(null);
 	const [chatbotToggleLoadingId, setChatbotToggleLoadingId] = useState(null);
+	const [assignmentsModalOpen, setAssignmentsModalOpen] = useState(false);
+	const [assignmentsContact, setAssignmentsContact] = useState(null);
 
 	const socketManager = useContext(SocketContext);
+	const canManageAssignments = canManageContactAssignments(user);
 
 	useEffect(() => {
 		api
@@ -596,6 +603,11 @@ const Contacts = () => {
 				onClose={handleCloseContactModal}
 				aria-labelledby="form-dialog-title"
 				contactId={selectedContactId}
+				onSave={(created) => {
+					if (created?.id) {
+						dispatch({ type: "UPDATE_CONTACTS", payload: created });
+					}
+				}}
 				onContactSaved={(updated) => {
 					dispatch({ type: "UPDATE_CONTACTS", payload: updated });
 				}}
@@ -611,6 +623,26 @@ const Contacts = () => {
 				contactId={scheduleContactId}
 				cleanContact={handleCleanScheduleContact}
 				redirectToSchedulesAfterContactSave={false}
+			/>
+			<ContactAssignmentsModal
+				open={assignmentsModalOpen}
+				onClose={() => {
+					setAssignmentsModalOpen(false);
+					setAssignmentsContact(null);
+				}}
+				contactId={assignmentsContact?.id}
+				contactName={assignmentsContact?.name}
+				onSaved={(assignments) => {
+					if (assignmentsContact?.id) {
+						dispatch({
+							type: "UPDATE_CONTACTS",
+							payload: {
+								...assignmentsContact,
+								assignments,
+							},
+						});
+					}
+				}}
 			/>
 			<ConfirmationModal
 				title={
@@ -844,6 +876,9 @@ const Contacts = () => {
 											<span>{i18n.t("contacts.table.labels")}</span>
 										</Tooltip>
 									</TableCell>
+									<TableCell className={classes.tableHeadCell}>
+										{i18n.t("contacts.table.assignees")}
+									</TableCell>
 									<TableCell align="center" className={classes.tableHeadCell}>
 										{i18n.t("contacts.table.lastInteraction")}
 									</TableCell>
@@ -931,6 +966,31 @@ const Contacts = () => {
 														<ContactLabelChip key={label.id} label={label} />
 													))}
 												</div>
+											</TableCell>
+											<TableCell>
+												<Box display="flex" alignItems="center" gridGap={4}>
+													<ContactAssigneesChips
+														assignments={contact.assignments}
+													/>
+													{canManageAssignments && (
+														<Tooltip
+															title={i18n.t(
+																"contacts.assignments.manage"
+															)}
+														>
+															<IconButton
+																size="small"
+																className={classes.actionIconBtn}
+																onClick={() => {
+																	setAssignmentsContact(contact);
+																	setAssignmentsModalOpen(true);
+																}}
+															>
+																<PeopleIcon fontSize="small" />
+															</IconButton>
+														</Tooltip>
+													)}
+												</Box>
 											</TableCell>
 											<TableCell align="center">
 												{renderLastInteraction(contact.lastInteractionAt)}
@@ -1036,7 +1096,7 @@ const Contacts = () => {
 											</TableCell>
 										</TableRow>
 									))}
-									{loading && <AppTableRowSkeleton avatar columns={5} />}
+									{loading && <AppTableRowSkeleton avatar columns={6} />}
 								</>
 							</TableBody>
 						</Table>

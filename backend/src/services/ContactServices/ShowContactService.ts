@@ -3,30 +3,51 @@ import ContactList from "../../models/ContactList";
 import ContactListItem from "../../models/ContactListItem";
 import AppError from "../../errors/AppError";
 import getTagsForContactIds, { ContactTagDto } from "./getTagsForContactIds";
+import getAssignmentsForContactIds from "../../helpers/getAssignmentsForContactIds";
+import {
+  assertUserCanAccessContact,
+  ContactAccessUser
+} from "../../helpers/contactAccess";
 
 export type CampaignListRef = { id: number; name: string };
 
 const ShowContactService = async (
   id: string | number,
-  companyId: number
+  companyId: number,
+  accessUser?: ContactAccessUser
 ): Promise<
   Record<string, unknown> & {
     tags: ContactTagDto[];
     campaignLists: CampaignListRef[];
+    assignments: unknown[];
   }
 > => {
-  const contact = await Contact.findByPk(id, { include: ["extraInfo", "whatsapp"] });
+  const contact = accessUser
+    ? await assertUserCanAccessContact(Number(id), companyId, accessUser)
+    : await Contact.findByPk(id, { include: ["extraInfo", "whatsapp"] });
 
   if (!contact) {
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
-  if (contact.companyId !== companyId) {
+  if (!accessUser && contact.companyId !== companyId) {
     throw new AppError("Não é possível excluir registro de outra empresa");
+  }
+
+  const full = await Contact.findByPk(contact.id, {
+    include: ["extraInfo", "whatsapp"]
+  });
+  if (!full) {
+    throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
   const tagsMap = await getTagsForContactIds([Number(id)], companyId);
   const tags = tagsMap.get(Number(id)) ?? [];
+  const assignmentsMap = await getAssignmentsForContactIds(
+    [Number(id)],
+    companyId
+  );
+  const assignments = assignmentsMap.get(Number(id)) ?? [];
 
   const listItems = await ContactListItem.findAll({
     where: { companyId, number: contact.number },
@@ -49,7 +70,7 @@ const ShowContactService = async (
   }
   const campaignLists = [...seen.values()];
 
-  return { ...contact.toJSON(), tags, campaignLists };
+  return { ...full.toJSON(), tags, campaignLists, assignments };
 };
 
 export default ShowContactService;

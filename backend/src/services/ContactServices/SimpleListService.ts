@@ -1,18 +1,26 @@
 import Contact from "../../models/Contact";
 import AppError from "../../errors/AppError";
 import { FindOptions, Op } from "sequelize";
+import {
+  canViewAllCompanyContacts,
+  getAssignedContactIdsForUser,
+  applyAssignedContactFilter,
+  ContactAccessUser
+} from "../../helpers/contactAccess";
 
 export interface SearchContactParams {
   companyId: string | number;
   name?: string;
   /** Quando false, oculta grupos não liberados para usuários comuns. */
   includeHiddenGroups?: boolean;
+  accessUser?: ContactAccessUser;
 }
 
 const SimpleListService = async ({
   name,
   companyId,
-  includeHiddenGroups = true
+  includeHiddenGroups = true,
+  accessUser
 }: SearchContactParams): Promise<Contact[]> => {
   let options: FindOptions = {
     order: [
@@ -39,6 +47,17 @@ const SimpleListService = async ({
             { isGroup: true, groupVisible: true }
           ]
         })
+  }
+
+  if (accessUser && !canViewAllCompanyContacts(accessUser)) {
+    const assignedIds = await getAssignedContactIdsForUser(
+      Number(accessUser.id),
+      Number(companyId)
+    );
+    options.where = applyAssignedContactFilter(
+      options.where as Record<string, unknown>,
+      assignedIds
+    );
   }
 
   const contacts = await Contact.findAll(options);
