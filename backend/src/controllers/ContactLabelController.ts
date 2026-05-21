@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 import AppError from "../errors/AppError";
+import { logger } from "../utils/logger";
 
 import ListContactLabelsService from "../services/ContactLabelServices/ListContactLabelsService";
 import CreateContactLabelService from "../services/ContactLabelServices/CreateContactLabelService";
@@ -142,27 +143,61 @@ export const setContactLabels = async (
 ): Promise<Response> => {
   const { companyId, id: userId } = req.user;
   const { contactId } = req.params;
-  const { labelIds } = req.body as { labelIds?: number[] };
+  const { labelIds } = req.body as { labelIds?: unknown[] };
+  const numericContactId = Number(contactId);
 
-  if (!Array.isArray(labelIds)) {
-    throw new AppError("ERR_VALIDATION_ERROR", 400);
+  logger.info({
+    msg: "[ContactLabels] apply start",
+    contactId: numericContactId,
+    companyId,
+    labelIds
+  });
+
+  if (!Number.isFinite(numericContactId) || numericContactId <= 0) {
+    throw new AppError("ERR_VALIDATION_ERROR", 400, "contactId inválido.");
   }
 
-  const labels = await SetContactLabelsService({
-    contactId: Number(contactId),
-    companyId,
-    labelIds,
-    userId: Number(userId)
-  });
+  if (!Array.isArray(labelIds)) {
+    throw new AppError("ERR_VALIDATION_ERROR", 400, "labelIds deve ser um array.");
+  }
 
-  const io = getIO();
-  io.to(`company-${companyId}-contact`).emit("contact", {
-    action: "update",
-    contact: {
-      id: Number(contactId),
-      labels
+  try {
+    const labels = await SetContactLabelsService({
+      contactId: numericContactId,
+      companyId,
+      labelIds: labelIds as number[],
+      userId: Number(userId)
+    });
+
+    logger.info({
+      msg: "[ContactLabels] apply success",
+      contactId: numericContactId,
+      companyId,
+      labelCount: labels.length
+    });
+
+    const io = getIO();
+    io.to(`company-${companyId}-contact`).emit("contact", {
+      action: "update",
+      contact: {
+        id: numericContactId,
+        labels
+      }
+    });
+
+    return res.status(200).json(labels);
+  } catch (err) {
+    if (!(err instanceof AppError)) {
+      logger.error({
+        msg: "[ContactLabels] apply failed",
+        contactId: numericContactId,
+        companyId,
+        labelIds,
+        error: err instanceof Error ? err.message : err,
+        stack: err instanceof Error ? err.stack : undefined,
+        body: req.body
+      });
     }
-  });
-
-  return res.status(200).json(labels);
+    throw err;
+  }
 };

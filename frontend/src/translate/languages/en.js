@@ -4936,6 +4936,10 @@ const messages = {
 				ERR_DUPLICATED_CONTACT: "A contact with this number already exists.",
 				ERR_NO_SETTING_FOUND: "No settings found with this ID.",
 				ERR_NO_CONTACT_FOUND: "No contact found with this ID.",
+				ERR_INVALID_LABEL_IDS:
+					"One or more labels are invalid or do not belong to your company.",
+				ERR_CONTACT_LABEL_RELATIONS_TABLE_MISSING:
+					"Label assignment is unavailable. Run backend migrations (ContactLabelRelations).",
 				ERR_NO_TICKET_FOUND: "No ticket found with this ID.",
 				ERR_NO_USER_FOUND: "No user found with this ID.",
 				ERR_NO_WAPP_FOUND: "No WhatsApp found with this ID.",

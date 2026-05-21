@@ -5097,6 +5097,10 @@ const messages = {
         ERR_DUPLICATED_CONTACT: "Já existe um contato com este número.",
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",
+        ERR_INVALID_LABEL_IDS:
+          "Uma ou mais etiquetas são inválidas ou não pertencem à sua empresa.",
+        ERR_CONTACT_LABEL_RELATIONS_TABLE_MISSING:
+          "Associação de etiquetas indisponível. Execute as migrations do backend (ContactLabelRelations).",
         ERR_NO_TICKET_FOUND: "Nenhum tíquete encontrado com este ID.",
         ERR_NO_USER_FOUND: "Nenhum usuário encontrado com este ID.",
         ERR_NO_WAPP_FOUND: "Nenhum WhatsApp encontrado com este ID.",

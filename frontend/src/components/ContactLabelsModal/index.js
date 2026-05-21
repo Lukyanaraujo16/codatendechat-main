@@ -169,16 +169,33 @@ export default function ContactLabelsModal({
 
   const handleSave = async () => {
     if (!contactId) return;
+    const labelIds = selected
+      .map((l) => Number(l.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const companyId = localStorage.getItem("companyId");
+    // eslint-disable-next-line no-console
+    console.log("[ContactLabels] apply start", { contactId, companyId, labelIds });
+
     setSaving(true);
     try {
       const { data } = await api.put(`/contacts/${contactId}/labels`, {
-        labelIds: selected.map((l) => l.id),
+        labelIds,
       });
       const labels = Array.isArray(data) ? data : selected;
+      // eslint-disable-next-line no-console
+      console.log("[ContactLabels] apply success", { contactId, labelCount: labels.length });
       onSaved(labels);
       showSuccessToast("contactLabels.toasts.saved");
       onClose();
     } catch (err) {
+      // eslint-disable-next-line no-console
+      console.log("[ContactLabels] apply failed", {
+        contactId,
+        companyId,
+        labelIds,
+        error: err?.response?.data || err?.message || err,
+      });
       toastError(err);
     } finally {
       setSaving(false);

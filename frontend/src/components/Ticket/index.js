@@ -258,9 +258,15 @@ const Ticket = () => {
           onReassignConnection={
             ticket.isOrphan ? () => setReassignModalOpen(true) : undefined
           }
-          onLabelsChange={(labels) =>
-            setContact((prev) => ({ ...prev, labels }))
-          }
+          onLabelsChange={(labels) => {
+            setContact((prev) => ({ ...prev, labels }));
+            setTicket((prev) => ({
+              ...prev,
+              contact: prev.contact
+                ? { ...prev.contact, labels }
+                : prev.contact,
+            }));
+          }}
         />
       );
     }
