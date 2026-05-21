@@ -1,12 +1,16 @@
 /**
- * Diagnóstico: tabelas de etiquetas no banco usado pelo backend.
+ * Diagnóstico: etiquetas via Sequelize model (mesmo caminho da aplicação).
  * Uso: npm run build && node dist/scripts/diagnose-contact-label-tables.js
  */
 import "../bootstrap";
 import sequelize from "../database";
 import { getDbConnectionSnapshot } from "../helpers/dbConnectionInfo";
-import { findTablesWithSchemas } from "../helpers/tableExists";
-import { warmupContactLabelRelationsTable } from "../helpers/contactLabelRelationsTable";
+import {
+  assertContactLabelRelationModelRegistered,
+  getContactLabelRelationModel,
+  logContactLabelRelationModelTable
+} from "../helpers/contactLabelRelationsTable";
+import ContactLabel from "../models/ContactLabel";
 
 async function main(): Promise<void> {
   const db = await getDbConnectionSnapshot(sequelize);
@@ -16,32 +20,46 @@ async function main(): Promise<void> {
   // eslint-disable-next-line no-console
   console.log(JSON.stringify(db, null, 2));
 
-  const contactLabel = await findTablesWithSchemas(sequelize, "%contact%label%");
-  const labelOnly = await findTablesWithSchemas(sequelize, "%label%");
+  assertContactLabelRelationModelRegistered(sequelize);
+  logContactLabelRelationModelTable(sequelize);
 
-  // eslint-disable-next-line no-console
-  console.log("\n=== tables ILIKE %contact%label% ===");
-  for (const row of contactLabel) {
-    // eslint-disable-next-line no-console
-    console.log(`  ${row.table_schema}.${row.table_name}`);
-  }
-  if (!contactLabel.length) {
-    // eslint-disable-next-line no-console
-    console.log("  (none)");
-  }
+  const relationModel = getContactLabelRelationModel(sequelize);
+  const labelModel = sequelize.models.ContactLabel as typeof ContactLabel;
 
-  // eslint-disable-next-line no-console
-  console.log("\n=== tables ILIKE %label% ===");
-  for (const row of labelOnly) {
+  try {
+    await relationModel.count();
     // eslint-disable-next-line no-console
-    console.log(`  ${row.table_schema}.${row.table_name}`);
+    console.log("\n=== ContactLabelRelation.count() === OK");
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("\n=== ContactLabelRelation.count() === FAILED");
+    console.error(err);
   }
 
-  const resolved = await warmupContactLabelRelationsTable(sequelize, { refresh: true });
-  // eslint-disable-next-line no-console
-  console.log("\n=== resolved ContactLabelRelations table ===");
-  // eslint-disable-next-line no-console
-  console.log(resolved ? `${db.schema || "public"}.${resolved}` : "(not found)");
+  try {
+    const n = await labelModel.count();
+    // eslint-disable-next-line no-console
+    console.log(`\n=== ContactLabels.count() === ${n}`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("\n=== ContactLabels.count() === FAILED");
+    console.error(err);
+  }
+
+  try {
+    const qi = sequelize.getQueryInterface();
+    const desc = await qi.describeTable(
+      relationModel.getTableName() as string
+    );
+    // eslint-disable-next-line no-console
+    console.log("\n=== describeTable(ContactLabelRelations) ===");
+    // eslint-disable-next-line no-console
+    console.log(Object.keys(desc).join(", "));
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("\n=== describeTable failed ===");
+    console.error(err);
+  }
 
   await sequelize.close();
 }

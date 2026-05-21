@@ -2,11 +2,6 @@ import AppError from "../../errors/AppError";
 import Contact from "../../models/Contact";
 import ContactLabel from "../../models/ContactLabel";
 import ContactLabelRelation from "../../models/ContactLabelRelation";
-import sequelize from "../../database";
-import { warmupContactLabelRelationsTable } from "../../helpers/contactLabelRelationsTable";
-import { logger } from "../../utils/logger";
-import { isMissingRelationError } from "../../helpers/optionalTableQuery";
-import { CONTACT_LABEL_RELATIONS_TABLE } from "../../helpers/contactLabelRelationsTable";
 
 interface Request {
   contactId: number;
@@ -25,37 +20,21 @@ const GetContactLabelsService = async ({
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
-  const tableName = await warmupContactLabelRelationsTable(sequelize);
-  if (!tableName) {
-    return [];
-  }
+  const relations = await ContactLabelRelation.findAll({
+    where: { contactId, companyId },
+    include: [
+      {
+        model: ContactLabel,
+        as: "label",
+        attributes: ["id", "name", "color", "description"]
+      }
+    ],
+    order: [["createdAt", "ASC"]]
+  });
 
-  try {
-    const relations = await ContactLabelRelation.findAll({
-      where: { contactId, companyId },
-      include: [
-        {
-          model: ContactLabel,
-          as: "label",
-          attributes: ["id", "name", "color", "description"]
-        }
-      ],
-      order: [["createdAt", "ASC"]]
-    });
-
-    return relations
-      .map((r) => r.label)
-      .filter((l): l is ContactLabel => Boolean(l));
-  } catch (err) {
-    if (isMissingRelationError(err, CONTACT_LABEL_RELATIONS_TABLE)) {
-      logger.warn(
-        { contactId, companyId },
-        "[ContactLabels] get skipped — relations table missing"
-      );
-      return [];
-    }
-    throw err;
-  }
+  return relations
+    .map((r) => r.label)
+    .filter((l): l is ContactLabel => Boolean(l));
 };
 
 export default GetContactLabelsService;

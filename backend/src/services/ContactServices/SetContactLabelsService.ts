@@ -4,14 +4,7 @@ import Contact from "../../models/Contact";
 import ContactLabel from "../../models/ContactLabel";
 import ContactLabelRelation from "../../models/ContactLabelRelation";
 import sequelize from "../../database";
-import {
-  assertContactLabelRelationsTable,
-  CONTACT_LABEL_RELATIONS_TABLE,
-  ensureContactLabelRelationsReady,
-  logContactLabelRelationsDbError,
-  logContactLabelRelationsDiagnostics
-} from "../../helpers/contactLabelRelationsTable";
-import { isMissingRelationError } from "../../helpers/optionalTableQuery";
+import { logContactLabelRelationsDbError } from "../../helpers/contactLabelRelationsTable";
 
 interface Request {
   contactId: number;
@@ -63,17 +56,6 @@ const SetContactLabelsService = async ({
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
-  try {
-    await ensureContactLabelRelationsReady(sequelize);
-  } catch (err) {
-    if (err instanceof AppError) throw err;
-    await logContactLabelRelationsDiagnostics(sequelize, "ensureContactLabelRelationsReady failed", {
-      contactId,
-      companyId
-    });
-    assertContactLabelRelationsTable();
-  }
-
   const uniqueIds = normalizeLabelIds(labelIds);
 
   if (uniqueIds.length > 0) {
@@ -110,15 +92,6 @@ const SetContactLabelsService = async ({
       }
     });
   } catch (err) {
-    if (isMissingRelationError(err, CONTACT_LABEL_RELATIONS_TABLE)) {
-      await logContactLabelRelationsDiagnostics(sequelize, "SQL missing relation on apply", {
-        contactId,
-        companyId,
-        labelIds: uniqueIds
-      });
-      logContactLabelRelationsDbError("apply", { contactId, companyId, labelIds: uniqueIds }, err);
-      assertContactLabelRelationsTable();
-    }
     logContactLabelRelationsDbError("apply", { contactId, companyId, labelIds: uniqueIds }, err);
     throw err;
   }
