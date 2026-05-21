@@ -23,6 +23,7 @@ import { TagsContainer } from "../TagsContainer";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 import QuickMessageChatModal from "../QuickMessageChatModal";
+import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import { canAccessTicket } from "../../utils/canAccessTicket";
 import {
   PANEL_RADIUS,
@@ -113,6 +114,7 @@ const Ticket = () => {
   const [crmPanelRefreshKey, setCrmPanelRefreshKey] = useState(0);
   const [reassignModalOpen, setReassignModalOpen] = useState(false);
   const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
+  const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
   const chatInputControllerRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
@@ -303,6 +305,7 @@ const Ticket = () => {
             contact={contact}
             onContactUpdated={(next) => setContact(next)}
             onOpenQuickReplies={() => setQuickRepliesOpen(true)}
+            onOpenTransfer={() => setTransferTicketModalOpen(true)}
             onCrmDealSaved={() => setCrmPanelRefreshKey((n) => n + 1)}
           />
         </TicketHeader>
@@ -348,6 +351,11 @@ const Ticket = () => {
         chatInputControllerRef={chatInputControllerRef}
         contact={contact}
         ticket={ticket}
+      />
+      <TransferTicketModalCustom
+        modalOpen={transferTicketModalOpen}
+        onClose={() => setTransferTicketModalOpen(false)}
+        ticketid={ticket.id}
       />
     </div>
   );

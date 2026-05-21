@@ -22,6 +22,8 @@ const filterOptions = createFilterOptions({
 	trim: true,
 });
 
+const stopDialogEvent = (e) => e.stopPropagation();
+
 const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 	const history = useHistory();
 	const [options, setOptions] = useState([]);
@@ -30,16 +32,22 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 	const [searchDraft, setSearchDraft] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedUser, setSelectedUser] = useState(null);
-	const searchInputRef = useRef(null);
+	const isMounted = useRef(true);
 
 	useEffect(() => {
-		if (!modalOpen) return;
-		const id = requestAnimationFrame(() => {
-			if (searchInputRef.current) {
-				searchInputRef.current.focus();
-			}
-		});
-		return () => cancelAnimationFrame(id);
+		isMounted.current = true;
+		return () => {
+			isMounted.current = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (modalOpen) return undefined;
+		setSearchDraft("");
+		setSearchQuery("");
+		setSelectedUser(null);
+		setUsersLoading(false);
+		return undefined;
 	}, [modalOpen]);
 
 	useEffect(() => {
@@ -88,20 +96,46 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 
 	const handleClose = () => {
 		onClose();
-		setSearchDraft("");
-		setSearchQuery("");
-		setSelectedUser(null);
 	};
 
-	const mergeInputRef = useCallback((params, node) => {
-		searchInputRef.current = node;
-		const ref = params.inputRef;
-		if (typeof ref === "function") {
-			ref(node);
-		} else if (ref && typeof ref === "object") {
-			ref.current = node;
+	const handleSearchInputChange = useCallback((e) => {
+		setSearchDraft(e.target.value);
+		if (selectedUser) {
+			setSelectedUser(null);
 		}
-	}, []);
+	}, [selectedUser]);
+
+	const renderAutocompleteInput = useCallback(
+		(params) => (
+			<TextField
+				{...params}
+				label={i18n.t("transferTicketModal.fieldLabel")}
+				variant="outlined"
+				required
+				autoComplete="off"
+				onChange={handleSearchInputChange}
+				onMouseDown={stopDialogEvent}
+				onClick={stopDialogEvent}
+				onFocus={stopDialogEvent}
+				inputProps={{
+					...params.inputProps,
+					autoComplete: "off",
+				}}
+				InputProps={{
+					...params.InputProps,
+					endAdornment: (
+						<React.Fragment>
+							{usersLoading ? (
+								<CircularProgress color="inherit" size={20} />
+							) : null}
+							{params.InputProps.endAdornment}
+						</React.Fragment>
+					),
+				}}
+			/>
+		),
+		[handleSearchInputChange, usersLoading]
+	);
 
 	const handleSaveTicket = async e => {
 		e.preventDefault();
@@ -130,20 +164,20 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 			disableEnforceFocus
 			disableAutoFocus
 			disableRestoreFocus
+			keepMounted
 		>
 			<form onSubmit={handleSaveTicket}>
 				<DialogTitle id="form-dialog-title">
 					{i18n.t("transferTicketModal.title")}
 				</DialogTitle>
-				<DialogContent dividers>
+				<DialogContent
+					dividers
+					onMouseDown={stopDialogEvent}
+					onClick={stopDialogEvent}
+				>
 					<Autocomplete
 						style={{ width: 300 }}
 						value={selectedUser}
-						inputValue={searchDraft}
-						onInputChange={(_event, newInputValue, reason) => {
-							if (reason === "reset") return;
-							setSearchDraft(newInputValue);
-						}}
 						getOptionLabel={option =>
 							typeof option === "string" ? option : `${option.name || ""}`
 						}
@@ -159,31 +193,13 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 						filterOptions={filterOptions}
 						freeSolo
 						autoHighlight
+						disablePortal
+						blurOnSelect={false}
+						clearOnBlur={false}
+						handleHomeEndKeys={false}
 						noOptionsText={i18n.t("transferTicketModal.noOptions")}
 						loading={usersLoading}
-						renderInput={params => (
-							<TextField
-								{...params}
-								label={i18n.t("transferTicketModal.fieldLabel")}
-								variant="outlined"
-								required
-								inputRef={node => mergeInputRef(params, node)}
-								onClick={e => e.stopPropagation()}
-								onMouseDown={e => e.stopPropagation()}
-								onKeyDown={e => e.stopPropagation()}
-								InputProps={{
-									...params.InputProps,
-									endAdornment: (
-										<React.Fragment>
-											{usersLoading ? (
-												<CircularProgress color="inherit" size={20} />
-											) : null}
-											{params.InputProps.endAdornment}
-										</React.Fragment>
-									),
-								}}
-							/>
-						)}
+						renderInput={renderAutocompleteInput}
 					/>
 				</DialogContent>
 				<DialogActions>

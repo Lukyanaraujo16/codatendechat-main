@@ -3,14 +3,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import ConfirmationModal from "../ConfirmationModal";
-import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
 import ScheduleModal from "../ScheduleModal";
 
 /**
  * Encapsula modais de agendamento, transferência e exclusão de ticket.
- * Usa render props: children({ openSchedule, openTransfer, openDelete })
+ * Usa render props: children({ openSchedule, openDelete })
  */
 const TicketActionModals = ({
   ticket,
@@ -20,7 +19,6 @@ const TicketActionModals = ({
   onDeleted,
 }) => {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
-  const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
   const isMounted = useRef(true);
 
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -53,16 +51,6 @@ const TicketActionModals = ({
     setConfirmationOpen(true);
   };
 
-  const openTransfer = () => {
-    setTransferTicketModalOpen(true);
-  };
-
-  const handleCloseTransferTicketModal = () => {
-    if (isMounted.current) {
-      setTransferTicketModalOpen(false);
-    }
-  };
-
   const openSchedule = () => {
     if (!ticket.contact?.id) return;
     setContactId(ticket.contact.id);
@@ -77,7 +65,7 @@ const TicketActionModals = ({
   return (
     <>
       {typeof children === "function"
-        ? children({ openSchedule, openTransfer, openDelete })
+        ? children({ openSchedule, openDelete })
         : children}
       <ConfirmationModal
         title={
@@ -94,11 +82,6 @@ const TicketActionModals = ({
       >
         {deleteMessage || i18n.t("ticketOptionsMenu.confirmationModal.message")}
       </ConfirmationModal>
-      <TransferTicketModalCustom
-        modalOpen={transferTicketModalOpen}
-        onClose={handleCloseTransferTicketModal}
-        ticketid={ticket.id}
-      />
       <ScheduleModal
         open={scheduleModalOpen}
         onClose={handleCloseScheduleModal}

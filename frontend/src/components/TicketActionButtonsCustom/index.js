@@ -48,6 +48,7 @@ const TicketActionButtonsCustom = ({
   contact,
   onContactUpdated,
   onOpenQuickReplies,
+  onOpenTransfer,
   onCrmDealSaved,
 }) => {
   const classes = useStyles();
@@ -141,7 +142,7 @@ const TicketActionButtonsCustom = ({
       )}
       {ticket.status === "open" && (
         <TicketActionModals ticket={ticket}>
-          {({ openSchedule, openTransfer, openDelete }) => (
+          {({ openSchedule, openDelete }) => (
             <TicketConversationActionBar
               loading={loading}
               userProfile={user?.profile}
@@ -152,7 +153,7 @@ const TicketActionButtonsCustom = ({
               }
               onReturn={(e) => handleUpdateTicketStatus(e, "pending", null)}
               onScheduleClick={openSchedule}
-              onTransferClick={openTransfer}
+              onTransferClick={onOpenTransfer}
               onDeleteClick={openDelete}
               onQuickRepliesClick={onOpenQuickReplies}
               extraIconActions={

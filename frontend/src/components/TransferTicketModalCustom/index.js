@@ -35,6 +35,8 @@ const filterOptions = createFilterOptions({
   trim: true,
 });
 
+const stopDialogEvent = (e) => e.stopPropagation();
+
 const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   const history = useHistory();
   const [options, setOptions] = useState([]);
@@ -49,7 +51,6 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   const classes = useStyles();
   const { findAll: findAllQueues } = useQueues();
   const isMounted = useRef(true);
-  const searchInputRef = useRef(null);
   const [whatsapps, setWhatsapps] = useState([]);
   const [selectedWhatsapp, setSelectedWhatsapp] = useState("");
   const { user } = useContext(AuthContext);
@@ -62,13 +63,12 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   }, []);
 
   useEffect(() => {
-    if (!modalOpen) return;
-    const id = requestAnimationFrame(() => {
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
-    });
-    return () => cancelAnimationFrame(id);
+    if (modalOpen) return undefined;
+    setSearchDraft("");
+    setSearchQuery("");
+    setSelectedUser(null);
+    setUsersLoading(false);
+    return undefined;
   }, [modalOpen]);
 
   useEffect(() => {
@@ -153,20 +153,51 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
 
   const handleClose = () => {
     onClose();
-    setSearchDraft("");
-    setSearchQuery("");
-    setSelectedUser(null);
   };
 
-  const mergeInputRef = useCallback((params, node) => {
-    searchInputRef.current = node;
-    const ref = params.inputRef;
-    if (typeof ref === "function") {
-      ref(node);
-    } else if (ref && typeof ref === "object") {
-      ref.current = node;
-    }
-  }, []);
+  const handleSearchInputChange = useCallback(
+    (e) => {
+      const next = e.target.value;
+      setSearchDraft(next);
+      if (selectedUser) {
+        setSelectedUser(null);
+        setQueues(allQueues);
+        setSelectedQueue("");
+      }
+    },
+    [selectedUser, allQueues]
+  );
+
+  const renderAutocompleteInput = useCallback(
+    (params) => (
+      <TextField
+        {...params}
+        label={i18n.t("transferTicketModal.fieldLabel")}
+        variant="outlined"
+        autoComplete="off"
+        onChange={handleSearchInputChange}
+        onMouseDown={stopDialogEvent}
+        onClick={stopDialogEvent}
+        onFocus={stopDialogEvent}
+        inputProps={{
+          ...params.inputProps,
+          autoComplete: "off",
+        }}
+        InputProps={{
+          ...params.InputProps,
+          endAdornment: (
+            <React.Fragment>
+              {usersLoading ? (
+                <CircularProgress color="inherit" size={20} />
+              ) : null}
+              {params.InputProps.endAdornment}
+            </React.Fragment>
+          ),
+        }}
+      />
+    ),
+    [handleSearchInputChange, usersLoading]
+  );
 
   const handleSaveTicket = async (e) => {
     e.preventDefault();
@@ -210,20 +241,20 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
       disableEnforceFocus
       disableAutoFocus
       disableRestoreFocus
+      keepMounted
     >
       <form onSubmit={handleSaveTicket}>
         <DialogTitle id="form-dialog-title">
           {i18n.t("transferTicketModal.title")}
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent
+          dividers
+          onMouseDown={stopDialogEvent}
+          onClick={stopDialogEvent}
+        >
           <Autocomplete
             style={{ width: 300, marginBottom: 20 }}
             value={selectedUser}
-            inputValue={searchDraft}
-            onInputChange={(_event, newInputValue, reason) => {
-              if (reason === "reset") return;
-              setSearchDraft(newInputValue);
-            }}
             getOptionLabel={(option) =>
               typeof option === "string" ? option : `${option.name || ""}`
             }
@@ -246,30 +277,13 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
             filterOptions={filterOptions}
             freeSolo
             autoHighlight
+            disablePortal
+            blurOnSelect={false}
+            clearOnBlur={false}
+            handleHomeEndKeys={false}
             noOptionsText={i18n.t("transferTicketModal.noOptions")}
             loading={usersLoading}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label={i18n.t("transferTicketModal.fieldLabel")}
-                variant="outlined"
-                inputRef={(node) => mergeInputRef(params, node)}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <React.Fragment>
-                      {usersLoading ? (
-                        <CircularProgress color="inherit" size={20} />
-                      ) : null}
-                      {params.InputProps.endAdornment}
-                    </React.Fragment>
-                  ),
-                }}
-              />
-            )}
+            renderInput={renderAutocompleteInput}
           />
           <FormControl variant="outlined" className={classes.maxWidth}>
             <InputLabel>

@@ -29,7 +29,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const TicketActionButtons = ({ ticket }) => {
+const TicketActionButtons = ({ ticket, onOpenTransfer }) => {
   const classes = useStyles();
   const history = useHistory();
   const [loading, setLoading] = useState(false);
@@ -71,7 +71,7 @@ const TicketActionButtons = ({ ticket }) => {
       )}
       {ticket.status === "open" && (
         <TicketActionModals ticket={ticket}>
-          {({ openSchedule, openTransfer, openDelete }) => (
+          {({ openSchedule, openDelete }) => (
             <TicketConversationActionBar
               loading={loading}
               userProfile={user?.profile}
@@ -81,7 +81,7 @@ const TicketActionButtons = ({ ticket }) => {
               }
               onReturn={(e) => handleUpdateTicketStatus(e, "pending", null)}
               onScheduleClick={openSchedule}
-              onTransferClick={openTransfer}
+              onTransferClick={onOpenTransfer}
               onDeleteClick={openDelete}
             />
           )}
