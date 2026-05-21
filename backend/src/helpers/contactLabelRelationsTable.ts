@@ -1,5 +1,7 @@
+import { Sequelize } from "sequelize";
 import ContactLabelRelation from "../models/ContactLabelRelation";
 import { logger } from "../utils/logger";
+import { assertSequelize } from "./assertSequelize";
 import { getDbConnectionSnapshot } from "./dbConnectionInfo";
 import {
   clearTableExistsCache,
@@ -22,7 +24,7 @@ const CONTACT_LABEL_RELATIONS_ALIASES = [
 ];
 
 let resolvedTableName: string | null | undefined;
-let warmupPromise: Promise<string | null> | null = null;
+const warmupPromises = new WeakMap<Sequelize, Promise<string | null>>();
 
 function normalizeTableKey(name: string): string {
   return name.replace(/[^a-z0-9]/gi, "").toLowerCase();
@@ -40,7 +42,9 @@ export function bindContactLabelRelationsTableName(physicalName: string): void {
   model.tableName = physicalName;
 }
 
-function pickBestRelationTable(rows: { table_schema: string; table_name: string }[]): string | null {
+function pickBestRelationTable(
+  rows: { table_schema: string; table_name: string }[]
+): string | null {
   if (!rows.length) return null;
 
   const canonicalKey = normalizeTableKey(CONTACT_LABEL_RELATIONS_TABLE);
@@ -54,21 +58,23 @@ function pickBestRelationTable(rows: { table_schema: string; table_name: string 
 }
 
 export async function logContactLabelRelationsDiagnostics(
+  sequelize: Sequelize,
   reason: string,
   extra: Record<string, unknown> = {}
 ): Promise<void> {
-  const db = await getDbConnectionSnapshot();
-  const relationTables = await findTablesWithSchemas(RELATION_TABLE_PATTERN);
-  const labelTables = await findTablesWithSchemas(LABEL_TABLE_PATTERN);
-  const resolved = await getContactLabelRelationsTableName({ refresh: true });
-  const existsCanonical = await tableExists(CONTACT_LABEL_RELATIONS_TABLE, {
+  const db = assertSequelize(sequelize, "logContactLabelRelationsDiagnostics");
+  const snapshot = await getDbConnectionSnapshot(db);
+  const relationTables = await findTablesWithSchemas(db, RELATION_TABLE_PATTERN);
+  const labelTables = await findTablesWithSchemas(db, LABEL_TABLE_PATTERN);
+  const resolved = await getContactLabelRelationsTableName(db, { refresh: true });
+  const existsCanonical = await tableExists(db, CONTACT_LABEL_RELATIONS_TABLE, {
     skipCache: true
   });
 
   logger.error({
     msg: `[ContactLabels] ${reason}`,
     ...extra,
-    db,
+    db: snapshot,
     resolvedTableName: resolved,
     existsCanonical,
     relationTables,
@@ -80,8 +86,11 @@ export async function logContactLabelRelationsDiagnostics(
 }
 
 export async function getContactLabelRelationsTableName(
+  sequelize: Sequelize,
   options: { refresh?: boolean } = {}
 ): Promise<string | null> {
+  const db = assertSequelize(sequelize, "getContactLabelRelationsTableName");
+
   if (!options.refresh && resolvedTableName !== undefined) {
     return resolvedTableName;
   }
@@ -91,7 +100,7 @@ export async function getContactLabelRelationsTableName(
     resolvedTableName = undefined;
   }
 
-  const relationRows = await findTablesWithSchemas(RELATION_TABLE_PATTERN);
+  const relationRows = await findTablesWithSchemas(db, RELATION_TABLE_PATTERN);
   const picked = pickBestRelationTable(relationRows);
   if (picked) {
     resolvedTableName = picked;
@@ -106,7 +115,7 @@ export async function getContactLabelRelationsTableName(
   }
 
   for (const alias of CONTACT_LABEL_RELATIONS_ALIASES) {
-    if (await tableExists(alias, { skipCache: true })) {
+    if (await tableExists(db, alias, { skipCache: true })) {
       resolvedTableName = alias;
       bindContactLabelRelationsTableName(alias);
       return resolvedTableName;
@@ -118,33 +127,39 @@ export async function getContactLabelRelationsTableName(
 }
 
 export async function isContactLabelRelationsTableAvailable(
+  sequelize: Sequelize,
   options?: { refresh?: boolean }
 ): Promise<boolean> {
-  const name = await getContactLabelRelationsTableName(options);
+  const name = await getContactLabelRelationsTableName(sequelize, options);
   return Boolean(name);
 }
 
 export async function warmupContactLabelRelationsTable(
+  sequelize: Sequelize,
   options: { refresh?: boolean } = {}
 ): Promise<string | null> {
-  if (!options.refresh && warmupPromise) {
-    return warmupPromise;
+  const db = assertSequelize(sequelize, "warmupContactLabelRelationsTable");
+
+  if (!options.refresh) {
+    const cached = warmupPromises.get(db);
+    if (cached) return cached;
   }
 
-  warmupPromise = (async () => {
-    const name = await getContactLabelRelationsTableName(options);
+  const promise = (async () => {
+    const name = await getContactLabelRelationsTableName(db, options);
     if (name) {
       logger.info(
         { table: name, modelTable: (ContactLabelRelation as { tableName?: string }).tableName },
         "[ContactLabels] relations table ready"
       );
     } else {
-      await logContactLabelRelationsDiagnostics("relations table not found at warmup");
+      await logContactLabelRelationsDiagnostics(db, "relations table not found at warmup");
     }
     return name;
   })();
 
-  return warmupPromise;
+  warmupPromises.set(db, promise);
+  return promise;
 }
 
 export function assertContactLabelRelationsTable(): never {
@@ -155,11 +170,13 @@ export function assertContactLabelRelationsTable(): never {
   );
 }
 
-export async function ensureContactLabelRelationsReady(): Promise<string> {
-  const name = await warmupContactLabelRelationsTable({ refresh: true });
+export async function ensureContactLabelRelationsReady(
+  sequelize: Sequelize
+): Promise<string> {
+  const name = await warmupContactLabelRelationsTable(sequelize, { refresh: true });
   if (name) return name;
 
-  await logContactLabelRelationsDiagnostics("TABLE_MISSING on apply");
+  await logContactLabelRelationsDiagnostics(sequelize, "TABLE_MISSING on apply");
   assertContactLabelRelationsTable();
 }
 

@@ -1,5 +1,6 @@
 import path from "path";
 import { Op } from "sequelize";
+import sequelize from "../../database";
 import Message from "../../models/Message";
 import Chat from "../../models/Chat";
 import ChatMessage from "../../models/ChatMessage";
@@ -66,7 +67,7 @@ export async function countAllReferencesToRelPath(
     n += await Announcement.count({ where: { companyId, ...pathWhere } });
   }
 
-  if (await isChatMessagesTableAvailable(warnings)) {
+  if (await isChatMessagesTableAvailable(sequelize, warnings)) {
     try {
       const chatRows = await ChatMessage.findAll({
         where: {

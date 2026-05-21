@@ -6,36 +6,42 @@ import "../bootstrap";
 import sequelize from "../database";
 import { getDbConnectionSnapshot } from "../helpers/dbConnectionInfo";
 import { findTablesWithSchemas } from "../helpers/tableExists";
-import {
-  getContactLabelRelationsTableName,
-  warmupContactLabelRelationsTable
-} from "../helpers/contactLabelRelationsTable";
+import { warmupContactLabelRelationsTable } from "../helpers/contactLabelRelationsTable";
 
 async function main(): Promise<void> {
-  const db = await getDbConnectionSnapshot();
+  const db = await getDbConnectionSnapshot(sequelize);
+
   // eslint-disable-next-line no-console
   console.log("\n=== DB connection (app) ===");
   // eslint-disable-next-line no-console
   console.log(JSON.stringify(db, null, 2));
 
-  const contactLabel = await findTablesWithSchemas("%contact%label%");
-  const labelOnly = await findTablesWithSchemas("%label%");
+  const contactLabel = await findTablesWithSchemas(sequelize, "%contact%label%");
+  const labelOnly = await findTablesWithSchemas(sequelize, "%label%");
 
   // eslint-disable-next-line no-console
   console.log("\n=== tables ILIKE %contact%label% ===");
-  // eslint-disable-next-line no-console
-  console.table(contactLabel);
+  for (const row of contactLabel) {
+    // eslint-disable-next-line no-console
+    console.log(`  ${row.table_schema}.${row.table_name}`);
+  }
+  if (!contactLabel.length) {
+    // eslint-disable-next-line no-console
+    console.log("  (none)");
+  }
 
   // eslint-disable-next-line no-console
   console.log("\n=== tables ILIKE %label% ===");
-  // eslint-disable-next-line no-console
-  console.table(labelOnly);
+  for (const row of labelOnly) {
+    // eslint-disable-next-line no-console
+    console.log(`  ${row.table_schema}.${row.table_name}`);
+  }
 
-  const resolved = await warmupContactLabelRelationsTable({ refresh: true });
+  const resolved = await warmupContactLabelRelationsTable(sequelize, { refresh: true });
   // eslint-disable-next-line no-console
   console.log("\n=== resolved ContactLabelRelations table ===");
   // eslint-disable-next-line no-console
-  console.log(resolved ?? "(not found)");
+  console.log(resolved ? `${db.schema || "public"}.${resolved}` : "(not found)");
 
   await sequelize.close();
 }

@@ -151,7 +151,7 @@ const models = [
 
 sequelize.addModels(models);
 
-void logDbConnectionAtStartup();
-void warmupContactLabelRelationsTable();
+void logDbConnectionAtStartup(sequelize);
+void warmupContactLabelRelationsTable(sequelize);
 
 export default sequelize;

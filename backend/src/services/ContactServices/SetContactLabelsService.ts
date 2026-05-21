@@ -64,10 +64,10 @@ const SetContactLabelsService = async ({
   }
 
   try {
-    await ensureContactLabelRelationsReady();
+    await ensureContactLabelRelationsReady(sequelize);
   } catch (err) {
     if (err instanceof AppError) throw err;
-    await logContactLabelRelationsDiagnostics("ensureContactLabelRelationsReady failed", {
+    await logContactLabelRelationsDiagnostics(sequelize, "ensureContactLabelRelationsReady failed", {
       contactId,
       companyId
     });
@@ -111,7 +111,7 @@ const SetContactLabelsService = async ({
     });
   } catch (err) {
     if (isMissingRelationError(err, CONTACT_LABEL_RELATIONS_TABLE)) {
-      await logContactLabelRelationsDiagnostics("SQL missing relation on apply", {
+      await logContactLabelRelationsDiagnostics(sequelize, "SQL missing relation on apply", {
         contactId,
         companyId,
         labelIds: uniqueIds

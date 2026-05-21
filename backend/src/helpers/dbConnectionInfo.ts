@@ -1,6 +1,6 @@
-import { QueryTypes } from "sequelize";
-import sequelize from "../database";
+import { QueryTypes, Sequelize } from "sequelize";
 import { logger } from "../utils/logger";
+import { assertSequelize } from "./assertSequelize";
 
 export type DbConnectionSnapshot = {
   dialect: string;
@@ -12,8 +12,12 @@ export type DbConnectionSnapshot = {
   searchPath: string | null;
 };
 
-export async function getDbConnectionSnapshot(): Promise<DbConnectionSnapshot> {
-  const cfg = sequelize.config as unknown as {
+export async function getDbConnectionSnapshot(
+  sequelize: Sequelize
+): Promise<DbConnectionSnapshot> {
+  const db = assertSequelize(sequelize, "getDbConnectionSnapshot");
+
+  const cfg = db.config as unknown as {
     host?: string;
     port?: number | string;
     database?: string;
@@ -21,7 +25,7 @@ export async function getDbConnectionSnapshot(): Promise<DbConnectionSnapshot> {
   };
 
   const snapshot: DbConnectionSnapshot = {
-    dialect: sequelize.getDialect(),
+    dialect: db.getDialect(),
     database: cfg.database ?? null,
     host: cfg.host ?? null,
     port: cfg.port != null ? Number(cfg.port) : null,
@@ -30,9 +34,9 @@ export async function getDbConnectionSnapshot(): Promise<DbConnectionSnapshot> {
     searchPath: null
   };
 
-  if (sequelize.getDialect() === "postgres") {
+  if (db.getDialect() === "postgres") {
     try {
-      const rows = (await sequelize.query<{
+      const rows = (await db.query<{
         current_schema: string;
         current_database: string;
         search_path: string;
@@ -53,9 +57,9 @@ export async function getDbConnectionSnapshot(): Promise<DbConnectionSnapshot> {
     } catch {
       snapshot.schema = "public";
     }
-  } else if (sequelize.getDialect() === "mysql" || sequelize.getDialect() === "mariadb") {
+  } else if (db.getDialect() === "mysql" || db.getDialect() === "mariadb") {
     try {
-      const rows = (await sequelize.query<{ db: string }>(
+      const rows = (await db.query<{ db: string }>(
         `SELECT DATABASE() AS db`,
         { type: QueryTypes.SELECT }
       )) as { db: string }[];
@@ -69,9 +73,9 @@ export async function getDbConnectionSnapshot(): Promise<DbConnectionSnapshot> {
   return snapshot;
 }
 
-export async function logDbConnectionAtStartup(): Promise<void> {
+export async function logDbConnectionAtStartup(sequelize: Sequelize): Promise<void> {
   try {
-    const info = await getDbConnectionSnapshot();
+    const info = await getDbConnectionSnapshot(sequelize);
     logger.info(
       {
         msg: "[DB] connection",

@@ -2,6 +2,7 @@ import AppError from "../../errors/AppError";
 import Contact from "../../models/Contact";
 import ContactLabel from "../../models/ContactLabel";
 import ContactLabelRelation from "../../models/ContactLabelRelation";
+import sequelize from "../../database";
 import { warmupContactLabelRelationsTable } from "../../helpers/contactLabelRelationsTable";
 import { logger } from "../../utils/logger";
 import { isMissingRelationError } from "../../helpers/optionalTableQuery";
@@ -24,7 +25,7 @@ const GetContactLabelsService = async ({
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
   }
 
-  const tableName = await warmupContactLabelRelationsTable();
+  const tableName = await warmupContactLabelRelationsTable(sequelize);
   if (!tableName) {
     return [];
   }

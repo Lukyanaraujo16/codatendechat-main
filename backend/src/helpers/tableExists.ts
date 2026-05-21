@@ -1,21 +1,10 @@
-import { QueryTypes } from "sequelize";
-import sequelize from "../database";
+import { QueryTypes, Sequelize } from "sequelize";
+import { assertSequelize } from "./assertSequelize";
 
 const existenceCache = new Map<string, boolean>();
 
 function cacheKey(tableName: string, schemasKey: string): string {
   return `${schemasKey}::${tableName.trim().toLowerCase()}`;
-}
-
-function parseExistsValue(value: unknown): boolean {
-  if (value === true || value === 1 || value === "1") return true;
-  if (value === false || value === 0 || value === "0") return false;
-  if (typeof value === "string") {
-    const lower = value.toLowerCase();
-    if (lower === "t" || lower === "true") return true;
-    if (lower === "f" || lower === "false") return false;
-  }
-  return Boolean(value);
 }
 
 export type TableExistsOptions = {
@@ -29,9 +18,13 @@ export type TableRow = {
 };
 
 /** Schemas onde procurar tabelas (Postgres: public + current_schema). */
-export async function getPostgresSearchSchemas(): Promise<string[]> {
+export async function getPostgresSearchSchemas(
+  sequelize: Sequelize
+): Promise<string[]> {
+  const db = assertSequelize(sequelize, "getPostgresSearchSchemas");
+
   try {
-    const rows = (await sequelize.query<{ current_schema: string }>(
+    const rows = (await db.query<{ current_schema: string }>(
       `SELECT current_schema() AS current_schema`,
       { type: QueryTypes.SELECT }
     )) as { current_schema: string }[];
@@ -50,16 +43,18 @@ function normalizeTableKey(name: string): string {
  * Lista tabelas (schema + nome) por padrão ILIKE/LIKE em todos os schemas relevantes.
  */
 export async function findTablesWithSchemas(
+  sequelize: Sequelize,
   pattern: string
 ): Promise<TableRow[]> {
-  const dialect = sequelize.getDialect();
+  const db = assertSequelize(sequelize, "findTablesWithSchemas");
+  const dialect = db.getDialect();
   const likePattern = pattern.replace(/\*/g, "%");
 
   try {
     if (dialect === "postgres") {
-      const schemas = await getPostgresSearchSchemas();
+      const schemas = await getPostgresSearchSchemas(db);
 
-      let rows = (await sequelize.query<TableRow>(
+      let rows = (await db.query<TableRow>(
         `SELECT table_schema, table_name
          FROM information_schema.tables
          WHERE table_schema = ANY(:schemas)
@@ -74,7 +69,7 @@ export async function findTablesWithSchemas(
 
       if (rows.length > 0) return rows;
 
-      rows = (await sequelize.query<TableRow>(
+      rows = (await db.query<TableRow>(
         `SELECT table_schema, table_name
          FROM information_schema.tables
          WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
@@ -91,7 +86,7 @@ export async function findTablesWithSchemas(
     }
 
     if (dialect === "mysql" || dialect === "mariadb") {
-      const rows = (await sequelize.query<TableRow>(
+      const rows = (await db.query<TableRow>(
         `SELECT table_schema, table_name
          FROM information_schema.tables
          WHERE table_schema = DATABASE()
@@ -105,7 +100,7 @@ export async function findTablesWithSchemas(
       return rows;
     }
 
-    const rows = (await sequelize.query<{ name: string }>(
+    const rows = (await db.query<{ name: string }>(
       `SELECT name FROM sqlite_master
        WHERE type = 'table' AND name LIKE :pattern COLLATE NOCASE`,
       {
@@ -119,20 +114,25 @@ export async function findTablesWithSchemas(
   }
 }
 
-export async function findTablesMatching(pattern: string): Promise<string[]> {
-  const rows = await findTablesWithSchemas(pattern);
+export async function findTablesMatching(
+  sequelize: Sequelize,
+  pattern: string
+): Promise<string[]> {
+  const rows = await findTablesWithSchemas(sequelize, pattern);
   return rows.map((r) => r.table_name);
 }
 
 export async function tableExists(
+  sequelize: Sequelize,
   tableName: string,
   options: TableExistsOptions = {}
 ): Promise<boolean> {
+  const db = assertSequelize(sequelize, "tableExists");
   const { skipCache = false, noNegativeCache = true } = options;
-  const dialect = sequelize.getDialect();
+  const dialect = db.getDialect();
   const schemasKey =
     dialect === "postgres"
-      ? (await getPostgresSearchSchemas()).join(",")
+      ? (await getPostgresSearchSchemas(db)).join(",")
       : dialect;
   const key = cacheKey(tableName, schemasKey);
 
@@ -140,7 +140,7 @@ export async function tableExists(
     return existenceCache.get(key)!;
   }
 
-  const rows = await findTablesWithSchemas(tableName);
+  const rows = await findTablesWithSchemas(db, tableName);
   const target = normalizeTableKey(tableName);
   const exists = rows.some((r) => normalizeTableKey(r.table_name) === target);
 
@@ -152,10 +152,12 @@ export async function tableExists(
 }
 
 export async function tableExistsAny(
+  sequelize: Sequelize,
   names: string[],
   options?: TableExistsOptions
 ): Promise<string | null> {
-  const all = await findTablesWithSchemas("%");
+  const db = assertSequelize(sequelize, "tableExistsAny");
+  const all = await findTablesWithSchemas(db, "%");
   const keys = new Set(names.map(normalizeTableKey));
 
   for (const row of all) {
@@ -165,7 +167,7 @@ export async function tableExistsAny(
   }
 
   for (const name of names) {
-    if (await tableExists(name, { ...options, skipCache: true })) {
+    if (await tableExists(db, name, { ...options, skipCache: true })) {
       return name;
     }
   }

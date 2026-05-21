@@ -1,4 +1,5 @@
 import path from "path";
+import sequelize from "../../database";
 import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 import QuickMessage from "../../models/QuickMessage";
@@ -184,7 +185,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       return finishPhysicalDelete(rel, rel, n);
     }
     case "chatMessage": {
-      if (!(await isChatMessagesTableAvailable(warnings))) {
+      if (!(await isChatMessagesTableAvailable(sequelize, warnings))) {
         throw new AppError("ERR_NO_PERMISSION", 404);
       }
       const id = Number(sourceId);

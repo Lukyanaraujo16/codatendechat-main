@@ -1,4 +1,6 @@
+import { Sequelize } from "sequelize";
 import { logger } from "../utils/logger";
+import { assertSequelize } from "./assertSequelize";
 import { tableExists } from "./tableExists";
 
 export const CHAT_MESSAGES_TABLE = "ChatMessages";
@@ -27,9 +29,11 @@ export function noteOptionalTableSkipped(
 }
 
 export async function isChatMessagesTableAvailable(
+  sequelize: Sequelize,
   warnings?: string[]
 ): Promise<boolean> {
-  const exists = await tableExists(CHAT_MESSAGES_TABLE);
+  const db = assertSequelize(sequelize, "isChatMessagesTableAvailable");
+  const exists = await tableExists(db, CHAT_MESSAGES_TABLE);
   if (!exists) {
     logger.warn(
       { table: CHAT_MESSAGES_TABLE },
