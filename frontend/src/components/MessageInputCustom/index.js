@@ -40,6 +40,10 @@ import { useWhatsAppPanelRecorder } from "../../hooks/useWhatsAppPanelRecorder";
 import resolveQuickMessageTemplate from "../../utils/resolveQuickMessageTemplate";
 import { recordRecentUse } from "../../utils/quickMessageChatStorage";
 import { PANEL_RADIUS } from "../../theme/ticketPanelStyles";
+import {
+  canAutoFocusMessageInput,
+  safeFocusMessageInput,
+} from "../../utils/messageInputFocus";
 
 const useStyles = makeStyles((theme) => {
   const isDark = theme.palette.type === "dark";
@@ -492,10 +496,7 @@ const CustomInput = (props) => {
 
 
   const setInputRef = (input) => {
-    if (input) {
-      input.focus();
-      inputRef.current = input;
-    }
+    inputRef.current = input || null;
   };
 
   return (
@@ -564,7 +565,17 @@ const CustomInput = (props) => {
 };
 
 const MessageInputCustom = (props) => {
-  const { ticketStatus, ticketId, chatInputControllerRef, contact, ticket } = props;
+  const {
+    ticketStatus,
+    ticketId,
+    chatInputControllerRef,
+    contact,
+    ticket,
+    transferModalOpen = false,
+    quickRepliesOpen = false,
+  } = props;
+
+  const focusBlockers = { transferModalOpen, quickRepliesOpen };
   const classes = useStyles();
 
   const [medias, setMedias] = useState([]);
@@ -603,18 +614,22 @@ const MessageInputCustom = (props) => {
     useWhatsAppPanelRecorder({ ticketId, setLoading });
 
   useEffect(() => {
-    inputRef.current.focus();
-  }, [replyingMessage]);
+    if (!replyingMessage || !inputRef.current) return;
+    if (!canAutoFocusMessageInput(focusBlockers)) return;
+    safeFocusMessageInput(inputRef.current, focusBlockers, "replyingMessage");
+  }, [replyingMessage, transferModalOpen, quickRepliesOpen]);
 
   useEffect(() => {
-    inputRef.current.focus();
+    if (inputRef.current && canAutoFocusMessageInput(focusBlockers)) {
+      safeFocusMessageInput(inputRef.current, focusBlockers, "ticketId");
+    }
     return () => {
       setInputMessage("");
       setShowEmoji(false);
       setMedias([]);
       setReplyingMessage(null);
     };
-  }, [ticketId, setReplyingMessage]);
+  }, [ticketId, setReplyingMessage, transferModalOpen, quickRepliesOpen]);
 
   // const handleChangeInput = e => {
   // 	if (isObject(e) && has(e, 'value')) {
@@ -712,9 +727,7 @@ const MessageInputCustom = (props) => {
     } else {
       setInputMessage(resolveMessageTemplate(row.message || ""));
       setTimeout(() => {
-        if (inputRef.current && inputRef.current.focus) {
-          inputRef.current.focus();
-        }
+        safeFocusMessageInput(inputRef.current, focusBlockers, "quickApplyFromModal");
       }, 0);
     }
   };
@@ -729,15 +742,11 @@ const MessageInputCustom = (props) => {
             : t
         );
         setTimeout(() => {
-          if (inputRef.current && inputRef.current.focus) {
-            inputRef.current.focus();
-          }
+          safeFocusMessageInput(inputRef.current, focusBlockers, "chatInputController.setDraft");
         }, 0);
       },
       focus: () => {
-        if (inputRef.current && inputRef.current.focus) {
-          inputRef.current.focus();
-        }
+        safeFocusMessageInput(inputRef.current, focusBlockers, "chatInputController.focus");
       },
       applyQuick: (row) => quickApplyFromModalRef.current?.(row),
     };
@@ -746,7 +755,12 @@ const MessageInputCustom = (props) => {
         chatInputControllerRef.current = null;
       }
     };
-  }, [chatInputControllerRef, resolveMessageTemplate]);
+  }, [
+    chatInputControllerRef,
+    resolveMessageTemplate,
+    transferModalOpen,
+    quickRepliesOpen,
+  ]);
 
   const handleUploadMedia = async (e) => {
     setLoading(true);

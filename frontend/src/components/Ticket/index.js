@@ -283,6 +283,8 @@ const Ticket = () => {
             contact={contact}
             ticket={ticket}
             chatInputControllerRef={chatInputControllerRef}
+            transferModalOpen={transferTicketModalOpen}
+            quickRepliesOpen={quickRepliesOpen}
           />
         </div>
       </>

@@ -51,6 +51,7 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   const classes = useStyles();
   const { findAll: findAllQueues } = useQueues();
   const isMounted = useRef(true);
+  const focusBeforeOpenRef = useRef(null);
   const [whatsapps, setWhatsapps] = useState([]);
   const [selectedWhatsapp, setSelectedWhatsapp] = useState("");
   const { user } = useContext(AuthContext);
@@ -63,11 +64,27 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   }, []);
 
   useEffect(() => {
-    if (modalOpen) return undefined;
+    if (modalOpen) {
+      focusBeforeOpenRef.current = document.activeElement;
+      return undefined;
+    }
+
     setSearchDraft("");
     setSearchQuery("");
     setSelectedUser(null);
     setUsersLoading(false);
+
+    const previous = focusBeforeOpenRef.current;
+    focusBeforeOpenRef.current = null;
+    if (
+      previous &&
+      typeof previous.focus === "function" &&
+      document.contains(previous)
+    ) {
+      requestAnimationFrame(() => {
+        previous.focus();
+      });
+    }
     return undefined;
   }, [modalOpen]);
 
