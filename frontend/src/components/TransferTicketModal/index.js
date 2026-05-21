@@ -35,7 +35,9 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid }) => {
 	useEffect(() => {
 		if (!modalOpen) return;
 		const id = requestAnimationFrame(() => {
-			searchInputRef.current?.focus();
+			if (searchInputRef.current) {
+				searchInputRef.current.focus();
+			}
 		});
 		return () => cancelAnimationFrame(id);
 	}, [modalOpen]);
