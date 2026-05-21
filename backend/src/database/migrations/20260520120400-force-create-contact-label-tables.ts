@@ -244,6 +244,10 @@ async function ensureContactLabelRelationsTable(
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false
     }
   });
 

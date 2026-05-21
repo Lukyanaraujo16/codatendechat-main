@@ -2,6 +2,7 @@ import {
   Table,
   Column,
   CreatedAt,
+  UpdatedAt,
   Model,
   PrimaryKey,
   AutoIncrement,
@@ -52,6 +53,9 @@ class ContactLabelRelation extends Model<ContactLabelRelation> {
 
   @CreatedAt
   createdAt: Date;
+
+  @UpdatedAt
+  updatedAt: Date;
 }
 
 export default ContactLabelRelation;
