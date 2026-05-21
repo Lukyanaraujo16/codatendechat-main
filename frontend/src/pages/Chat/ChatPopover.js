@@ -2,9 +2,9 @@ import React, {
   useContext,
   useEffect,
   useReducer,
-  useRef,
   useState,
 } from "react";
+import { useHistory } from "react-router-dom";
 import { alpha, makeStyles } from "@material-ui/core/styles";
 import toastError from "../../errors/toastError";
 import Popover from "@material-ui/core/Popover";
@@ -17,18 +17,13 @@ import {
   Tooltip,
   Typography,
 } from "@material-ui/core";
-import NotificationPopoverLayout, { PulsingNotificationBadge } from "../../components/NotificationPopoverLayout";
+import NotificationPopoverLayout from "../../components/NotificationPopoverLayout";
 import api from "../../services/api";
 import { isArray } from "lodash";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { useDate } from "../../hooks/useDate";
 import { AuthContext } from "../../context/Auth/AuthContext";
-
-import {
-  useNotificationSound,
-  NOTIFICATION_SOUND_TYPES,
-} from "../../context/NotificationSound/NotificationSoundContext";
-import { playNotificationSoundThrottled } from "../../utils/notificationSoundPlayback";
+import { useGlobalNotifications } from "../../context/GlobalNotifications/GlobalNotificationsContext";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
@@ -103,13 +98,15 @@ const reducer = (state, action) => {
   }
 
   if (action.type === "CHANGE_CHAT") {
-    const changedChats = state.map((chat) => {
-      if (chat.id === action.payload.chat.id) {
-        return action.payload.chat;
-      }
-      return chat;
-    });
-    return changedChats;
+    const chat = action.payload.chat;
+    if (!chat?.id) return state;
+    const chatIndex = state.findIndex((u) => u.id === chat.id);
+    if (chatIndex !== -1) {
+      const next = [...state];
+      next[chatIndex] = chat;
+      return next;
+    }
+    return [chat, ...state];
   }
 };
 
@@ -126,26 +123,11 @@ export default function ChatPopover() {
   const [hasMore, setHasMore] = useState(false);
   const [searchParam] = useState("");
   const [chats, dispatch] = useReducer(reducer, []);
-  const [invisible, setInvisible] = useState(true);
   const { datetimeToClient } = useDate();
-  const { playNotificationSound } = useNotificationSound();
-  const soundAlertRef = useRef();
+  const history = useHistory();
+  const { markAsReadByChat } = useGlobalNotifications();
 
   const socketManager = useContext(SocketContext);
-
-  useEffect(() => {
-    soundAlertRef.current = () =>
-      playNotificationSoundThrottled(
-        playNotificationSound,
-        NOTIFICATION_SOUND_TYPES.internalChat
-      );
-
-    if (!("Notification" in window)) {
-      console.log("This browser doesn't support notifications");
-    } else {
-      Notification.requestPermission();
-    }
-  }, [playNotificationSound]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -178,14 +160,6 @@ export default function ChatPopover() {
     const onCompanyChat = (data) => {
       if (data.action === "new-message") {
         dispatch({ type: "CHANGE_CHAT", payload: data });
-        const userIds = data.newMessage.chat.users.map((userObj) =>
-          Number(userObj.userId)
-        );
-        const myId = Number(user.id);
-
-        if (userIds.includes(myId) && Number(data.newMessage.senderId) !== myId) {
-          soundAlertRef.current();
-        }
       }
       if (data.action === "update") {
         dispatch({ type: "CHANGE_CHAT", payload: data });
@@ -197,24 +171,6 @@ export default function ChatPopover() {
       socket.off(eventName, onCompanyChat);
     };
   }, [socketManager, user.id, user?.companyId, hasTenant]);
-
-  useEffect(() => {
-    let unreadsCount = 0;
-    if (chats.length > 0) {
-      for (let chat of chats) {
-        for (let chatUser of chat.users) {
-          if (Number(chatUser.userId) === Number(user.id)) {
-            unreadsCount += chatUser.unreads;
-          }
-        }
-      }
-    }
-    if (unreadsCount > 0) {
-      setInvisible(false);
-    } else {
-      setInvisible(true);
-    }
-  }, [chats, user.id]);
 
   const fetchChats = async () => {
     try {
@@ -243,7 +199,6 @@ export default function ChatPopover() {
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
-    setInvisible(true);
   };
 
   const handleClose = () => {
@@ -251,7 +206,11 @@ export default function ChatPopover() {
   };
 
   const goToMessages = (chat) => {
-    window.location.href = `/chats/${chat.uuid}`;
+    if (!chat) return;
+    markAsReadByChat({ chatId: chat.id, chatUuid: chat.uuid });
+    const pathId = chat.uuid || chat.id;
+    history.push(`/chats/${pathId}`);
+    setAnchorEl(null);
   };
 
   const open = Boolean(anchorEl);
@@ -270,9 +229,7 @@ export default function ChatPopover() {
           className={classes.headerIconButton}
           aria-label={i18n.t("chat.popover.openTooltip")}
         >
-          <PulsingNotificationBadge hasNotification={!invisible}>
-            <ForumIcon />
-          </PulsingNotificationBadge>
+          <ForumIcon />
         </IconButton>
       </Tooltip>
       <Popover

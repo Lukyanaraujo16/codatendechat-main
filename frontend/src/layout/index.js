@@ -40,6 +40,7 @@ import PushNotificationOptInBanner from "../components/PushNotificationOptInBann
 import { useBranding } from "../context/Branding/BrandingContext";
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
+import GlobalNotificationsProvider from "../context/GlobalNotifications/GlobalNotificationsProvider";
 
 import { useDate } from "../hooks/useDate";
 
@@ -489,6 +490,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   }
 
   return (
+    <GlobalNotificationsProvider>
     <div className={classes.root}>
       <Drawer
         variant={drawerVariant}
@@ -730,6 +732,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         ) : null}
       </main>
     </div>
+    </GlobalNotificationsProvider>
   );
 };
 

@@ -26,6 +26,7 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { has, isObject } from "lodash";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { useGlobalNotifications } from "../../context/GlobalNotifications/GlobalNotificationsContext";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
@@ -243,10 +244,24 @@ function Chat(props) {
   const scrollToBottomRef = useRef();
   const currentChatRef = useRef({});
   const { id } = useParams();
+  const { markAsReadByChat } = useGlobalNotifications();
 
   useEffect(() => {
     currentChatRef.current = currentChat;
   }, [currentChat]);
+
+  useEffect(() => {
+    if (!isObject(currentChat) || !currentChat.id) return;
+    markAsReadByChat({
+      chatId: currentChat.id,
+      chatUuid: currentChat.uuid,
+    });
+  }, [currentChat?.id, currentChat?.uuid, markAsReadByChat]);
+
+  useEffect(() => {
+    if (!id) return;
+    markAsReadByChat({ chatId: id, chatUuid: id });
+  }, [id, markAsReadByChat]);
 
   const filteredChats = React.useMemo(() => {
     if (!Array.isArray(chats)) return [];
@@ -318,7 +333,31 @@ function Chat(props) {
       }
     };
 
+    const upsertChatInList = (prev, incomingChat) => {
+      if (!incomingChat?.id) return prev;
+      const idx = prev.findIndex((c) => c.id === incomingChat.id);
+      if (idx !== -1) {
+        return prev.map((c) =>
+          c.id === incomingChat.id ? { ...incomingChat } : c
+        );
+      }
+      return [incomingChat, ...prev];
+    };
+
     const onChatCompany = (data) => {
+      if (data.action === "new-message" || data.action === "update") {
+        const incomingChat = data.chat || data.record;
+        setChats((prev) => upsertChatInList(prev, incomingChat));
+        if (data.action === "update") {
+          setCurrentChat((cur) =>
+            cur && incomingChat && cur.id === incomingChat.id
+              ? incomingChat
+              : cur
+          );
+        }
+        return;
+      }
+
       if (data.action !== "delete") return;
       const deletedId = +data.id;
       setChats((prev) => prev.filter((c) => c.id !== deletedId));
@@ -357,11 +396,14 @@ function Chat(props) {
     const onChatRoom = (data) => {
       if (data.action === "new-message") {
         setMessages((prev) => [...prev, data.newMessage]);
-        setChats((prev) =>
-          prev.map((chat) =>
+        setChats((prev) => {
+          if (!data.chat?.id) return prev;
+          const idx = prev.findIndex((c) => c.id === data.chat.id);
+          if (idx === -1) return [data.chat, ...prev];
+          return prev.map((chat) =>
             chat.id === data.newMessage.chatId ? { ...data.chat } : chat
-          )
-        );
+          );
+        });
         if (typeof scrollToBottomRef.current === "function") {
           scrollToBottomRef.current();
         }
@@ -390,10 +432,15 @@ function Chat(props) {
 
   const selectChat = (chat) => {
     if (!chat) return;
+    markAsReadByChat({ chatId: chat.id, chatUuid: chat.uuid });
     setMessages([]);
     setMessagesPage(1);
     setCurrentChat(chat);
     setTab(1);
+    const pathId = chat.uuid || chat.id;
+    if (pathId) {
+      history.push(`/chats/${pathId}`);
+    }
   };
 
   const sendMessage = async (contentMessage) => {

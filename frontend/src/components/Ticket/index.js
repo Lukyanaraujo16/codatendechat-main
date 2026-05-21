@@ -19,6 +19,7 @@ import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { useGlobalNotifications } from "../../context/GlobalNotifications/GlobalNotificationsContext";
 import { TagsContainer } from "../TagsContainer";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
@@ -122,12 +123,21 @@ const Ticket = () => {
   const [partialEnrichWarning, setPartialEnrichWarning] = useState(false);
 
   const socketManager = useContext(SocketContext);
+  const { markAsReadByTicket } = useGlobalNotifications();
   const ticketRef = useRef(ticket);
   ticketRef.current = ticket;
 
   useEffect(() => {
     setPartialEnrichWarning(false);
   }, [ticketId]);
+
+  useEffect(() => {
+    if (!ticket?.id) return;
+    markAsReadByTicket({
+      ticketId: ticket.id,
+      ticketUuid: ticket.uuid,
+    });
+  }, [ticket?.id, ticket?.uuid, markAsReadByTicket]);
 
   useEffect(() => {
     setLoading(true);

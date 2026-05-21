@@ -3314,6 +3314,31 @@ const messages = {
 				title: "Notifications",
 				noTickets: "No notifications.",
 			},
+			globalNotifications: {
+				whatsappTitle: "New message in inbox",
+				internalChatTitle: "New internal message",
+				unknownContact: "Contact",
+				open: "Open",
+				markAllRead: "Mark all as read",
+				unreadCount: "{{count}} unread",
+				noUnread: "No pending notifications",
+			},
+			notificationCenter: {
+				title: "Notifications",
+				empty: "You're all caught up",
+				showMore: "Show more",
+				limitHint: "Showing the latest 50 notifications",
+				tabs: {
+					all: "All",
+					whatsapp: "WhatsApp",
+					internal: "Internal",
+					unread: "Unread",
+				},
+				sections: {
+					internal: "Internal chats",
+					whatsapp: "Inbox",
+				},
+			},
 			notificationSound: {
 				ariaLabel: "Notification volume",
 				popoverTitle: "Alert sound volume",

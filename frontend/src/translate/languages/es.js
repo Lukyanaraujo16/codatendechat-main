@@ -3325,6 +3325,31 @@ const messages = {
         title: "Notificaciones",
         noTickets: "Ninguna notificación.",
       },
+      globalNotifications: {
+        whatsappTitle: "Nuevo mensaje en atención",
+        internalChatTitle: "Nuevo mensaje interno",
+        unknownContact: "Contacto",
+        open: "Abrir",
+        markAllRead: "Marcar todas como leídas",
+        unreadCount: "{{count}} sin leer",
+        noUnread: "Ninguna notificación pendiente",
+      },
+      notificationCenter: {
+        title: "Notificaciones",
+        empty: "Estás al día",
+        showMore: "Mostrar más",
+        limitHint: "Mostrando las últimas 50 notificaciones",
+        tabs: {
+          all: "Todas",
+          whatsapp: "WhatsApp",
+          internal: "Interno",
+          unread: "No leídas",
+        },
+        sections: {
+          internal: "Conversaciones internas",
+          whatsapp: "Atención",
+        },
+      },
       notificationSound: {
         ariaLabel: "Volumen de notificaciones",
         popoverTitle: "Volumen de alertas de atención",
