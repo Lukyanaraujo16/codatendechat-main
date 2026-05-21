@@ -55,6 +55,7 @@ const useStyles = makeStyles(theme => ({
 		borderRight: getPanelDividerBorder(theme),
 		backgroundColor: theme.palette.background.paper,
 		boxShadow: getPanelElevation(theme),
+		clipPath: `inset(0 round ${PANEL_RADIUS}px ${PANEL_RADIUS}px 0 ${PANEL_RADIUS}px)`,
 	},
 	messagesWrapper: {
 		display: "flex",

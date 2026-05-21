@@ -50,6 +50,7 @@ const BatchDeleteCompanyMediaService = async (
   freedFormatted: string;
   deleted: BatchDeleteCompanyMediaResultItem[];
   failed: BatchDeleteCompanyMediaFailedItem[];
+  warnings: string[];
 }> => {
   logger.info(
     {
@@ -90,6 +91,7 @@ const BatchDeleteCompanyMediaService = async (
 
   const deleted: BatchDeleteCompanyMediaResultItem[] = [];
   const failed: BatchDeleteCompanyMediaFailedItem[] = [];
+  const warnings: string[] = [];
   let totalFreed = 0;
 
   for (const it of queue) {
@@ -100,7 +102,8 @@ const BatchDeleteCompanyMediaService = async (
         it.sourceId,
         {
           deferStorageDecrement: true,
-          knownSizeBytes: it.sizeBytes
+          knownSizeBytes: it.sizeBytes,
+          warnings
         }
       );
       totalFreed += result.freedBytes;
@@ -119,7 +122,7 @@ const BatchDeleteCompanyMediaService = async (
           sizeBytes: result.freedBytes,
           fileMissing: result.fileMissing
         },
-        "[CompanyMediaDelete] item deleted"
+        "[CompanyMediaDelete] deleted"
       );
     } catch (err) {
       const reason =
@@ -163,7 +166,8 @@ const BatchDeleteCompanyMediaService = async (
     freedBytes: totalFreed,
     freedFormatted: formatBytesPtBr(totalFreed),
     deleted,
-    failed
+    failed,
+    warnings
   };
 };
 

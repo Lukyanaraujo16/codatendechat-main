@@ -1,7 +1,8 @@
 import path from "path";
-import { QueryTypes } from "sequelize";
-import sequelize from "../../database";
+import { Op } from "sequelize";
 import Message from "../../models/Message";
+import Chat from "../../models/Chat";
+import ChatMessage from "../../models/ChatMessage";
 import QuickMessage from "../../models/QuickMessage";
 import Schedule from "../../models/Schedule";
 import Campaign from "../../models/Campaign";
@@ -17,14 +18,22 @@ import {
   collectPathMatchVariants,
   pathsReferToSameFile
 } from "../../helpers/companyMediaDeletePath";
+import {
+  isChatMessagesTableAvailable,
+  isMissingRelationError,
+  noteOptionalTableSkipped
+} from "../../helpers/optionalTableQuery";
+import { logger } from "../../utils/logger";
 
 /**
  * Conta quantos registos apontam para o mesmo ficheiro relativo em `public/`.
  * Usa variantes de path (URL absoluta, /public/, basename) — alinhado à listagem.
+ * Tabelas opcionais/legadas ausentes são ignoradas (não propagam erro).
  */
 export async function countAllReferencesToRelPath(
   companyId: number,
-  relRaw: string | null | undefined
+  relRaw: string | null | undefined,
+  warnings?: string[]
 ): Promise<number> {
   const variants = collectPathMatchVariants(relRaw);
   const r = normalizePublicRelPath(relRaw);
@@ -57,19 +66,30 @@ export async function countAllReferencesToRelPath(
     n += await Announcement.count({ where: { companyId, ...pathWhere } });
   }
 
-  const chatRows = await sequelize.query<{ mediaPath: string }>(
-    `
-    SELECT cm.mediaPath AS "mediaPath"
-    FROM ChatMessages cm
-    INNER JOIN Chats c ON c.id = cm.chatId
-    WHERE c.companyId = :cid
-      AND cm.mediaPath IS NOT NULL
-      AND cm.mediaPath != ''
-    `,
-    { replacements: { cid: companyId }, type: QueryTypes.SELECT }
-  );
-  for (const row of chatRows) {
-    if (pathsReferToSameFile(row.mediaPath, relRaw)) n += 1;
+  if (await isChatMessagesTableAvailable(warnings)) {
+    try {
+      const chatRows = await ChatMessage.findAll({
+        where: {
+          mediaPath: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: "" }] }
+        },
+        attributes: ["mediaPath"],
+        include: [{ model: Chat, where: { companyId }, required: true, attributes: [] }]
+      });
+      for (const row of chatRows) {
+        const mediaPath = row.getDataValue("mediaPath") as string | null;
+        if (pathsReferToSameFile(mediaPath, relRaw)) n += 1;
+      }
+    } catch (err) {
+      if (isMissingRelationError(err, "chatmessages")) {
+        logger.warn(
+          { companyId, err: err instanceof Error ? err.message : String(err) },
+          "[CompanyMediaDelete] skipped missing table ChatMessages"
+        );
+        noteOptionalTableSkipped(warnings, "chatmessages");
+      } else {
+        throw err;
+      }
+    }
   }
 
   const m = /^fileList\/(\d+)\/(.+)$/.exec(r || "");

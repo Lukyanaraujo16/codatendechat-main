@@ -50,9 +50,12 @@ const useStyles = makeStyles((theme) => ({
 
   bulkToolbarHost: {
     flexShrink: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
     width: "100%",
     maxWidth: "none",
-    padding: 0,
+    padding: `${8}px ${LIST_SIDE_PADDING_PX}px 0`,
     backgroundColor: theme.palette.background.default,
     boxSizing: "border-box",
   },
@@ -94,13 +97,14 @@ const useStyles = makeStyles((theme) => ({
   bulkToolbar: {
     display: "flex",
     alignItems: "center",
+    alignSelf: "stretch",
     width: "100%",
     maxWidth: "none",
     gap: theme.spacing(1),
     borderRadius: PANEL_RADIUS,
     backgroundColor: theme.palette.background.paper,
     padding: "10px 14px",
-    margin: theme.spacing(1, 1.5, 1.5),
+    margin: `0 0 ${12}px 0`,
     minHeight: 52,
     overflow: "hidden",
     flexShrink: 0,
@@ -110,8 +114,12 @@ const useStyles = makeStyles((theme) => ({
   },
   bulkToolbarLabel: {
     flex: 1,
+    minWidth: 0,
     fontSize: "0.8125rem",
+    lineHeight: 1.4,
     color: theme.palette.text.secondary,
+    display: "flex",
+    alignItems: "center",
   },
 
   emptyStateWrap: {

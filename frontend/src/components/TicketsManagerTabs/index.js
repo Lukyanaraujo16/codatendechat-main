@@ -99,6 +99,7 @@ const useStyles = makeStyles(theme => ({
 		borderRadius: INBOX_LIST_PANEL_RADIUS,
 		backgroundColor: theme.palette.background.paper,
 		boxShadow: "none",
+		clipPath: `inset(0 round ${PANEL_RADIUS}px ${PANEL_RADIUS}px 0 ${PANEL_RADIUS}px)`,
 	},
 	ticketsWrapper: {
 		position: "relative",
@@ -115,13 +116,22 @@ const useStyles = makeStyles(theme => ({
 	tabsHeader: {
 		flex: "none",
 		backgroundColor: theme.palette.background.paper,
+		borderRadius: `${PANEL_RADIUS}px ${PANEL_RADIUS}px 0 0`,
 		borderTopLeftRadius: PANEL_RADIUS,
 		borderTopRightRadius: PANEL_RADIUS,
 		overflow: "hidden",
 		borderBottom: `1px solid ${theme.palette.divider}`,
-		paddingTop: theme.spacing(0.5),
-		boxShadow: "none",
+		padding: 0,
+		margin: 0,
+		boxShadow: "none !important",
+		backgroundImage: "none",
 		isolation: "isolate",
+		clipPath: `inset(0 round ${PANEL_RADIUS}px ${PANEL_RADIUS}px 0 0)`,
+		"&.MuiPaper-root": {
+			borderRadius: `${PANEL_RADIUS}px ${PANEL_RADIUS}px 0 0`,
+			overflow: "hidden",
+			boxShadow: "none !important",
+		},
 		"& .MuiTabs-root": {
 			backgroundColor: theme.palette.background.paper,
 			minHeight: 48,
@@ -139,17 +149,23 @@ const useStyles = makeStyles(theme => ({
 			borderTopLeftRadius: PANEL_RADIUS,
 			borderTopRightRadius: PANEL_RADIUS,
 		},
+		"& .MuiTouchRipple-root": {
+			display: "none",
+		},
 		"& .MuiTab-root": {
 			backgroundColor: "transparent",
 			borderRadius: 0,
 			boxShadow: "none !important",
 			minHeight: 48,
 			overflow: "hidden",
+			maxWidth: "none",
 			"&::before": {
-				display: "none",
+				display: "none !important",
+				content: '""',
 			},
 			"&::after": {
-				display: "none",
+				display: "none !important",
+				content: '""',
 			},
 			"&:first-child": {
 				borderTopLeftRadius: PANEL_RADIUS,
@@ -160,14 +176,17 @@ const useStyles = makeStyles(theme => ({
 			"&.Mui-selected": {
 				backgroundColor: "transparent",
 				boxShadow: "none !important",
-				borderRadius: PANEL_RADIUS,
+				borderTopLeftRadius: PANEL_RADIUS,
+				borderTopRightRadius: PANEL_RADIUS,
+				overflow: "hidden",
 			},
 		},
 		"& .MuiTabs-indicator": {
 			height: 3,
 			borderRadius: 2,
 			backgroundColor: theme.palette.primary.main,
-			boxShadow: "none",
+			boxShadow: "none !important",
+			bottom: 0,
 		},
 	},
 
@@ -929,7 +948,7 @@ const TicketsManagerTabs = () => {
           </AppNeutralButton>
         </AppDialogActions>
       </AppDialog>
-      <Paper elevation={0} className={classes.tabsHeader}>
+      <Paper elevation={0} square={false} className={classes.tabsHeader}>
         <AppTabs
           value={tab}
           onChange={handleChangeTab}
@@ -938,6 +957,7 @@ const TicketsManagerTabs = () => {
           textColor="primary"
         >
           <Tab
+            disableRipple
             value={"open"}
             classes={{ root: classes.tab }}
             label={
@@ -948,6 +968,7 @@ const TicketsManagerTabs = () => {
             }
           />
           <Tab
+            disableRipple
             value={"closed"}
             classes={{ root: classes.tab }}
             label={
@@ -958,6 +979,7 @@ const TicketsManagerTabs = () => {
             }
           />
           <Tab
+            disableRipple
             value={"groups"}
             classes={{ root: classes.tab, label: classes.tabLabel }}
             label={
@@ -968,6 +990,7 @@ const TicketsManagerTabs = () => {
             }
           />
           <Tab
+            disableRipple
             value={"filters"}
             classes={{ root: classes.tab, label: classes.tabLabel }}
             label={

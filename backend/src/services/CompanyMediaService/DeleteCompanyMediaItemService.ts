@@ -13,6 +13,7 @@ import { FlowImgModel } from "../../models/FlowImg";
 import { FlowAudioModel } from "../../models/FlowAudio";
 import { unlinkPublicMediaFile } from "../../helpers/companyMediaDeletePath";
 import { decrementCompanyStorageUsage } from "../CompanyService/adjustCompanyStorageUsage";
+import { isChatMessagesTableAvailable } from "../../helpers/optionalTableQuery";
 import { countAllReferencesToRelPath } from "./countAllReferencesToRelPath";
 
 export const MESSAGE_MEDIA_REMOVED_BODY = "[Mídia removida pelo administrador]";
@@ -39,9 +40,14 @@ async function unlinkAfterClearedReference(
   relRaw: string | null | undefined,
   joinedRel: string | null | undefined,
   deferStorageDecrement: boolean,
-  fallbackSizeBytes = 0
+  fallbackSizeBytes = 0,
+  warnings?: string[]
 ): Promise<DeleteCompanyMediaItemResult> {
-  const remaining = await countAllReferencesToRelPath(companyId, relRaw);
+  const remaining = await countAllReferencesToRelPath(
+    companyId,
+    relRaw,
+    warnings
+  );
   if (remaining > 0) {
     return { freedBytes: 0, fileMissing: false };
   }
@@ -62,6 +68,8 @@ export type DeleteCompanyMediaItemOptions = {
   deferStorageDecrement: boolean;
   /** Bytes conhecidos da listagem (ajuste de armazenamento se ficheiro já não existir). */
   knownSizeBytes?: number;
+  /** Avisos técnicos acumulados (tabelas opcionais ausentes). */
+  warnings?: string[];
 };
 
 /** Elimina uma mídia com a mesma lógica que o DELETE singular; devolve bytes contabilizados. */
@@ -73,6 +81,7 @@ export const deleteCompanyMediaItemWithOptions = async (
 ): Promise<DeleteCompanyMediaItemResult> => {
   const defer = opts.deferStorageDecrement;
   const fallbackSize = Math.max(0, Number(opts.knownSizeBytes) || 0);
+  const warnings = opts.warnings;
 
   const finishPhysicalDelete = async (
     relRaw: string,
@@ -87,7 +96,8 @@ export const deleteCompanyMediaItemWithOptions = async (
         relRaw,
         joinedRel,
         defer,
-        fallbackSize
+        fallbackSize,
+        warnings
       );
     }
     return { freedBytes: 0, fileMissing: false };
@@ -104,7 +114,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!msg) throw new AppError("ERR_NO_PERMISSION", 404);
       const rel = msg.getDataValue("mediaUrl") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await msg.update({
         mediaUrl: null as unknown as string,
         mediaType: null as unknown as string,
@@ -120,7 +130,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       const inner = row.getDataValue("mediaPath") as string | null;
       if (!inner) throw new AppError("ERR_VALIDATION", 400);
       const rel = path.join("quickMessage", inner);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await row.update({ mediaPath: null as unknown as string, mediaName: null as unknown as string });
       return finishPhysicalDelete(rel, path.join("quickMessage", inner), n);
     }
@@ -131,7 +141,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!row) throw new AppError("ERR_NO_SCHEDULE_FOUND", 404);
       const rel = row.getDataValue("mediaPath") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await row.update({ mediaPath: null as unknown as string, mediaName: null as unknown as string });
       return finishPhysicalDelete(rel, null, n);
     }
@@ -142,7 +152,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!row) throw new AppError("ERR_CAMPAIGN_NOT_FOUND", 404);
       const rel = row.getDataValue("mediaPath") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await row.update({ mediaPath: null as unknown as string, mediaName: null as unknown as string });
       return finishPhysicalDelete(rel, null, n);
     }
@@ -153,7 +163,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!row) throw new AppError("ERR_NO_ANNOUNCEMENT_FOUND", 404);
       const rel = row.getDataValue("mediaPath") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await row.update({
         mediaPath: null as unknown as string,
         mediaName: null as unknown as string
@@ -169,11 +179,14 @@ export const deleteCompanyMediaItemWithOptions = async (
       });
       if (!opt) throw new AppError("ERR_NO_FILE_FOUND", 404);
       const rel = path.join("fileList", String(opt.fileId), opt.path);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await opt.destroy();
       return finishPhysicalDelete(rel, rel, n);
     }
     case "chatMessage": {
+      if (!(await isChatMessagesTableAvailable(warnings))) {
+        throw new AppError("ERR_NO_PERMISSION", 404);
+      }
       const id = Number(sourceId);
       if (!Number.isFinite(id)) throw new AppError("ERR_VALIDATION", 400);
       const row = await ChatMessage.findOne({
@@ -183,7 +196,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!row) throw new AppError("ERR_NO_PERMISSION", 404);
       const rel = row.getDataValue("mediaPath") as string | null;
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await row.update({
         mediaPath: "" as unknown as string,
         mediaName: null as unknown as string,
@@ -198,7 +211,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!row) throw new AppError("ERR_NO_PERMISSION", 404);
       const rel = String(row.name || "");
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await row.destroy();
       return finishPhysicalDelete(rel, null, n);
     }
@@ -209,7 +222,7 @@ export const deleteCompanyMediaItemWithOptions = async (
       if (!row) throw new AppError("ERR_NO_PERMISSION", 404);
       const rel = String(row.name || "");
       if (!rel) throw new AppError("ERR_VALIDATION", 400);
-      const n = await countAllReferencesToRelPath(companyId, rel);
+      const n = await countAllReferencesToRelPath(companyId, rel, warnings);
       await row.destroy();
       return finishPhysicalDelete(rel, null, n);
     }
